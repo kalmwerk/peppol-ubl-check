@@ -1,0 +1,34 @@
+# Generate invoices with your own code, check them, and keep the JSON report.
+# Save as .github/workflows/peppol-ubl-check.yml
+name: Peppol UBL check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  generated-invoices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      # Replace with whatever writes your test invoices, e.g. your exporter's test suite
+      - run: npm run export-test-invoices -- --out build/invoices
+      - uses: kalmwerk/peppol-ubl-check@v1
+        id: peppol
+        with:
+          files: "build/invoices/**/*.xml"
+          json-file: build/peppol-report.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: peppol-report
+          path: build/peppol-report.json
+      - name: Print the counts
+        if: always()
+        run: echo "${{ steps.peppol.outputs.checked }} invoices checked, ${{ steps.peppol.outputs.errors }} errors"

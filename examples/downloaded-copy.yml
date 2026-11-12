@@ -1,0 +1,23 @@
+# Use a copy of the Action kept in your own repository (the zip from
+# https://peppol-invoice-compass.lovable.app/tools/peppol-github-action,
+# unzipped into .github/actions/), for example before it is on GitHub
+# or when your organisation only allows local actions.
+# Save as .github/workflows/peppol-ubl-check.yml
+name: Peppol UBL check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  invoices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/peppol-ubl-check
+        with:
+          files: "invoices/**/*.xml"
