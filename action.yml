@@ -1,0 +1,64 @@
+name: Peppol UBL check by InvoiceVerify
+description: Check UBL and Peppol BIS Billing 3.0 e-invoices offline with 153 EN 16931 and Peppol rules, with a fix for each error.
+author: Kalmwerk
+branding:
+  icon: check-circle
+  color: blue
+
+inputs:
+  files:
+    description: Invoice files to check, as globs relative to the repository root, one per line or comma separated. A folder means every *.xml in it; "!pattern" leaves files out. Hidden folders and node_modules are skipped unless named.
+    required: false
+    default: "**/*.xml"
+  ignore:
+    description: Globs to leave out, one per line or comma separated, e.g. "test/fixtures/broken/**".
+    required: false
+    default: ""
+  profile:
+    description: '"peppol" checks every UBL file against Peppol BIS Billing 3.0 and EN 16931, so a wrong CustomizationID is reported. "auto" picks the rule set from each file''s CustomizationID; "en16931" and "xrechnung" force those.'
+    required: false
+    default: peppol
+  fail-on:
+    description: '"error" fails the job when any invoice has errors, "warning" also on warnings, "never" only reports.'
+    required: false
+    default: error
+  non-invoice:
+    description: 'What to do with matching XML files whose root element is not Invoice, CreditNote or CrossIndustryInvoice (pom.xml, configs): "skip" lists them as skipped, "fail" reports them as errors.'
+    required: false
+    default: skip
+  if-no-files-found:
+    description: '"error" fails the job when no invoice is found, "warn" only warns, "ignore" says nothing.'
+    required: false
+    default: error
+  json-file:
+    description: Also write the full report as JSON to this path (relative to the repository root), e.g. for upload-artifact. Empty writes no file.
+    required: false
+    default: ""
+  summary:
+    description: Write the results table, with how to fix each finding, to the job summary.
+    required: false
+    default: "true"
+  annotations:
+    description: Show each finding as an annotation on the file and line (up to 50), so it appears in pull requests.
+    required: false
+    default: "true"
+
+outputs:
+  result:
+    description: '"passed" or "failed" (any finding at or above fail-on).'
+  checked:
+    description: Number of invoices checked.
+  failed:
+    description: Number of invoices with findings at or above fail-on.
+  errors:
+    description: Number of errors across all invoices.
+  warnings:
+    description: Number of warnings across all invoices.
+  skipped:
+    description: Number of matching files skipped because they are not invoices.
+  json-file:
+    description: Absolute path of the JSON report (empty without json-file).
+
+runs:
+  using: node24
+  main: dist/index.js
