@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: dist/ is up to date
+        run: git diff --exit-code -- dist/ || (echo "::error::dist/ is stale. Run npm run build and commit it." && exit 1)
+      - run: npm test
+
+  # Runs the committed Action on a real runner against the test invoices.
+  self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Valid invoices pass
+        uses: ./
+        id: valid
+        with:
+          files: "test/fixtures/valid/*.xml"
+      - name: Invalid invoices fail
+        uses: ./
+        id: invalid
+        continue-on-error: true
+        with:
+          files: |
+            test/fixtures/invalid/*.xml
+            test/fixtures/other/*.xml
+          json-file: peppol-report.json
+          annotations: false
+      - name: Check the outputs
+        env:
+          VALID_RESULT: ${{ steps.valid.outputs.result }}
+          VALID_CHECKED: ${{ steps.valid.outputs.checked }}
+          INVALID_OUTCOME: ${{ steps.invalid.outcome }}
+          INVALID_RESULT: ${{ steps.invalid.outputs.result }}
+          INVALID_SKIPPED: ${{ steps.invalid.outputs.skipped }}
+          REPORT: ${{ steps.invalid.outputs.json-file }}
+        run: |
+          test "$VALID_RESULT" = passed
+          test "$VALID_CHECKED" = 3
+          test "$INVALID_OUTCOME" = failure
+          test "$INVALID_RESULT" = failed
+          test "$INVALID_SKIPPED" = 1
+          grep -q '"ruleId": "BR-CO-17"' "$REPORT"
+      - name: The CLI agrees
+        run: |
+          node dist/cli.js "test/fixtures/valid/*.xml"
+          if node dist/cli.js -q test/fixtures/invalid; then echo "::error::the CLI passed invalid invoices" && exit 1; fi

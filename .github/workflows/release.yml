@@ -1,0 +1,35 @@
+# When a v1.x.y release is published: write its notes from CHANGELOG.md, then
+# move the major tag (v1) so `uses: kalmwerk/peppol-ubl-check@v1` picks it up.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Kalmwerk's free release-notes Action: fills the release from the matching CHANGELOG.md section
+      - uses: kalmwerk/release-notes-action@v1
+        with:
+          source: changelog
+
+  major-tag:
+    needs: notes
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Move the major version tag
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          MAJOR="${TAG%%.*}"
+          case "$MAJOR" in v[0-9]*) ;; *) echo "::error::Tag $TAG isn't vX.Y.Z" && exit 1 ;; esac
+          git tag -f "$MAJOR" "$TAG"
+          git push -f origin "refs/tags/$MAJOR"
