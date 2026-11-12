@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-11-12
+
+Full source included in the release. The rules and the results are unchanged.
+
+### Changed
+- The download now holds `src/` (with the copied rule engine), the tests and their sample invoices, the CI and release workflows and the build script, next to `action.yml` and `dist/`, so it matches the repository and can be reviewed and rebuilt (`npm ci && npm run check`).
+
 ## [1.0.0] - 2026-11-12
 
 First release: InvoiceVerify's rule engine as a GitHub Action and a command-line tool, offline.

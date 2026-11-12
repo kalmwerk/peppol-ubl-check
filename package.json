@@ -1,0 +1,48 @@
+{
+  "name": "peppol-ubl-check",
+  "version": "1.0.1",
+  "description": "Offline Peppol BIS Billing 3.0 / UBL e-invoice check for GitHub Actions and the command line: 153 EN 16931, Peppol and XRechnung rules, no API key, nothing sent anywhere.",
+  "license": "MIT",
+  "author": "Kalmwerk (https://peppol-invoice-compass.lovable.app)",
+  "homepage": "https://peppol-invoice-compass.lovable.app/tools/peppol-github-action",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kalmwerk/peppol-ubl-check.git"
+  },
+  "keywords": [
+    "peppol",
+    "ubl",
+    "e-invoicing",
+    "einvoice",
+    "en16931",
+    "xrechnung",
+    "validator",
+    "github-action"
+  ],
+  "bin": {
+    "peppol-ubl-check": "dist/cli.js"
+  },
+  "files": [
+    "dist/cli.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "THIRD_PARTY_LICENSES.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run build && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.1",
+    "esbuild": "0.25.12",
+    "saxes": "6.0.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}
