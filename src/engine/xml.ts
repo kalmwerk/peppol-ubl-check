@@ -14,6 +14,8 @@ export interface XNode {
   attrs: Record<string, string>;
   children: XNode[];
   text: string;
+  /** Text exactly as written, before trimming (BR-DE-18 needs the line break after a Skonto entry) */
+  raw?: string;
   line: number;
   col: number;
   parent: XNode | null;
@@ -92,7 +94,11 @@ export function parseXml(input: string): XNode {
 
   parser.on("closetag", () => {
     const node = stack.pop();
-    if (node) node.text = node.text.trim();
+    if (node) {
+      const trimmed = node.text.trim();
+      if (trimmed !== node.text && trimmed !== "" && node.children.length === 0) node.raw = node.text;
+      node.text = trimmed;
+    }
   });
 
   try {

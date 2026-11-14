@@ -6,7 +6,7 @@ import { RULES, type Section } from "./rules-catalog";
 import { runRules, type Finding } from "./rules";
 import { parseXml, XmlSyntaxError } from "./xml";
 
-export type ValidationProfile = "auto" | "peppol" | "en16931" | "xrechnung";
+export type ValidationProfile = "auto" | "peppol" | "en16931" | "xrechnung" | "nlcius";
 
 export interface SectionStatus {
   status: "pass" | "warn" | "fail";
@@ -30,7 +30,7 @@ export interface ValidationReport {
   version: 1;
   valid: boolean;
   format: FormatInfo;
-  profileApplied: "peppol" | "en16931" | "xrechnung" | "none";
+  profileApplied: "peppol" | "en16931" | "xrechnung" | "nlcius" | "none";
   invoice: InvoiceModel | null;
   computed: ComputedTotals | null;
   findings: Finding[];
@@ -109,10 +109,12 @@ function computeTotals(m: InvoiceModel): ComputedTotals {
   };
 }
 
-function rulesApplicable(peppol: boolean, en16931: boolean, xrechnung: boolean) {
+function rulesApplicable(peppol: boolean, en16931: boolean, xrechnung: boolean, nlcius: boolean) {
   return RULES.filter((r) => {
     if (r.source === "Peppol") return peppol;
-    if (r.source === "XRechnung") return xrechnung;
+    if (r.source === "NLCIUS") return nlcius;
+    // IV-DE-* (Leitweg-ID) are our own checks but only run with the XRechnung rules
+    if (r.source === "XRechnung" || r.id.startsWith("IV-DE-")) return xrechnung;
     if (!en16931 && (r.section === "lines" || r.section === "vat")) return false;
     return true;
   }).length;
@@ -203,26 +205,28 @@ export function validateInvoiceXml(
   const peppol =
     profile === "peppol"
       ? format.syntax === "UBL"
-      : profile === "en16931" || profile === "xrechnung"
+      : profile === "en16931" || profile === "xrechnung" || profile === "nlcius"
         ? false
         : format.peppol;
   const xrechnung =
     profile === "xrechnung" ||
     (profile === "auto" && (format.id === "xrechnung-ubl" || format.id === "xrechnung-cii"));
+  const nlcius =
+    profile === "nlcius" || (profile === "auto" && (format.id === "si-ubl-2" || format.id === "nlcius-cii"));
   const en16931 = format.en16931;
-  const findings = runRules(model, format, { peppol, en16931, xrechnung });
+  const findings = runRules(model, format, { peppol, en16931, xrechnung, nlcius });
   const order = { error: 0, warning: 1, info: 2 } as const;
   findings.sort((a, b) => order[a.severity] - order[b.severity] || (a.line ?? 0) - (b.line ?? 0));
   const { counts, sections } = summarize(findings);
   return finish({
     valid: counts.error === 0,
     format,
-    profileApplied: peppol ? "peppol" : xrechnung ? "xrechnung" : "en16931",
+    profileApplied: peppol ? "peppol" : xrechnung ? "xrechnung" : nlcius ? "nlcius" : "en16931",
     invoice: model,
     computed: computeTotals(model),
     findings,
     counts,
     sections,
-    rulesChecked: rulesApplicable(peppol, en16931, xrechnung),
+    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius),
   });
 }

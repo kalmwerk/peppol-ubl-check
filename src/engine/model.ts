@@ -34,6 +34,7 @@ export interface Party {
   legalId?: Identifier; // BT-30 / BT-47
   vatId?: string; // BT-31 / BT-48
   taxRegistrationId?: string; // BT-32
+  legalForm?: string; // BT-33 seller additional legal information
   endpoint?: Identifier; // BT-34 / BT-49
   address?: Address; // BG-5 / BG-8
   contact?: { name?: string; phone?: string; email?: string }; // BG-6 / BG-9
@@ -106,6 +107,12 @@ export interface PaymentMeans {
   cardPan?: string; // BT-87
   mandateRef?: string; // BT-89
   debitedAccount?: string; // BT-91
+  /** BG-17 credit transfer group present (UBL PayeeFinancialAccount, CII creditor account) */
+  hasCreditTransfer?: boolean;
+  /** BG-18 payment card group present */
+  hasCard?: boolean;
+  /** BG-19 direct debit group present (UBL PaymentMandate; CII mandate, creditor ID or debtor IBAN) */
+  hasDirectDebit?: boolean;
   locs: LocMap;
   loc?: Loc;
 }
@@ -149,6 +156,10 @@ export interface InvoiceModel {
   despatchAdviceRef?: string; // BT-16
   accountingCost?: string; // BT-19
   paymentTerms?: string; // BT-20
+  /** BT-20 exactly as written (untrimmed), for the XRechnung Skonto syntax (BR-DE-18) */
+  paymentTermsRaw?: string;
+  /** BT-90 bank assigned creditor identifier (SEPA creditor ID) */
+  creditorId?: string;
   notes: string[]; // BT-22
   precedingInvoices: { id?: string; date?: string; loc?: Loc }[]; // BG-3
   periodStart?: string; // BT-73
@@ -166,7 +177,7 @@ export interface InvoiceModel {
   taxTotals: { amount?: number; currency?: string; hasSubtotals: boolean; loc?: Loc }[];
   totals: Totals; // BG-22
   lines: InvoiceLine[]; // BG-25
-  attachments: { id?: string; description?: string; filename?: string; mime?: string }[]; // BG-24
+  attachments: { id?: string; description?: string; filename?: string; mime?: string; loc?: Loc }[]; // BG-24
   /** Amount nodes with their currencyID attribute, for currency consistency checks */
   amountCurrencies: { bt: string; currency?: string; loc: Loc }[];
   /** Raw amount strings for decimal-precision checks */

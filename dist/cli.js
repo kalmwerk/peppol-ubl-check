@@ -2201,6 +2201,16 @@ var RULES = [
     "Add cac:PostalAddress to the tax representative party."
   ),
   R(
+    "BR-20",
+    "EN16931",
+    "error",
+    "parties",
+    ["BT-69"],
+    "Tax representative country code missing",
+    "The Seller tax representative postal address (BG-12) shall contain a Tax representative country code (BT-69), if the Seller has a tax representative.",
+    "Add cac:Country/cbc:IdentificationCode (e.g. NL) to the tax representative's postal address."
+  ),
+  R(
     "BR-21",
     "EN16931",
     "error",
@@ -2449,6 +2459,16 @@ var RULES = [
     "Payment means code missing",
     "A Payment instruction (BG-16) shall specify the Payment means type code (BT-81).",
     "Add cbc:PaymentMeansCode, e.g. 58 for SEPA credit transfer or 30 for credit transfer."
+  ),
+  R(
+    "BR-52",
+    "EN16931",
+    "error",
+    "header",
+    ["BG-24", "BT-122"],
+    "Supporting document without reference",
+    "Each Additional supporting document (BG-24) shall contain a Supporting document reference (BT-122).",
+    "Give every attached or linked document an ID (cac:AdditionalDocumentReference/cbc:ID), such as the timesheet or order number."
   ),
   R(
     "BR-53",
@@ -3305,6 +3325,98 @@ var RULES = [
     "Belgian enterprise number MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0208 must be exactly 10 digits and pass the mod-97 check.",
     'Write the 10-digit KBO/BCE number without BE, dots or spaces, e.g. <cbc:EndpointID schemeID="0208">0403170701</cbc:EndpointID>. The VAT number BE0403170701 belongs under scheme 9925 or in PartyTaxScheme.'
   ),
+  // Peppol BIS Billing 3.0 national rules for suppliers in the Netherlands (OpenPeppol
+  // PEPPOL-EN16931-UBL.sch, "NETHERLANDS" pattern; each is the Peppol form of an NLCIUS rule)
+  R(
+    "NL-R-001",
+    "Peppol",
+    "error",
+    "header",
+    ["BT-25"],
+    "Dutch credit note without invoice reference",
+    "For suppliers in the Netherlands, a credit note MUST reference the invoice it corrects (cac:BillingReference/cac:InvoiceDocumentReference/cbc:ID, BT-25).",
+    "Add the number of the original invoice as the preceding invoice reference (BT-25) of the credit note."
+  ),
+  R(
+    "NL-R-002",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-35", "BT-37", "BT-38"],
+    "Dutch seller address incomplete",
+    "For suppliers in the Netherlands, the seller's address MUST contain street name, city and post code (BT-35, BT-37, BT-38).",
+    "Fill in the street and house number, the city and the post code of your own company in the invoicing software."
+  ),
+  R(
+    "NL-R-003",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-30"],
+    "Dutch seller legal ID is not KvK or OIN",
+    "For suppliers in the Netherlands, the seller's legal registration identifier (BT-30) MUST be a KvK number (schemeID 0106) or an OIN (schemeID 0190) and must not be empty.",
+    "Enter your 8-digit KvK number with schemeID 0106 (government bodies: the OIN with 0190) as the legal registration identifier, not your VAT number."
+  ),
+  R(
+    "NL-R-004",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-50", "BT-52", "BT-53"],
+    "Dutch buyer address incomplete",
+    "For suppliers in the Netherlands invoicing a buyer in the Netherlands, the buyer's address MUST contain street name, city and post code (BT-50, BT-52, BT-53).",
+    "Complete the customer's address in the customer record: street and house number, city and post code."
+  ),
+  R(
+    "NL-R-005",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-47"],
+    "Dutch buyer legal ID is not KvK or OIN",
+    "For suppliers in the Netherlands invoicing a buyer in the Netherlands, a buyer legal registration identifier (BT-47), when given, MUST be a KvK number (schemeID 0106) or an OIN (schemeID 0190).",
+    "Store the customer's KvK number with schemeID 0106 (government buyers: their OIN with 0190), or leave the field out instead of filling in another number."
+  ),
+  R(
+    "NL-R-006",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-64", "BT-66", "BT-67"],
+    "Dutch tax representative address incomplete",
+    "For suppliers in the Netherlands with a tax representative in the Netherlands, the representative's address MUST contain street name, city and post code.",
+    "Complete the street, city and post code of the fiscal representative, or remove the representative if you don't use one."
+  ),
+  R(
+    "NL-R-007",
+    "Peppol",
+    "error",
+    "payment",
+    ["BG-16", "BT-115"],
+    "Dutch invoice without payment instructions",
+    "For suppliers in the Netherlands, an invoice with an amount due (BT-115 above zero) MUST contain payment instructions (cac:PaymentMeans).",
+    "Add the payment means: usually code 58 (SEPA credit transfer) or 30 with your IBAN."
+  ),
+  R(
+    "NL-R-008",
+    "Peppol",
+    "error",
+    "payment",
+    ["BT-81"],
+    "Payment means code not allowed between Dutch parties",
+    "For suppliers in the Netherlands invoicing a buyer in the Netherlands, the payment means code (BT-81) MUST be 30, 48, 49, 57, 58 or 59.",
+    "Use 58 (SEPA credit transfer) or 30 (credit transfer) for a bank transfer, 59 for SEPA direct debit, 49 for direct debit, 48 for card payment or 57 for a standing agreement."
+  ),
+  R(
+    "NL-R-009",
+    "Peppol",
+    "error",
+    "lines",
+    ["BT-132", "BT-13"],
+    "Order line reference without order reference",
+    "For suppliers in the Netherlands, an invoice line that references an order line (BT-132) requires the purchase order reference on document level (BT-13).",
+    "Add the buyer's purchase order number as the order reference (BT-13), or remove the order line references."
+  ),
   // ---------- InvoiceVerify extended checks ----------
   R(
     "IV-VAT-01",
@@ -3376,7 +3488,312 @@ var RULES = [
     "The Belgian enterprise number (scheme 0208) does not pass its mod-97 check.",
     "Check the 10-digit KBO/BCE number of the party."
   ),
+  // ---------- SI-UBL 2.0 / NLCIUS (Dutch CIUS, Dutch Peppol Authority validation 2.0.3.13) ----------
+  // IDs and severities as in schematron/si-ubl-2.0/si-ubl-2.0-nlcius.sch (fatal = error).
+  // Rules marked "suppliers in the Netherlands" only apply when the seller country (BT-40) is NL.
+  R(
+    "SI-V20-INV-R000",
+    "NLCIUS",
+    "error",
+    "document",
+    ["BT-24"],
+    "Not tagged as SI-UBL 2.0 / NLCIUS",
+    "An SI-UBL 2.0 invoice or credit note MUST carry a specification identifier (BT-24) starting with urn:cen.eu:en16931:2017#compliant#urn:fdc:nen.nl:nlcius:v1.0.",
+    "Set the CustomizationID to urn:cen.eu:en16931:2017#compliant#urn:fdc:nen.nl:nlcius:v1.0, or send the invoice as Peppol BIS Billing 3.0 if the receiver expects that."
+  ),
+  R(
+    "BR-NL-1",
+    "NLCIUS",
+    "error",
+    "parties",
+    ["BT-30"],
+    "Seller KvK or OIN number missing",
+    "For suppliers in the Netherlands, the seller MUST provide a KvK number (schemeID 0106) or an OIN (schemeID 0190) as its legal registration identifier (BT-30).",
+    "Add your 8-digit KvK number as PartyLegalEntity/CompanyID with schemeID 0106 (government bodies: the OIN with 0190)."
+  ),
+  R(
+    "BR-NL-2",
+    "NLCIUS",
+    "error",
+    "header",
+    ["BT-10", "BT-13"],
+    "Buyer reference or order reference missing",
+    "For suppliers in the Netherlands, the invoice MUST contain the buyer reference (BT-10) or the purchase order reference (BT-13).",
+    "Ask the buyer for their reference or purchase order number and enter it; government buyers usually give one in the order or contract."
+  ),
+  R(
+    "BR-NL-3",
+    "NLCIUS",
+    "error",
+    "parties",
+    ["BT-35", "BT-37", "BT-38"],
+    "Seller address incomplete",
+    "For suppliers in the Netherlands, the seller's address MUST contain street name, city and post code (BT-35, BT-37, BT-38).",
+    "Fill in the street and house number, the city and the post code of your company in the invoicing software."
+  ),
+  R(
+    "BR-NL-4",
+    "NLCIUS",
+    "error",
+    "parties",
+    ["BT-50", "BT-52", "BT-53"],
+    "Dutch buyer address incomplete",
+    "For suppliers in the Netherlands, if the buyer is in the Netherlands, the buyer's address MUST contain street name, city and post code (BT-50, BT-52, BT-53).",
+    "Complete the customer's address in the customer record: street and house number, city and post code."
+  ),
+  R(
+    "BR-NL-5",
+    "NLCIUS",
+    "error",
+    "parties",
+    ["BT-64", "BT-66", "BT-67"],
+    "Dutch tax representative address incomplete",
+    "For suppliers in the Netherlands, if the tax representative is in the Netherlands, its address MUST contain street name, city and post code.",
+    "Complete the fiscal representative's street, city and post code, or remove the representative if you don't use one."
+  ),
+  R(
+    "BR-NL-7",
+    "NLCIUS",
+    "error",
+    "header",
+    ["BT-3"],
+    "Invoice type code not allowed",
+    "The invoice type code (BT-3) MUST be 380 (commercial invoice), 381 (credit note), 384 (corrected invoice) or 389 (self-billed invoice).",
+    "Use 380 for a normal invoice and 381 for a credit note; other codes such as 386 (prepayment) or 388 are not allowed in SI-UBL 2.0."
+  ),
+  R(
+    "BR-NL-8",
+    "NLCIUS",
+    "error",
+    "document",
+    ["BT-3"],
+    "Credit note sent in the wrong document type",
+    "Type code 381 MUST be sent as a UBL CreditNote, and a UBL CreditNote MUST have type code 381; codes 380, 384 and 389 use the UBL Invoice.",
+    "Export credit notes as CreditNote documents (root <CreditNote>, CreditNoteTypeCode 381), or give a normal invoice type code 380."
+  ),
+  R(
+    "BR-NL-9",
+    "NLCIUS",
+    "error",
+    "header",
+    ["BT-3", "BT-25"],
+    "Corrected invoice without invoice reference",
+    "For suppliers in the Netherlands, a corrected invoice (type code 384) MUST reference the invoice it corrects (BT-25).",
+    "Add the number of the original invoice as the preceding invoice reference (BillingReference/InvoiceDocumentReference/ID)."
+  ),
+  R(
+    "BR-NL-10",
+    "NLCIUS",
+    "error",
+    "parties",
+    ["BT-47"],
+    "Dutch buyer KvK or OIN number missing",
+    "For suppliers in the Netherlands, if the buyer is in the Netherlands, the buyer's legal registration identifier (BT-47) MUST be a KvK number (schemeID 0106) or an OIN (schemeID 0190).",
+    "Store the customer's KvK number (schemeID 0106) in the customer record; for a government buyer use its OIN (schemeID 0190)."
+  ),
+  R(
+    "BR-NL-11",
+    "NLCIUS",
+    "error",
+    "payment",
+    ["BG-16", "BT-115"],
+    "Payment instructions missing",
+    "For suppliers in the Netherlands, an invoice with an amount due (BT-115 above zero) MUST contain payment instructions (BG-16).",
+    "Add the payment means with your IBAN: code 58 (SEPA credit transfer) or 30 (credit transfer)."
+  ),
+  R(
+    "BR-NL-12",
+    "NLCIUS",
+    "error",
+    "payment",
+    ["BT-81"],
+    "Payment means code not allowed",
+    "For suppliers in the Netherlands, the payment means code (BT-81) MUST be 30, 48, 49, 57, 58 or 59.",
+    "Use 58 (SEPA credit transfer) or 30 (credit transfer) for a bank transfer, 59 for SEPA direct debit, 49 for direct debit, 48 for card payment or 57 for a standing agreement."
+  ),
+  R(
+    "BR-NL-13",
+    "NLCIUS",
+    "error",
+    "lines",
+    ["BT-132", "BT-13"],
+    "Order line reference without order reference",
+    "If an invoice line references an order line (BT-132), the purchase order reference (BT-13) MUST be given on document level.",
+    "Add the buyer's purchase order number as the order reference, or remove the order line references."
+  ),
+  R(
+    "BR-NL-19",
+    "NLCIUS",
+    "warning",
+    "header",
+    ["BT-6"],
+    "VAT accounting currency not recommended",
+    "For suppliers in the Netherlands, the VAT accounting currency code (BT-6) is not recommended.",
+    "Leave out TaxCurrencyCode unless the invoice is in a foreign currency and you must state the VAT in euro."
+  ),
+  R(
+    "BR-NL-20",
+    "NLCIUS",
+    "warning",
+    "header",
+    ["BT-7"],
+    "VAT point date not recommended",
+    "For suppliers in the Netherlands, the VAT point date (BT-7) is not recommended; receivers ignore its value.",
+    "Remove TaxPointDate; state the delivery date or invoice period instead when it differs from the invoice date."
+  ),
+  R(
+    "BR-NL-21",
+    "NLCIUS",
+    "warning",
+    "header",
+    ["BT-8"],
+    "VAT point date code not recommended",
+    "For suppliers in the Netherlands, the VAT point date code (BT-8) is not recommended; receivers ignore its value.",
+    "Remove the DescriptionCode from the invoice period."
+  ),
+  R(
+    "BR-NL-23",
+    "NLCIUS",
+    "warning",
+    "document",
+    ["BT-23"],
+    "Business process type not recommended (CII)",
+    "For suppliers in the Netherlands, the business process type (BT-23) is not recommended in an NLCIUS CII invoice, unless a network such as Peppol requires it.",
+    "Leave out the BusinessProcessSpecifiedDocumentContextParameter, unless your receiver or network asks for it."
+  ),
+  R(
+    "BR-NL-24",
+    "NLCIUS",
+    "warning",
+    "header",
+    ["BT-26"],
+    "Preceding invoice date not recommended",
+    "For suppliers in the Netherlands, the issue date of the preceding invoice (BT-26) is not recommended.",
+    "Keep the number of the preceding invoice (BT-25) and leave out its issue date."
+  ),
+  R(
+    "BR-NL-25",
+    "NLCIUS",
+    "warning",
+    "parties",
+    ["BT-32"],
+    "Seller tax registration number not recommended",
+    "For suppliers in the Netherlands, a seller tax registration identifier other than the VAT number (BT-32) is not recommended, because it does not apply in the Netherlands.",
+    "Keep only the VAT number (PartyTaxScheme with TaxScheme VAT) and the KvK number; remove the other tax registration."
+  ),
+  R(
+    "BR-NL-26",
+    "NLCIUS",
+    "warning",
+    "parties",
+    ["BT-33"],
+    "Seller additional legal information not recommended",
+    "For suppliers in the Netherlands, the seller additional legal information (BT-33) is not recommended, because it does not apply in the Netherlands.",
+    "Remove CompanyLegalForm (CII: the seller Description); legal details such as the KvK number have their own fields."
+  ),
+  R(
+    "BR-NL-27",
+    "NLCIUS",
+    "warning",
+    "parties",
+    ["BT-162", "BT-163", "BT-164", "BT-165"],
+    "Address line 3 not recommended",
+    "For suppliers in the Netherlands, the third address line of the seller, buyer, tax representative or deliver-to address is not recommended.",
+    "Put the street and house number in the street field and drop the third address line."
+  ),
+  R(
+    "BR-NL-28",
+    "NLCIUS",
+    "warning",
+    "parties",
+    ["BT-39", "BT-54", "BT-68", "BT-79"],
+    "Country subdivision not recommended",
+    "For suppliers in the Netherlands, a country subdivision (province or region) in the seller, buyer, tax representative or deliver-to address is not recommended.",
+    "Leave out CountrySubentity; street, post code, city and country are enough for a Dutch address."
+  ),
+  R(
+    "BR-NL-29",
+    "NLCIUS",
+    "warning",
+    "payment",
+    ["BT-82"],
+    "Payment means text not recommended",
+    "For suppliers in the Netherlands, the payment means text (BT-82, the name attribute of PaymentMeansCode) is not recommended.",
+    "Keep only the payment means code, e.g. <cbc:PaymentMeansCode>58</cbc:PaymentMeansCode>."
+  ),
+  R(
+    "BR-NL-30",
+    "NLCIUS",
+    "warning",
+    "payment",
+    ["BT-85"],
+    "Payment account name not recommended",
+    "For suppliers in the Netherlands, the payment account name (BT-85) is not recommended.",
+    "Keep the IBAN and leave out the account holder's name."
+  ),
+  R(
+    "BR-NL-31",
+    "NLCIUS",
+    "warning",
+    "payment",
+    ["BT-86"],
+    "BIC not recommended for SEPA payments",
+    "The payment service provider identifier (BT-86, the BIC) is not recommended for SEPA payments (payment means code 58 or 59).",
+    "Remove the BIC (FinancialInstitutionBranch/ID); a SEPA transfer only needs the IBAN."
+  ),
+  R(
+    "BR-NL-32",
+    "NLCIUS",
+    "warning",
+    "totals",
+    ["BT-98", "BT-140"],
+    "Allowance reason code not recommended",
+    "For suppliers in the Netherlands, an allowance reason code (BT-98 on document level, BT-140 on a line) is not recommended.",
+    "Describe the discount in the reason text (AllowanceChargeReason) and leave out the reason code."
+  ),
+  R(
+    "BR-NL-33",
+    "NLCIUS",
+    "warning",
+    "vat",
+    ["BT-111"],
+    "VAT total in accounting currency not recommended",
+    "For suppliers in the Netherlands, a VAT total in another currency than the invoice currency (BT-111) is not recommended.",
+    "Remove the second TaxTotal in the accounting currency, unless the law requires the VAT in euro on a foreign-currency invoice."
+  ),
+  R(
+    "BR-NL-34",
+    "NLCIUS",
+    "warning",
+    "totals",
+    ["BT-105", "BT-145"],
+    "Charge reason code not recommended",
+    "For suppliers in the Netherlands, a charge reason code (BT-105 on document level, BT-145 on a line) is not recommended.",
+    "Describe the surcharge in the reason text (AllowanceChargeReason) and leave out the reason code."
+  ),
+  R(
+    "BR-NL-35",
+    "NLCIUS",
+    "warning",
+    "vat",
+    ["BT-121"],
+    "VAT exemption reason code not recommended",
+    "For suppliers in the Netherlands, a VAT exemption reason code (BT-121) is not recommended.",
+    'State the exemption reason as text (BT-120), for example "Btw verlegd" for reverse charge, and leave out the VATEX code.'
+  ),
+  R(
+    "SI-UBL-2",
+    "NLCIUS",
+    "warning",
+    "document",
+    void 0,
+    "Empty elements",
+    "An SI-UBL 2.0 or NLCIUS document should not contain empty elements.",
+    "Remove elements without a value, or fill them in; many exports write empty tags for fields that were left blank."
+  ),
   // ---------- XRechnung 3.0 (German CIUS, KoSIT) ----------
+  // Paraphrased from the KoSIT XRechnung Schematron for XRechnung 3.0.2. Not every BR-DE
+  // rule is here (the Extension and CVD rules are not), so this is a subset of the official set.
   R(
     "BR-DE-1",
     "XRechnung",
@@ -3384,7 +3801,7 @@ var RULES = [
     "payment",
     ["BG-16"],
     "Payment instructions missing",
-    "An XRechnung must contain payment instructions (BG-16), i.e. at least a payment means code.",
+    "An XRechnung must contain payment instructions (BG-16).",
     "Add a payment means (e.g. 58 SEPA credit transfer with the IBAN, or 59 SEPA direct debit with the mandate reference)."
   ),
   R(
@@ -3468,6 +3885,36 @@ var RULES = [
     "Fill in the buyer's post code in the postal address."
   ),
   R(
+    "BR-DE-10",
+    "XRechnung",
+    "error",
+    "parties",
+    ["BT-77"],
+    "Deliver-to city missing",
+    "When a deliver-to address (BG-15) is given, it must contain the city (BT-77).",
+    "Add the city to the delivery address, or leave the whole delivery address out."
+  ),
+  R(
+    "BR-DE-11",
+    "XRechnung",
+    "error",
+    "parties",
+    ["BT-78"],
+    "Deliver-to post code missing",
+    "When a deliver-to address (BG-15) is given, it must contain the post code (BT-78).",
+    "Add the post code to the delivery address, or leave the whole delivery address out."
+  ),
+  R(
+    "BR-DE-14",
+    "XRechnung",
+    "error",
+    "vat",
+    ["BT-119"],
+    "VAT rate missing in the VAT breakdown",
+    "Every VAT breakdown (BG-23) in an XRechnung must state the VAT category rate (BT-119), also for categories where EN 16931 allows leaving it out.",
+    "Write the rate in every VAT breakdown, e.g. 19, 7 or 0 for exempt and reverse-charge categories."
+  ),
+  R(
     "BR-DE-15",
     "XRechnung",
     "error",
@@ -3482,9 +3929,9 @@ var RULES = [
     "XRechnung",
     "error",
     "parties",
-    ["BT-31", "BT-32", "BT-63"],
+    ["BT-31", "BT-32", "BG-11"],
     "Seller VAT or tax number missing",
-    "When VAT categories S, Z, E, AE, K, G, L or M are used, the seller VAT identifier (BT-31), the seller tax registration number (BT-32) or the tax representative VAT identifier (BT-63) must be given.",
+    "When VAT categories S, Z, E, AE, K, G, L or M are used, the seller VAT identifier (BT-31), the seller tax registration number (BT-32) or a seller tax representative (BG-11) must be given.",
     "Add the seller's USt-IdNr. (VAT number) or Steuernummer."
   ),
   R(
@@ -3498,14 +3945,184 @@ var RULES = [
     "Use 380 for a normal invoice or 381 for a credit note."
   ),
   R(
+    "BR-DE-18",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BT-20"],
+    "Skonto (early payment discount) written in the wrong format",
+    "Early payment discount lines in the payment terms (BT-20) must be written as #SKONTO#TAGE=n#PROZENT=n.nn# (optionally #BASISBETRAG=n.nn#), in capitals, without extra spaces, each followed by a line break.",
+    "Write each discount on its own line, e.g. #SKONTO#TAGE=14#PROZENT=2.00#, and end the payment terms with a line break after the last one."
+  ),
+  R(
+    "BR-DE-19",
+    "XRechnung",
+    "warning",
+    "payment",
+    ["BT-84"],
+    "IBAN for SEPA credit transfer not valid",
+    "With payment means 58 (SEPA credit transfer) the payment account identifier (BT-84) should be a valid IBAN.",
+    "Enter the seller's IBAN without typos; the check digits must match."
+  ),
+  R(
+    "BR-DE-20",
+    "XRechnung",
+    "warning",
+    "payment",
+    ["BT-91"],
+    "IBAN for SEPA direct debit not valid",
+    "With payment means 59 (SEPA direct debit) the debited account identifier (BT-91) should be a valid IBAN.",
+    "Enter the buyer's IBAN from the direct debit mandate."
+  ),
+  R(
     "BR-DE-21",
     "XRechnung",
     "warning",
     "document",
     ["BT-24"],
     "Specification identifier is not XRechnung",
-    "The specification identifier (BT-24) should match the XRechnung standard identifier, e.g. urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0.",
+    "The specification identifier (BT-24) should be the XRechnung 3.0 identifier urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0 (or its Extension or CVD variant).",
     "Set the CustomizationID / guideline ID to the XRechnung 3.0 identifier when you send an XRechnung."
+  ),
+  R(
+    "BR-DE-22",
+    "XRechnung",
+    "error",
+    "document",
+    ["BT-125"],
+    "Two attachments have the same file name",
+    "The filename attribute of every embedded attachment (BT-125) must be unique.",
+    "Rename one of the attached files so every attachment has its own file name."
+  ),
+  R(
+    "BR-DE-23-a",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BT-81", "BG-17"],
+    "Credit transfer without account details",
+    "When the payment means code is a credit transfer (30 or 58), the credit transfer group (BG-17) must be given.",
+    "Add the payee's IBAN (and optionally BIC and account name) to the payment means."
+  ),
+  R(
+    "BR-DE-23-b",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BT-81", "BG-18", "BG-19"],
+    "Credit transfer mixed with card or direct debit details",
+    "When the payment means code is a credit transfer (30 or 58), card details (BG-18) and direct debit details (BG-19) must not be given.",
+    "Remove the card or mandate details, or use a separate, correct payment means code."
+  ),
+  R(
+    "BR-DE-24-a",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BT-81", "BG-18"],
+    "Card payment without card details",
+    "When the payment means code is a card payment (48, 54 or 55), the payment card group (BG-18) must be given.",
+    "Add the card details (at least the last digits of the card number) or use another payment means code."
+  ),
+  R(
+    "BR-DE-24-b",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BT-81", "BG-17", "BG-19"],
+    "Card payment mixed with account or direct debit details",
+    "When the payment means code is a card payment (48, 54 or 55), credit transfer (BG-17) and direct debit (BG-19) details must not be given.",
+    "Remove the IBAN or mandate details from the card payment."
+  ),
+  R(
+    "BR-DE-25-a",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BT-81", "BG-19"],
+    "Direct debit without mandate details",
+    "When the payment means code is 59 (SEPA direct debit), the direct debit group (BG-19) must be given.",
+    "Add the mandate reference, the SEPA creditor ID and the buyer's IBAN."
+  ),
+  R(
+    "BR-DE-25-b",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BT-81", "BG-17", "BG-18"],
+    "Direct debit mixed with account or card details",
+    "When the payment means code is 59 (SEPA direct debit), credit transfer (BG-17) and card (BG-18) details must not be given.",
+    "Remove the payee account or card details from the direct debit payment means."
+  ),
+  R(
+    "BR-DE-26",
+    "XRechnung",
+    "warning",
+    "header",
+    ["BT-3", "BG-3"],
+    "Corrected invoice without reference to the original",
+    "When the invoice type code is 384 (corrected invoice), the preceding invoice reference (BG-3) should be given at least once.",
+    "Add the number and date of the invoice you are correcting."
+  ),
+  R(
+    "BR-DE-27",
+    "XRechnung",
+    "warning",
+    "parties",
+    ["BT-42"],
+    "Seller telephone number looks wrong",
+    "The seller contact telephone number (BT-42) should contain at least three digits.",
+    "Enter a real telephone number, e.g. +49 30 1234567."
+  ),
+  R(
+    "BR-DE-28",
+    "XRechnung",
+    "warning",
+    "parties",
+    ["BT-43"],
+    "Seller email address looks wrong",
+    "The seller contact email address (BT-43) should contain exactly one @, with text on both sides and a domain with a dot.",
+    "Enter a complete address such as rechnung@firma.de, without spaces."
+  ),
+  R(
+    "BR-DE-30",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BG-19", "BT-90"],
+    "SEPA creditor ID missing for direct debit",
+    "When direct debit (BG-19) is used, the bank assigned creditor identifier (BT-90) must be given.",
+    "Add your SEPA creditor ID (Gläubiger-Identifikationsnummer, e.g. DE98ZZZ09999999999)."
+  ),
+  R(
+    "BR-DE-31",
+    "XRechnung",
+    "error",
+    "payment",
+    ["BG-19", "BT-91"],
+    "Debited account missing for direct debit",
+    "When direct debit (BG-19) is used, the debited account identifier (BT-91) must be given.",
+    "Add the buyer's IBAN from the direct debit mandate."
+  ),
+  R(
+    "BR-DE-TMP-32",
+    "XRechnung",
+    "info",
+    "header",
+    ["BT-72", "BG-14", "BG-26"],
+    "No delivery date or service period",
+    "An invoice should state when the goods were delivered or the service was performed: an actual delivery date (BT-72), an invoicing period (BG-14) or a period on every line (BG-26).",
+    "Add the delivery date or the service period, which German VAT law requires on an invoice anyway."
+  ),
+  R(
+    "IV-DE-01",
+    "InvoiceVerify",
+    "warning",
+    "header",
+    ["BT-10", "BT-49"],
+    "Leitweg-ID not valid",
+    "A Leitweg-ID has a coarse address (2–12 digits, starting 01–16 or 99), an optional fine address (up to 30 letters or digits) and two check digits (ISO/IEC 7064 MOD 97-10), separated by hyphens. This check follows the KoSIT Leitweg-ID format specification 2.0.2; it does not tell whether the authority uses the ID.",
+    "Copy the Leitweg-ID exactly from the order or the authority's letter; a single wrong digit makes the check digits fail."
   )
 ];
 var RULE_INDEX = Object.fromEntries(RULES.map((r) => [r.id, r]));
@@ -4200,6 +4817,12 @@ var UNIT_CODES = {
 var PEPPOL_CUSTOMIZATION_ID = "urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0";
 var XRECHNUNG_CUSTOMIZATION_PREFIX = "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0";
 var EN16931_ID = "urn:cen.eu:en16931:2017";
+var NLCIUS_CUSTOMIZATION_ID = "urn:cen.eu:en16931:2017#compliant#urn:fdc:nen.nl:nlcius:v1.0";
+var NLCIUS_GACCOUNT_SUFFIX = "#conformant#urn:fdc:nen.nl:gaccount:v1.0";
+function isNlciusId(customizationId) {
+  const id = customizationId?.trim();
+  return !!id && (id.includes("#compliant#urn:fdc:nen.nl:nlcius:v1.0") || id.includes(NLCIUS_GACCOUNT_SUFFIX));
+}
 var FACTURX_PROFILES = {
   "urn:factur-x.eu:1p0:minimum": { label: "Factur-X MINIMUM", en16931: false },
   "urn:factur-x.eu:1p0:basicwl": { label: "Factur-X BASIC WL", en16931: false },
@@ -4304,7 +4927,11 @@ function parseXml(input) {
   });
   parser.on("closetag", () => {
     const node = stack.pop();
-    if (node) node.text = node.text.trim();
+    if (node) {
+      const trimmed = node.text.trim();
+      if (trimmed !== node.text && trimmed !== "" && node.children.length === 0) node.raw = node.text;
+      node.text = trimmed;
+    }
   });
   try {
     parser.write(source).close();
@@ -4518,6 +5145,7 @@ function readParty(ctx, node) {
     L["identifier"] ??= ctx.loc(gid);
   }
   p.name = ctx.str(node, "Name", L, "name");
+  p.legalForm = ctx.str(node, "Description", L, "legalForm");
   const legal = at(node, "SpecifiedLegalOrganization");
   if (legal) {
     const lid = at(legal, "ID");
@@ -4652,6 +5280,8 @@ function readCii(root) {
       locs,
       "paymentTerms"
     ),
+    paymentTermsRaw: at(settlement, "SpecifiedTradePaymentTerms/Description")?.raw,
+    creditorId: text(settlement, "CreditorReferenceID"),
     notes: all(doc, "IncludedNote").map((n) => text(n, "Content") ?? ""),
     precedingInvoices: kids(settlement, "InvoiceReferencedDocument").map((r) => ({
       id: text(r, "IssuerAssignedID"),
@@ -4672,7 +5302,8 @@ function readCii(root) {
       id: text(d, "IssuerAssignedID"),
       description: text(d, "Name"),
       filename: at(d, "AttachmentBinaryObject")?.attrs["filename"],
-      mime: at(d, "AttachmentBinaryObject")?.attrs["mimeCode"]
+      mime: at(d, "AttachmentBinaryObject")?.attrs["mimeCode"],
+      loc: ctx.loc(d)
     })),
     amountCurrencies: [],
     decimals: [],
@@ -4733,6 +5364,10 @@ function readCii(root) {
       cardPan: ctx.str(pm, "ApplicableTradeSettlementFinancialCard/ID", pl, "cardPan"),
       mandateRef: mandate,
       debitedAccount: ctx.str(pm, "PayerPartyDebtorFinancialAccount/IBANID", pl, "debitedAccount"),
+      hasCreditTransfer: !!at(pm, "PayeePartyCreditorFinancialAccount"),
+      hasCard: !!at(pm, "ApplicableTradeSettlementFinancialCard"),
+      // CII has no element for BG-19; it exists when any of its three terms is given
+      hasDirectDebit: !!(mandate || text(settlement, "CreditorReferenceID") || text(pm, "PayerPartyDebtorFinancialAccount/IBANID")),
       locs: pl,
       loc: ctx.loc(pm)
     };
@@ -4959,6 +5594,7 @@ function readParty2(ctx, partyNode) {
       p.legalId = { id: text(cid) ?? "", scheme: cid.attrs["schemeID"] };
       L["legalId"] = ctx.loc(cid);
     }
+    p.legalForm = ctx.str(legal, "CompanyLegalForm", L, "legalForm");
   }
   const contact = at(partyNode, "Contact");
   if (contact) {
@@ -5018,6 +5654,7 @@ function readUbl(root) {
     despatchAdviceRef: ctx.str(root, "DespatchDocumentReference/ID", locs, "despatchAdviceRef"),
     accountingCost: ctx.str(root, "AccountingCost", locs, "accountingCost"),
     paymentTerms: ctx.str(root, "PaymentTerms/Note", locs, "paymentTerms"),
+    paymentTermsRaw: at(root, "PaymentTerms/Note")?.raw,
     notes: kids(root, "Note").map((n) => text(n) ?? ""),
     precedingInvoices: all(root, "BillingReference").map((br) => {
       const ref = at(br, "InvoiceDocumentReference") ?? at(br, "CreditNoteDocumentReference");
@@ -5037,7 +5674,8 @@ function readUbl(root) {
       id: text(d, "ID"),
       description: text(d, "DocumentDescription"),
       filename: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["filename"],
-      mime: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["mimeCode"]
+      mime: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["mimeCode"],
+      loc: ctx.loc(d)
     })),
     amountCurrencies: [],
     decimals: [],
@@ -5070,6 +5708,8 @@ function readUbl(root) {
     p.locs["name"] = p.locs["tradingName"] ?? p.loc;
     model.taxRepresentative = p;
   }
+  const sepa = (p) => p?.identifiers.find((i) => i.scheme?.toUpperCase() === "SEPA" && i.id)?.id;
+  model.creditorId = sepa(model.seller) ?? sepa(model.payee);
   const delivery = at(root, "Delivery");
   if (delivery) {
     const dl = {};
@@ -5094,6 +5734,9 @@ function readUbl(root) {
       cardPan: ctx.str(pm, "CardAccount/PrimaryAccountNumberID", pl, "cardPan"),
       mandateRef: ctx.str(pm, "PaymentMandate/ID", pl, "mandateRef"),
       debitedAccount: ctx.str(pm, "PaymentMandate/PayerFinancialAccount/ID", pl, "debitedAccount"),
+      hasCreditTransfer: !!at(pm, "PayeeFinancialAccount"),
+      hasCard: !!at(pm, "CardAccount"),
+      hasDirectDebit: !!at(pm, "PaymentMandate"),
       locs: pl,
       loc: ctx.loc(pm)
     };
@@ -5283,6 +5926,15 @@ function detectFormat(root) {
         peppol: false
       };
     }
+    if (isNlciusId(cid)) {
+      return {
+        ...base,
+        id: "si-ubl-2",
+        label: "SI-UBL 2.0 · NLCIUS (UBL 2.1)",
+        en16931: true,
+        peppol: false
+      };
+    }
     if (cid?.startsWith(EN16931_ID)) {
       return {
         ...base,
@@ -5312,6 +5964,15 @@ function detectFormat(root) {
         ...base,
         id: "xrechnung-cii",
         label: "XRechnung 3.0 (UN/CEFACT CII)",
+        en16931: true,
+        peppol: false
+      };
+    }
+    if (isNlciusId(cid)) {
+      return {
+        ...base,
+        id: "nlcius-cii",
+        label: "NLCIUS (UN/CEFACT CII)",
         en16931: true,
         peppol: false
       };
@@ -5716,9 +6377,50 @@ function isPeppol0208(id) {
   if (!/^[0-9]{10}$/.test(n)) return false;
   return 97 - Number(n.slice(0, 8)) % 97 === Number(n.slice(8));
 }
+var LEITWEG_COARSE_LENGTHS = /* @__PURE__ */ new Set([2, 3, 5, 8, 9, 12]);
+function checkLeitwegId(input) {
+  const id = input.trim();
+  const m = /^([0-9]+)(?:-([A-Za-z0-9]+))?-([0-9]{2})$/.exec(id);
+  if (!m || id.length > 46) return { ok: false, problem: "format" };
+  const coarse = m[1];
+  const fine = m[2] ?? "";
+  if (!LEITWEG_COARSE_LENGTHS.has(coarse.length)) return { ok: false, problem: "coarse" };
+  const state = Number(coarse.slice(0, 2));
+  if (!(state >= 1 && state <= 16 || state === 99)) return { ok: false, problem: "coarse" };
+  if (fine.length > 30) return { ok: false, problem: "fine" };
+  const numeric = (coarse + fine + m[3]).toUpperCase().split("").map((c) => /[A-Z]/.test(c) ? String(c.charCodeAt(0) - 55) : c).join("");
+  return mod97(numeric) === 1 ? { ok: true } : { ok: false, problem: "check-digit" };
+}
+function looksLikeLeitwegId(input) {
+  return /^[0-9]{2,12}(?:-[A-Za-z0-9]{1,40})?-[0-9]{2}$/.test(input.trim());
+}
 
 // src/engine/rules.ts
+var NL_PAYMENT_MEANS = /* @__PURE__ */ new Set(["30", "48", "49", "57", "58", "59"]);
+var NLCIUS_TYPE_CODES = /* @__PURE__ */ new Set(["380", "381", "384", "389"]);
+var isKvkOrOin = (id) => !!id && (id.scheme?.trim() === "0106" || id.scheme?.trim() === "0190") && id.id.trim() !== "";
+var isNL = (country) => country?.trim().toUpperCase() === "NL";
+function missingAddressParts(a) {
+  return [!a.line1 && "street name", !a.city && "city", !a.postalCode && "post code"].filter((x) => !!x);
+}
 var XRECHNUNG_TYPE_CODES = /* @__PURE__ */ new Set(["326", "380", "384", "389", "381", "875", "876", "877"]);
+var XRECHNUNG_CIUS_ID = "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0";
+var XRECHNUNG_SPEC_IDS = /* @__PURE__ */ new Set([
+  XRECHNUNG_CIUS_ID,
+  `${XRECHNUNG_CIUS_ID}#conformant#urn:xeinkauf.de:kosit:extension:xrechnung_3.0`,
+  `${XRECHNUNG_CIUS_ID}#compliant#urn:xeinkauf.de:kosit:xrechnung:cvd_0.9`
+]);
+var XR_SKONTO = /^#SKONTO#TAGE=[0-9]+#PROZENT=[0-9]+\.[0-9]{2}(#BASISBETRAG=-?[0-9]+\.[0-9]{2})?#$/;
+var XR_EMAIL = /^[^@\s]+@([^@.\s]+\.)+[^@.\s]+$/;
+var XR_PHONE = /([0-9].*){3,}/;
+var CREDIT_TRANSFER = /* @__PURE__ */ new Set(["30", "58"]);
+var CARD = /* @__PURE__ */ new Set(["48", "54", "55"]);
+var LEITWEG_PROBLEM = {
+  format: "is not built as coarse address, optional fine address and two check digits separated by hyphens",
+  coarse: "has a coarse address that is not 2, 3, 5, 8, 9 or 12 digits starting with 01–16 or 99",
+  fine: "has a fine address longer than 30 characters",
+  "check-digit": "has check digits that don't match (ISO/IEC 7064 MOD 97-10)"
+};
 var f2 = (n) => n === void 0 || Number.isNaN(n) ? "—" : round2(n).toFixed(2);
 var rateKey = (rate) => rate === void 0 ? "" : String(round2(rate));
 function runRules(m, fmt, opts) {
@@ -5786,12 +6488,14 @@ function runRules(m, fmt, opts) {
       `VAT accounting currency "${m.taxCurrency}" is not an ISO 4217 code.`,
       at2(m.locs, "taxCurrency")
     );
-  if (m.taxCurrency && T.taxAmountAccounting === void 0)
+  if (m.taxCurrency && T.taxAmountAccounting === void 0 && !m.taxTotals.some((t) => t.amount !== void 0 && t.currency?.trim() === m.taxCurrency?.trim()))
     emit(
       "BR-53",
       `Tax currency ${m.taxCurrency} is set, but no VAT total in that currency was found.`,
       at2(m.locs, "taxCurrency")
     );
+  for (const a of m.attachments)
+    if (!a.id) emit("BR-52", "A supporting document (BG-24) has no document reference (BT-122).", a.loc);
   if (m.taxPointDate && m.taxPointCode)
     emit(
       "BR-CO-03",
@@ -5922,6 +6626,8 @@ function runRules(m, fmt, opts) {
     const tr = m.taxRepresentative;
     if (!tr.name) emit("BR-18", "The tax representative has no name.", tr.loc);
     if (!tr.address) emit("BR-19", "The tax representative has no postal address.", tr.loc);
+    else if (!tr.address.country)
+      emit("BR-20", "The tax representative's postal address has no country code.", at2(tr.locs, "address", tr.loc));
     if (!tr.vatId) emit("BR-56", "The tax representative has no VAT identifier.", tr.loc);
   }
   if (m.delivery?.address && !m.delivery.address.country)
@@ -6468,7 +7174,7 @@ function runRules(m, fmt, opts) {
     const used = /* @__PURE__ */ new Map();
     const addUse = (category, rate, amount, loc) => {
       if (!category || !VAT_CATEGORIES[category]) return;
-      const key = `${category}|${rateKey(rate)}`;
+      const key = `${category}|${rateKey(rate ?? 0)}`;
       const cur = used.get(key) ?? { category, rate, taxable: 0, loc };
       cur.taxable = round2(cur.taxable + amount);
       used.set(key, cur);
@@ -6479,9 +7185,10 @@ function runRules(m, fmt, opts) {
       addUse(a.vatCategory, a.vatRate, -(a.amount ?? 0), a.loc ?? m.loc);
     for (const c of m.charges) addUse(c.vatCategory, c.vatRate, c.amount ?? 0, c.loc ?? m.loc);
     for (const [key, u] of used) {
-      const breakdown = m.vat.find((v) => `${v.category}|${rateKey(v.rate)}` === key);
+      const breakdown = m.vat.find((v) => `${v.category}|${rateKey(v.rate ?? 0)}` === key);
       const label = `${u.category}${u.rate !== void 0 ? ` ${u.rate}%` : ""}`;
       if (!breakdown) {
+        if (u.taxable === 0 && m.vat.some((v) => v.category === u.category)) continue;
         emit(
           u.category === "S" ? "BR-S-01" : "BR-VAT-01",
           `Category ${label} is used but has no VAT breakdown.`,
@@ -6536,44 +7243,287 @@ function runRules(m, fmt, opts) {
         at2(seller.locs, "vatId", buyer.locs["vatId"])
       );
   }
+  if (opts.peppol && m.syntax === "UBL" && isNL(m.seller.address?.country)) {
+    const s = m.seller;
+    const b = m.buyer;
+    const buyerNl = isNL(b.address?.country);
+    if (m.kind === "creditnote" && !m.precedingInvoices.some((p) => p.id))
+      emit("NL-R-001", "This credit note from a Dutch supplier doesn't reference the invoice it corrects (BT-25).", at2(m.locs, "typeCode"));
+    if (s.address) {
+      const miss = missingAddressParts(s.address);
+      if (miss.length) emit("NL-R-002", `The seller address has no ${miss.join(", ")}.`, at2(s.locs, "address", s.loc));
+    }
+    if (s.legalId && !isKvkOrOin(s.legalId))
+      emit("NL-R-003", `The seller legal ID "${s.legalId.id}" has scheme ${s.legalId.scheme ?? "none"}, not 0106 (KvK) or 0190 (OIN).`, at2(s.locs, "legalId", s.loc), {
+        expected: "schemeID 0106 (KvK) or 0190 (OIN)",
+        actual: s.legalId.scheme ?? "no schemeID"
+      });
+    if (buyerNl && b.address) {
+      const miss = missingAddressParts(b.address);
+      if (miss.length) emit("NL-R-004", `The Dutch buyer's address has no ${miss.join(", ")}.`, at2(b.locs, "address", b.loc));
+    }
+    if (buyerNl && b.legalId && !isKvkOrOin(b.legalId))
+      emit("NL-R-005", `The buyer legal ID "${b.legalId.id}" has scheme ${b.legalId.scheme ?? "none"}, not 0106 (KvK) or 0190 (OIN).`, at2(b.locs, "legalId", b.loc), {
+        expected: "schemeID 0106 (KvK) or 0190 (OIN)",
+        actual: b.legalId.scheme ?? "no schemeID"
+      });
+    const rep = m.taxRepresentative;
+    if (rep?.address && isNL(rep.address.country)) {
+      const miss = missingAddressParts(rep.address);
+      if (miss.length) emit("NL-R-006", `The Dutch tax representative's address has no ${miss.join(", ")}.`, at2(rep.locs, "address", rep.loc));
+    }
+    const due = m.totals.payable;
+    if (due !== void 0 && m.paymentMeans.length === 0 && (m.kind === "invoice" && due > 0 || m.kind === "creditnote" && due < 0))
+      emit("NL-R-007", `There is an amount due of ${f2(due)} but no payment instructions.`, tLoc("payable"));
+    if (buyerNl)
+      for (const pm of m.paymentMeans) {
+        const code = pm.code?.trim();
+        if (!code || !NL_PAYMENT_MEANS.has(code))
+          emit("NL-R-008", `Payment means code ${code ?? "(missing)"} is not allowed between Dutch parties.`, at2(pm.locs, "code", pm.loc), {
+            expected: "30, 48, 49, 57, 58 or 59",
+            actual: code
+          });
+      }
+    if (!m.orderRef)
+      for (const ln of m.lines.filter((l) => l.orderLineRef).slice(0, 25))
+        emit("NL-R-009", `Line ${ln.id ?? "?"} references order line ${ln.orderLineRef}, but the invoice has no order reference (BT-13).`, at2(ln.locs, "orderLineRef", ln.loc));
+  }
+  if (opts.nlcius) {
+    const s = m.seller;
+    const b = m.buyer;
+    const ubl = m.syntax === "UBL";
+    const nl = isNL(s.address?.country);
+    if (!isNlciusId(m.customizationId))
+      emit("SI-V20-INV-R000", `Specification identifier is ${m.customizationId ?? "missing"}, not SI-UBL 2.0 / NLCIUS.`, at2(m.locs, "customizationId"), {
+        expected: NLCIUS_CUSTOMIZATION_ID,
+        actual: m.customizationId
+      });
+    const tc = m.typeCode?.trim();
+    if (tc && (nl || !ubl)) {
+      if (!NLCIUS_TYPE_CODES.has(tc))
+        emit("BR-NL-7", `Type code ${tc} is not one of 380, 381, 384 or 389.`, at2(m.locs, "typeCode"), { expected: "380, 381, 384 or 389", actual: tc });
+      if (tc === "384" && !m.precedingInvoices.some((p) => p.id))
+        emit("BR-NL-9", "This corrected invoice (type 384) doesn't reference the invoice it corrects (BT-25).", at2(m.locs, "typeCode"));
+    }
+    if (ubl && nl && tc) {
+      if (tc === "381" && m.kind === "invoice")
+        emit("BR-NL-8", "Type code 381 (credit note) is sent as a UBL Invoice; it must be a UBL CreditNote.", at2(m.locs, "typeCode"), { expected: "<CreditNote>", actual: "<Invoice>" });
+      else if (tc !== "381" && m.kind === "creditnote")
+        emit("BR-NL-8", `A UBL CreditNote has type code ${tc}; credit notes use 381, codes 380, 384 and 389 the UBL Invoice.`, at2(m.locs, "typeCode"), { expected: "381", actual: tc });
+    }
+    if (!m.orderRef)
+      for (const ln of m.lines.filter((l) => l.orderLineRef).slice(0, 25))
+        emit("BR-NL-13", `Line ${ln.id ?? "?"} references order line ${ln.orderLineRef}, but the invoice has no order reference (BT-13).`, at2(ln.locs, "orderLineRef", ln.loc));
+    if (nl) {
+      if (s.loc && !isKvkOrOin(s.legalId))
+        emit(
+          "BR-NL-1",
+          s.legalId ? `The seller legal ID "${s.legalId.id}" has scheme ${s.legalId.scheme ?? "none"}, not 0106 (KvK) or 0190 (OIN).` : "The seller has no KvK or OIN number (BT-30).",
+          at2(s.locs, "legalId", s.loc),
+          { expected: "schemeID 0106 (KvK) or 0190 (OIN)", actual: s.legalId ? `${s.legalId.scheme ?? "no schemeID"} ${s.legalId.id}`.trim() : void 0 }
+        );
+      if (!m.buyerReference && !m.orderRef)
+        emit("BR-NL-2", "Neither a buyer reference (BT-10) nor a purchase order reference (BT-13) is given.", at2(m.locs, "buyerReference"));
+      if (s.address) {
+        const miss = missingAddressParts(s.address);
+        if (miss.length) emit("BR-NL-3", `The seller address has no ${miss.join(", ")}.`, at2(s.locs, "address", s.loc));
+      }
+      const buyerNl = !b.address?.country || isNL(b.address.country);
+      if (b.address && buyerNl) {
+        const miss = missingAddressParts(b.address);
+        if (miss.length) emit("BR-NL-4", `The Dutch buyer's address has no ${miss.join(", ")}.`, at2(b.locs, "address", b.loc));
+      }
+      const rep = m.taxRepresentative;
+      if (rep?.address && (!rep.address.country || isNL(rep.address.country))) {
+        const miss = missingAddressParts(rep.address);
+        if (miss.length) emit("BR-NL-5", `The Dutch tax representative's address has no ${miss.join(", ")}.`, at2(rep.locs, "address", rep.loc));
+      }
+      if (b.loc) {
+        if (isNL(b.address?.country) && !isKvkOrOin(b.legalId))
+          emit(
+            "BR-NL-10",
+            b.legalId ? `The buyer legal ID "${b.legalId.id}" has scheme ${b.legalId.scheme ?? "none"}, not 0106 (KvK) or 0190 (OIN).` : "The Dutch buyer has no KvK or OIN number (BT-47).",
+            at2(b.locs, "legalId", b.loc),
+            { expected: "schemeID 0106 (KvK) or 0190 (OIN)", actual: b.legalId ? `${b.legalId.scheme ?? "no schemeID"} ${b.legalId.id}`.trim() : void 0 }
+          );
+        else if (!isNL(b.address?.country) && b.legalId && !b.legalId.id.trim())
+          emit("BR-NL-10", "The buyer legal ID (BT-47) is empty.", at2(b.locs, "legalId", b.loc));
+      }
+      const due = m.totals.payable;
+      if ((!ubl || m.kind === "invoice") && due !== void 0 && due > 0 && m.paymentMeans.length === 0)
+        emit("BR-NL-11", `There is an amount due of ${f2(due)} but no payment instructions.`, tLoc("payable"));
+      for (const pm of m.paymentMeans) {
+        const code = pm.code?.trim();
+        if (!code || !NL_PAYMENT_MEANS.has(code))
+          emit("BR-NL-12", `Payment means code ${code ?? "(missing)"} is not one of 30, 48, 49, 57, 58 or 59.`, at2(pm.locs, "code", pm.loc), {
+            expected: "30, 48, 49, 57, 58 or 59",
+            actual: code
+          });
+        if ((code === "58" || code === "59") && pm.bic)
+          emit("BR-NL-31", `A BIC (${pm.bic}) is given for SEPA payment means ${code}.`, at2(pm.locs, "bic", pm.loc), { actual: pm.bic });
+        if (pm.text) emit("BR-NL-29", `Payment means text "${pm.text}" is given.`, at2(pm.locs, ubl ? "code" : "text", pm.loc), { actual: pm.text });
+        if (pm.accountName) emit("BR-NL-30", `Payment account name "${pm.accountName}" is given.`, at2(pm.locs, "accountName", pm.loc), { actual: pm.accountName });
+      }
+      if (m.taxCurrency) emit("BR-NL-19", `A VAT accounting currency (${m.taxCurrency}) is given.`, at2(m.locs, "taxCurrency"), { actual: m.taxCurrency });
+      if (m.taxPointDate || m.locs["taxPointDate"]) emit("BR-NL-20", "A VAT point date (BT-7) is given.", at2(m.locs, "taxPointDate"));
+      if (m.taxPointCode) emit("BR-NL-21", `A VAT point date code (${m.taxPointCode}) is given.`, at2(m.locs, "taxPointCode"), { actual: m.taxPointCode });
+      if (!ubl && m.profileId) emit("BR-NL-23", `A business process type (${m.profileId}) is given.`, at2(m.locs, "profileId"), { actual: m.profileId });
+      for (const p of m.precedingInvoices.filter((x) => x.date))
+        emit("BR-NL-24", `The preceding invoice ${p.id ?? ""} carries an issue date (${p.date}).`.replace("  ", " "), p.loc);
+      if (s.taxRegistrationId)
+        emit("BR-NL-25", `A tax registration number other than VAT (${s.taxRegistrationId}) is given.`, at2(s.locs, "taxRegistrationId", s.loc), { actual: s.taxRegistrationId });
+      if (s.legalForm) emit("BR-NL-26", `Additional legal information "${s.legalForm}" is given.`, at2(s.locs, "legalForm", s.loc), { actual: s.legalForm });
+      const addresses = [
+        ["seller", s.address, s.locs],
+        ["buyer", b.address, b.locs],
+        ["tax representative", m.taxRepresentative?.address, m.taxRepresentative?.locs ?? {}],
+        ["deliver-to", m.delivery?.address, m.delivery?.locs ?? {}]
+      ];
+      for (const [who, a, locs] of addresses) {
+        if (!a) continue;
+        if (a.line3) emit("BR-NL-27", `The ${who} address has a third address line ("${a.line3}").`, at2(locs, "address.line3", at2(locs, "address")), { actual: a.line3 });
+        if (a.subdivision) emit("BR-NL-28", `The ${who} address has a country subdivision ("${a.subdivision}").`, at2(locs, "address.subdivision", at2(locs, "address")), { actual: a.subdivision });
+      }
+      const acs = [
+        ...m.allowances.map((a) => ({ a, line: void 0 })),
+        ...m.charges.map((a) => ({ a, line: void 0 })),
+        ...m.lines.flatMap((l) => [...l.allowances, ...l.charges].map((a) => ({ a, line: l.id ?? "?" })))
+      ];
+      for (const { a, line } of acs) {
+        if (!a.reasonCode) continue;
+        const where = line ? ` on line ${line}` : "";
+        emit(a.isCharge ? "BR-NL-34" : "BR-NL-32", `${a.isCharge ? "Charge" : "Allowance"} reason code ${a.reasonCode} is given${where}.`, at2(a.locs, "reasonCode", a.loc), { actual: a.reasonCode });
+      }
+      for (const tt of m.taxTotals)
+        if (tt.currency && m.currency && tt.currency.trim() !== m.currency.trim())
+          emit("BR-NL-33", `A VAT total in ${tt.currency} is given next to the invoice currency ${m.currency}.`, tt.loc, { actual: tt.currency });
+      for (const v of m.vat)
+        if (v.exemptionCode) emit("BR-NL-35", `VAT exemption reason code ${v.exemptionCode} is given.`, at2(v.locs, "exemptionCode", v.loc), { actual: v.exemptionCode });
+    }
+    for (const loc of m.emptyElements.slice(0, 25)) emit("SI-UBL-2", `Element ${loc.xpath.split("/").pop()} is empty.`, loc);
+  }
   if (opts.xrechnung) {
     const s = m.seller;
     const b = m.buyer;
-    if (m.paymentMeans.length === 0 || !m.paymentMeans.some((p) => p.code))
-      emit("BR-DE-1", "Payment instructions (BG-16) are missing.");
-    if (!s.contact) emit("BR-DE-2", "The seller contact (BG-6) is missing.", s.loc);
-    if (!s.address?.city) emit("BR-DE-3", "The seller city (BT-37) is missing.", at2(s.locs, "address", s.loc));
-    if (!s.address?.postalCode)
-      emit("BR-DE-4", "The seller post code (BT-38) is missing.", at2(s.locs, "address", s.loc));
-    if (s.contact) {
-      if (!s.contact.name) emit("BR-DE-5", "The seller contact name (BT-41) is missing.", at2(s.locs, "contact", s.loc));
-      if (!s.contact.phone)
-        emit("BR-DE-6", "The seller contact telephone (BT-42) is missing.", at2(s.locs, "contact", s.loc));
-      if (!s.contact.email)
-        emit("BR-DE-7", "The seller contact email (BT-43) is missing.", at2(s.locs, "contact", s.loc));
-    }
-    if (!b.address?.city) emit("BR-DE-8", "The buyer city (BT-52) is missing.", at2(b.locs, "address", b.loc));
-    if (!b.address?.postalCode)
-      emit("BR-DE-9", "The buyer post code (BT-53) is missing.", at2(b.locs, "address", b.loc));
+    if (m.paymentMeans.length === 0) emit("BR-DE-1", "Payment instructions (BG-16) are missing.");
     if (!m.buyerReference)
       emit("BR-DE-15", "The buyer reference / Leitweg-ID (BT-10) is missing.", at2(m.locs, "buyerReference"));
+    else if (looksLikeLeitwegId(m.buyerReference)) {
+      const lw = checkLeitwegId(m.buyerReference);
+      if (!lw.ok)
+        emit("IV-DE-01", `Leitweg-ID "${m.buyerReference}" ${LEITWEG_PROBLEM[lw.problem]}.`, at2(m.locs, "buyerReference"), {
+          actual: m.buyerReference
+        });
+    }
+    if (b.endpoint?.scheme === "0204" && b.endpoint.id) {
+      const lw = checkLeitwegId(b.endpoint.id);
+      if (!lw.ok)
+        emit("IV-DE-01", `Buyer electronic address "${b.endpoint.id}" (scheme 0204) ${LEITWEG_PROBLEM[lw.problem]}.`, at2(b.locs, "endpoint", b.loc), {
+          actual: b.endpoint.id
+        });
+    }
     const cats = /* @__PURE__ */ new Set();
-    for (const v of m.vat) if (v.category) cats.add(v.category);
     for (const ln of m.lines) if (ln.vatCategory) cats.add(ln.vatCategory);
+    for (const ac of [...m.allowances, ...m.charges]) if (ac.vatCategory) cats.add(ac.vatCategory);
+    for (const v of m.vat) if (v.category) cats.add(v.category);
     const needsTaxId = [...cats].some((c) => ["S", "Z", "E", "AE", "K", "G", "L", "M"].includes(c));
-    if (needsTaxId && !s.vatId && !s.taxRegistrationId && !m.taxRepresentative?.vatId)
-      emit("BR-DE-16", "Neither the seller VAT number nor a tax number is given.", s.loc);
+    if (needsTaxId && !s.vatId && !s.taxRegistrationId && !m.taxRepresentative)
+      emit("BR-DE-16", "Neither the seller VAT number, a tax number nor a tax representative is given.", s.loc);
     if (m.typeCode && !XRECHNUNG_TYPE_CODES.has(m.typeCode))
       emit("BR-DE-17", `Type code ${m.typeCode} is not one of the codes XRechnung expects.`, at2(m.locs, "typeCode"), {
         actual: m.typeCode
       });
-    if (!m.customizationId?.includes("urn:xeinkauf.de:kosit:xrechnung_3"))
-      emit(
-        "BR-DE-21",
-        `Specification identifier is ${m.customizationId ?? "missing"}, not XRechnung 3.0.`,
-        at2(m.locs, "customizationId"),
-        { expected: "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0", actual: m.customizationId }
-      );
+    const terms = m.paymentTermsRaw ?? m.paymentTerms;
+    if (terms) {
+      const skonto = terms.split(/\r?\n/).filter((l) => l.trim().startsWith("#"));
+      const bad = skonto.find((l) => !XR_SKONTO.test(l.trim()));
+      if (bad)
+        emit("BR-DE-18", `Payment terms line "${bad.trim()}" doesn't follow the XRechnung Skonto syntax.`, at2(m.locs, "paymentTerms"), {
+          expected: "#SKONTO#TAGE=14#PROZENT=2.00#",
+          actual: bad.trim()
+        });
+      else if (skonto.length && !/^\s*\n/.test(terms.split(/#.+#/).pop() ?? ""))
+        emit("BR-DE-18", "The last Skonto entry in the payment terms is not followed by a line break.", at2(m.locs, "paymentTerms"));
+    }
+    if (!m.customizationId || !XRECHNUNG_SPEC_IDS.has(m.customizationId))
+      emit("BR-DE-21", `Specification identifier is ${m.customizationId ?? "missing"}, not XRechnung 3.0.`, at2(m.locs, "customizationId"), {
+        expected: XRECHNUNG_CIUS_ID,
+        actual: m.customizationId
+      });
+    const names = m.attachments.map((a) => a.filename).filter((n) => !!n);
+    const dup = names.find((n, i) => names.indexOf(n) !== i);
+    if (dup) emit("BR-DE-22", `Two attachments are both called "${dup}".`);
+    if (m.typeCode === "384" && m.precedingInvoices.length === 0)
+      emit("BR-DE-26", "A corrected invoice (type 384) should reference the invoice it corrects (BG-3).", at2(m.locs, "typeCode"));
+    if (!s.contact) emit("BR-DE-2", "The seller contact (BG-6) is missing.", s.loc);
+    else {
+      const cl = at2(s.locs, "contact", s.loc);
+      if (!s.contact.name) emit("BR-DE-5", "The seller contact name (BT-41) is missing.", cl);
+      if (!s.contact.phone) emit("BR-DE-6", "The seller contact telephone (BT-42) is missing.", cl);
+      else if (!XR_PHONE.test(s.contact.phone))
+        emit("BR-DE-27", `Seller telephone "${s.contact.phone}" has fewer than three digits.`, at2(s.locs, "contact.phone", cl), {
+          actual: s.contact.phone
+        });
+      if (!s.contact.email) emit("BR-DE-7", "The seller contact email (BT-43) is missing.", cl);
+      else if (!XR_EMAIL.test(s.contact.email.trim()))
+        emit("BR-DE-28", `Seller email "${s.contact.email}" is not a valid address.`, at2(s.locs, "contact.email", cl), {
+          actual: s.contact.email
+        });
+    }
+    if (s.address) {
+      const al = at2(s.locs, "address", s.loc);
+      if (!s.address.city) emit("BR-DE-3", "The seller city (BT-37) is missing.", al);
+      if (!s.address.postalCode) emit("BR-DE-4", "The seller post code (BT-38) is missing.", al);
+    }
+    if (b.address) {
+      const al = at2(b.locs, "address", b.loc);
+      if (!b.address.city) emit("BR-DE-8", "The buyer city (BT-52) is missing.", al);
+      if (!b.address.postalCode) emit("BR-DE-9", "The buyer post code (BT-53) is missing.", al);
+    }
+    const dlv = m.delivery;
+    if (dlv?.address) {
+      const al = at2(dlv.locs, "address", dlv.loc);
+      if (!dlv.address.city) emit("BR-DE-10", "The deliver-to city (BT-77) is missing.", al);
+      if (!dlv.address.postalCode) emit("BR-DE-11", "The deliver-to post code (BT-78) is missing.", al);
+    }
+    for (const pm of m.paymentMeans) {
+      const code = pm.code?.trim();
+      if (!code) continue;
+      const pl = pm.loc ?? m.loc;
+      if (CREDIT_TRANSFER.has(code)) {
+        if (code === "58" && !(pm.account && checkIban(pm.account)))
+          emit("BR-DE-19", `Payment account "${pm.account ?? "—"}" is not a valid IBAN for SEPA credit transfer (58).`, at2(pm.locs, "account", pl), {
+            actual: pm.account
+          });
+        if (!pm.hasCreditTransfer)
+          emit("BR-DE-23-a", `Payment means ${code} (credit transfer) has no credit transfer account (BG-17).`, pl);
+        if (pm.hasCard || pm.hasDirectDebit)
+          emit("BR-DE-23-b", `Payment means ${code} (credit transfer) also carries card or direct debit details.`, pl);
+      } else if (CARD.has(code)) {
+        if (!pm.hasCard) emit("BR-DE-24-a", `Payment means ${code} (card payment) has no card details (BG-18).`, pl);
+        if (pm.hasCreditTransfer || pm.hasDirectDebit)
+          emit("BR-DE-24-b", `Payment means ${code} (card payment) also carries an account or direct debit details.`, pl);
+      } else if (code === "59") {
+        if (!(pm.debitedAccount && checkIban(pm.debitedAccount)))
+          emit("BR-DE-20", `Debited account "${pm.debitedAccount ?? "—"}" is not a valid IBAN for SEPA direct debit (59).`, at2(pm.locs, "debitedAccount", pl), {
+            actual: pm.debitedAccount
+          });
+        if (!pm.hasDirectDebit) emit("BR-DE-25-a", "Payment means 59 (SEPA direct debit) has no direct debit details (BG-19).", pl);
+        if (pm.hasCreditTransfer || pm.hasCard)
+          emit("BR-DE-25-b", "Payment means 59 (SEPA direct debit) also carries a credit transfer account or card details.", pl);
+      }
+    }
+    if (m.paymentMeans.some((p) => p.hasDirectDebit)) {
+      if (!m.creditorId) emit("BR-DE-30", "Direct debit is used, but the SEPA creditor identifier (BT-90) is missing.");
+      if (!m.paymentMeans.some((p) => p.debitedAccount))
+        emit("BR-DE-31", "Direct debit is used, but the debited account (BT-91) is missing.");
+    }
+    for (const v of m.vat)
+      if (v.rate === void 0 && !m.typeErrors.some((t) => t.bt === "BT-119" && t.loc.line === v.locs["rate"]?.line))
+        emit("BR-DE-14", `The VAT breakdown for category ${v.category ?? "?"} has no rate (BT-119).`, v.loc);
+    const lineDates = m.lines.length > 0 && m.lines.every((l) => l.periodStart || l.periodEnd);
+    if (!m.delivery?.date && !m.hasPeriod && !lineDates)
+      emit("BR-DE-TMP-32", "No delivery date (BT-72), invoicing period (BG-14) or line periods (BG-26) are given.");
   }
   return out;
 }
@@ -6641,10 +7591,11 @@ function computeTotals(m) {
     lines
   };
 }
-function rulesApplicable(peppol, en16931, xrechnung) {
+function rulesApplicable(peppol, en16931, xrechnung, nlcius) {
   return RULES.filter((r) => {
     if (r.source === "Peppol") return peppol;
-    if (r.source === "XRechnung") return xrechnung;
+    if (r.source === "NLCIUS") return nlcius;
+    if (r.source === "XRechnung" || r.id.startsWith("IV-DE-")) return xrechnung;
     if (!en16931 && (r.section === "lines" || r.section === "vat")) return false;
     return true;
   }).length;
@@ -6722,40 +7673,41 @@ function validateInvoiceXml(xml, profile = "auto") {
     });
   }
   const model = format.syntax === "UBL" ? readUbl(root) : readCii(root);
-  const peppol = profile === "peppol" ? format.syntax === "UBL" : profile === "en16931" || profile === "xrechnung" ? false : format.peppol;
+  const peppol = profile === "peppol" ? format.syntax === "UBL" : profile === "en16931" || profile === "xrechnung" || profile === "nlcius" ? false : format.peppol;
   const xrechnung = profile === "xrechnung" || profile === "auto" && (format.id === "xrechnung-ubl" || format.id === "xrechnung-cii");
+  const nlcius = profile === "nlcius" || profile === "auto" && (format.id === "si-ubl-2" || format.id === "nlcius-cii");
   const en16931 = format.en16931;
-  const findings = runRules(model, format, { peppol, en16931, xrechnung });
+  const findings = runRules(model, format, { peppol, en16931, xrechnung, nlcius });
   const order = { error: 0, warning: 1, info: 2 };
   findings.sort((a, b) => order[a.severity] - order[b.severity] || (a.line ?? 0) - (b.line ?? 0));
   const { counts, sections } = summarize(findings);
   return finish({
     valid: counts.error === 0,
     format,
-    profileApplied: peppol ? "peppol" : xrechnung ? "xrechnung" : "en16931",
+    profileApplied: peppol ? "peppol" : xrechnung ? "xrechnung" : nlcius ? "nlcius" : "en16931",
     invoice: model,
     computed: computeTotals(model),
     findings,
     counts,
     sections,
-    rulesChecked: rulesApplicable(peppol, en16931, xrechnung)
+    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius)
   });
 }
 
 // src/version.ts
 var TOOL_NAME = "peppol-ubl-check";
-var VERSION = "1.0.1";
+var VERSION = "1.2.0";
 var SITE_URL = "https://peppol-invoice-compass.lovable.app";
 var VALIDATOR_URL = `${SITE_URL}/validate`;
 var TOOL_PAGE_URL = `${SITE_URL}/tools/peppol-github-action`;
 
 // src/check.ts
-var PROFILES = ["peppol", "auto", "en16931", "xrechnung"];
+var PROFILES = ["peppol", "auto", "en16931", "xrechnung", "nlcius"];
 var FAIL_ON = ["error", "warning", "never"];
 var NON_INVOICE = ["skip", "fail"];
 var INVOICE_ROOTS = ["Invoice", "CreditNote", "CrossIndustryInvoice"];
 function ruleCounts() {
-  const counts = { total: RULES.length, EN16931: 0, Peppol: 0, XRechnung: 0, InvoiceVerify: 0 };
+  const counts = { total: RULES.length, EN16931: 0, Peppol: 0, XRechnung: 0, NLCIUS: 0, InvoiceVerify: 0 };
   for (const r of RULES) counts[r.source]++;
   return counts;
 }
@@ -7094,7 +8046,7 @@ function headline(r) {
 }
 function coverageNote() {
   const c = ruleCounts();
-  return `Checked offline with InvoiceVerify's ${c.total} rules (${c.EN16931} EN 16931, ${c.Peppol} Peppol BIS Billing 3.0, ${c.XRechnung} XRechnung, ${c.InvoiceVerify} extra checks for tax IDs, IBANs and syntax): a partial version of the official Schematron rule sets, without XSD schema validation or PDF/A checks. Nothing was sent anywhere.`;
+  return `Checked offline with InvoiceVerify's ${c.total} rules (${c.EN16931} EN 16931, ${c.Peppol} Peppol BIS Billing 3.0, ${c.XRechnung} XRechnung, ${c.NLCIUS} SI-UBL 2.0, ${c.InvoiceVerify} extra checks for tax IDs, IBANs and syntax): a partial version of the official Schematron rule sets, without XSD schema validation or PDF/A checks. Nothing was sent anywhere.`;
 }
 var ANSI = { red: "\x1B[31m", yellow: "\x1B[33m", green: "\x1B[32m", dim: "\x1B[2m", bold: "\x1B[1m", reset: "\x1B[0m" };
 function textReport(r, options = {}) {
@@ -7139,6 +8091,7 @@ Options:
   -p, --profile <name>     peppol (default): Peppol BIS Billing 3.0 rules on every UBL file
                            auto: choose per file from its CustomizationID
                            en16931: EN 16931 rules only; xrechnung: EN 16931 + XRechnung
+                           nlcius: EN 16931 + Dutch SI-UBL 2.0 (NLCIUS)
       --fail-on <level>    error (default), warning or never: when to exit with code 1
       --non-invoice <how>  skip (default) or fail: XML files whose root element isn't
                            Invoice, CreditNote or CrossIndustryInvoice

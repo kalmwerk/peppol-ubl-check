@@ -30,6 +30,7 @@ Options:
   -p, --profile <name>     peppol (default): Peppol BIS Billing 3.0 rules on every UBL file
                            auto: choose per file from its CustomizationID
                            en16931: EN 16931 rules only; xrechnung: EN 16931 + XRechnung
+                           nlcius: EN 16931 + Dutch SI-UBL 2.0 (NLCIUS)
       --fail-on <level>    error (default), warning or never: when to exit with code 1
       --non-invoice <how>  skip (default) or fail: XML files whose root element isn't
                            Invoice, CreditNote or CrossIndustryInvoice

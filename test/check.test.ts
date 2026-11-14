@@ -8,8 +8,51 @@ const opts: CheckOptions = { cwd: FIXTURES, profile: "peppol", failOn: "error", 
 const ids = (path: string, o: Partial<CheckOptions> = {}) => checkFile(path, { ...opts, ...o }).findings.map((f) => f.ruleId);
 
 describe("the rule engine", () => {
-  it("has 153 rules: 101 EN 16931, 28 Peppol, 13 XRechnung, 11 extra checks", () => {
-    expect(ruleCounts()).toEqual({ total: 153, EN16931: 101, Peppol: 28, XRechnung: 13, InvoiceVerify: 11 });
+  it("has 214 rules: 103 EN 16931, 37 Peppol, 32 XRechnung, 30 NLCIUS, 12 extra checks", () => {
+    expect(ruleCounts()).toEqual({ total: 214, EN16931: 103, Peppol: 37, XRechnung: 32, NLCIUS: 30, InvoiceVerify: 12 });
+  });
+});
+
+describe("Dutch SI-UBL 2.0 test invoices", () => {
+  it("passes the valid SI-UBL 2.0 invoice with profile auto and nlcius", () => {
+    for (const profile of ["auto", "nlcius"] as const) {
+      const r = checkFile("nlcius/si-ubl-valid.xml", { ...opts, profile });
+      expect(r.status, profile).toBe("ok");
+      expect(r.profileApplied, profile).toBe("nlcius");
+      expect(r.findings, profile).toEqual([]);
+    }
+  });
+
+  it("finds the Dutch NLCIUS errors", () => {
+    expect(ids("nlcius/si-ubl-errors.xml", { profile: "auto" })).toEqual(
+      expect.arrayContaining(["BR-NL-1", "BR-NL-2", "BR-NL-4", "BR-NL-12"]),
+    );
+  });
+
+  it("reports the SI-UBL ID under the default peppol profile instead of checking less", () => {
+    expect(checkFile("nlcius/si-ubl-valid.xml", opts).status).toBe("errors");
+  });
+});
+
+describe("XRechnung test invoices", () => {
+  it("passes the valid XRechnung in UBL and CII with profile auto and xrechnung", () => {
+    for (const f of ["xrechnung/xrechnung-ubl-valid.xml", "xrechnung/xrechnung-cii-valid.xml"])
+      for (const profile of ["auto", "xrechnung"] as const) {
+        const r = checkFile(f, { ...opts, profile });
+        expect(r.status, `${f} ${profile}`).toBe("ok");
+        expect(r.findings, `${f} ${profile}`).toEqual([]);
+      }
+  });
+
+  it("finds the XRechnung errors in UBL and CII", () => {
+    expect(ids("xrechnung/xrechnung-ubl-errors.xml", { profile: "auto" })).toEqual(["BR-DE-15", "BR-DE-6", "BR-DE-18"]);
+    expect(ids("xrechnung/xrechnung-cii-errors.xml", { profile: "auto" })).toEqual(
+      expect.arrayContaining(["IV-DE-01", "BR-DE-7", "BR-DE-23-a", "BR-DE-19"]),
+    );
+  });
+
+  it("reports the XRechnung ID under the default peppol profile instead of checking less", () => {
+    expect(checkFile("xrechnung/xrechnung-ubl-valid.xml", opts).status).toBe("errors");
   });
 });
 
@@ -97,7 +140,7 @@ describe("checkFiles", () => {
     const r = checkFiles(all, opts);
     expect(r.totals).toEqual({ matched: 4, checked: 3, ok: 1, withWarnings: 1, withErrors: 1, skipped: 1, errors: 5, warnings: 1, info: 0 });
     expect(r.result).toBe("failed");
-    expect(r).toMatchObject({ tool: "peppol-ubl-check", rulesAvailable: 153, profile: "peppol", failOn: "error" });
+    expect(r).toMatchObject({ tool: "peppol-ubl-check", rulesAvailable: 214, profile: "peppol", failOn: "error" });
   });
 
   it("passes warnings unless fail-on is warning, and never fails with never", () => {

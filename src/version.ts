@@ -2,7 +2,7 @@
 // test/metadata.test.ts keeps VERSION equal to package.json and CHANGELOG.md.
 
 export const TOOL_NAME = "peppol-ubl-check";
-export const VERSION = "1.0.1";
+export const VERSION = "1.2.0";
 export const REPO = "kalmwerk/peppol-ubl-check";
 
 /** InvoiceVerify, the website this rule engine comes from. Only ever linked, never called. */

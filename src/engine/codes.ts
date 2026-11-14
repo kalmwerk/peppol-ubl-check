@@ -762,6 +762,19 @@ export const PEPPOL_PROFILE_ID = "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0";
 export const XRECHNUNG_CUSTOMIZATION_PREFIX =
   "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0";
 export const EN16931_ID = "urn:cen.eu:en16931:2017";
+/**
+ * SI-UBL 2.0 / NLCIUS, the Dutch CIUS (BT-24 starts with this). Published with the
+ * validation artefacts of the Dutch Peppol Authority (github.com/peppolautoriteit-nl/validation).
+ */
+export const NLCIUS_CUSTOMIZATION_ID = "urn:cen.eu:en16931:2017#compliant#urn:fdc:nen.nl:nlcius:v1.0";
+/** Suffix of the NLCIUS G-account extension (a second payment to a Dutch G-account). */
+export const NLCIUS_GACCOUNT_SUFFIX = "#conformant#urn:fdc:nen.nl:gaccount:v1.0";
+
+/** True when BT-24 marks the document as SI-UBL 2.0 / NLCIUS (or its G-account extension). */
+export function isNlciusId(customizationId: string | undefined): boolean {
+  const id = customizationId?.trim();
+  return !!id && (id.includes("#compliant#urn:fdc:nen.nl:nlcius:v1.0") || id.includes(NLCIUS_GACCOUNT_SUFFIX));
+}
 
 export const FACTURX_PROFILES: Record<string, { label: string; en16931: boolean }> = {
   "urn:factur-x.eu:1p0:minimum": { label: "Factur-X MINIMUM", en16931: false },

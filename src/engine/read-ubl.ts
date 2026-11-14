@@ -71,6 +71,7 @@ function readParty(ctx: ReadCtx, partyNode: XNode | null): Party {
       p.legalId = { id: text(cid) ?? "", scheme: cid.attrs["schemeID"] };
       L["legalId"] = ctx.loc(cid);
     }
+    p.legalForm = ctx.str(legal, "CompanyLegalForm", L, "legalForm");
   }
   const contact = at(partyNode, "Contact");
   if (contact) {
@@ -136,6 +137,7 @@ export function readUbl(root: XNode): InvoiceModel {
     despatchAdviceRef: ctx.str(root, "DespatchDocumentReference/ID", locs, "despatchAdviceRef"),
     accountingCost: ctx.str(root, "AccountingCost", locs, "accountingCost"),
     paymentTerms: ctx.str(root, "PaymentTerms/Note", locs, "paymentTerms"),
+    paymentTermsRaw: at(root, "PaymentTerms/Note")?.raw,
     notes: kids(root, "Note").map((n) => text(n) ?? ""),
     precedingInvoices: all(root, "BillingReference").map((br) => {
       const ref = at(br, "InvoiceDocumentReference") ?? at(br, "CreditNoteDocumentReference");
@@ -156,6 +158,7 @@ export function readUbl(root: XNode): InvoiceModel {
       description: text(d, "DocumentDescription"),
       filename: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["filename"],
       mime: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["mimeCode"],
+      loc: ctx.loc(d),
     })),
     amountCurrencies: [],
     decimals: [],
@@ -192,6 +195,11 @@ export function readUbl(root: XNode): InvoiceModel {
     model.taxRepresentative = p;
   }
 
+  // BT-90: the SEPA creditor ID is a seller (or payee) identifier with scheme "SEPA"
+  const sepa = (p: { identifiers: { id: string; scheme?: string }[] } | undefined) =>
+    p?.identifiers.find((i) => i.scheme?.toUpperCase() === "SEPA" && i.id)?.id;
+  model.creditorId = sepa(model.seller) ?? sepa(model.payee);
+
   const delivery = at(root, "Delivery");
   if (delivery) {
     const dl: LocMap = {};
@@ -217,6 +225,9 @@ export function readUbl(root: XNode): InvoiceModel {
       cardPan: ctx.str(pm, "CardAccount/PrimaryAccountNumberID", pl, "cardPan"),
       mandateRef: ctx.str(pm, "PaymentMandate/ID", pl, "mandateRef"),
       debitedAccount: ctx.str(pm, "PaymentMandate/PayerFinancialAccount/ID", pl, "debitedAccount"),
+      hasCreditTransfer: !!at(pm, "PayeeFinancialAccount"),
+      hasCard: !!at(pm, "CardAccount"),
+      hasDirectDebit: !!at(pm, "PaymentMandate"),
       locs: pl,
       loc: ctx.loc(pm),
     };

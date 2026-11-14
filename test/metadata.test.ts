@@ -52,8 +52,8 @@ describe("README", () => {
 
   it("states the rule count and what isn't covered", () => {
     const c = ruleCounts();
-    expect(readme).toContain(`**${c.total} rules:** ${c.EN16931} EN 16931 business rules, ${c.Peppol} Peppol BIS Billing 3.0 rules, ${c.XRechnung} XRechnung rules and ${c.InvoiceVerify} extra checks`);
-    expect(readme).toContain("partial version of the official EN 16931 and Peppol Schematron rule sets");
+    expect(readme).toContain(`**${c.total} rules:** ${c.EN16931} EN 16931 business rules, ${c.Peppol} Peppol BIS Billing 3.0 rules, ${c.XRechnung} XRechnung rules, ${c.NLCIUS} Dutch SI-UBL 2.0 (NLCIUS) rules and ${c.InvoiceVerify} extra checks`);
+    expect(readme).toContain("partial version of the official EN 16931, Peppol, XRechnung and SI-UBL 2.0 Schematron rule sets");
     expect(readme).toContain("no XSD schema validation");
     expect(readme).toContain("no PDF/A check");
     expect(readme).toContain(`${SITE_URL}/validate`);
