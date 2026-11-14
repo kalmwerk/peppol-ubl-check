@@ -453,3 +453,55 @@ export function isPeppol0208(id: string): boolean {
   if (!/^[0-9]{10}$/.test(n)) return false;
   return 97 - (Number(n.slice(0, 8)) % 97) === Number(n.slice(8));
 }
+
+/** Why a Leitweg-ID failed its check (Leitweg-ID Format-Spezifikation 2.0.2, KoSIT). */
+export type LeitwegProblem = "format" | "coarse" | "fine" | "check-digit";
+
+/** Lengths the coarse part can have: state 2, + district 1, + county 2, + municipality 3, 4 or 7. */
+const LEITWEG_COARSE_LENGTHS = new Set([2, 3, 5, 8, 9, 12]);
+
+/**
+ * Checks a German Leitweg-ID against the KoSIT format specification 2.0.2:
+ * coarse address (2–12 digits, starting 01–16 for a federal state or 99 for the
+ * federal government), optional fine address (up to 30 letters A–Z or digits),
+ * and two check digits computed with ISO/IEC 7064 MOD 97-10 over both parts
+ * without hyphens (letters A=10 … Z=35), separated by "-". Example from the
+ * specification: 04011000-1234512345-06.
+ */
+export function checkLeitwegId(input: string): { ok: true } | { ok: false; problem: LeitwegProblem } {
+  const id = input.trim();
+  const m = /^([0-9]+)(?:-([A-Za-z0-9]+))?-([0-9]{2})$/.exec(id);
+  if (!m || id.length > 46) return { ok: false, problem: "format" };
+  const coarse = m[1]!;
+  const fine = m[2] ?? "";
+  if (!LEITWEG_COARSE_LENGTHS.has(coarse.length)) return { ok: false, problem: "coarse" };
+  const state = Number(coarse.slice(0, 2));
+  if (!((state >= 1 && state <= 16) || state === 99)) return { ok: false, problem: "coarse" };
+  if (fine.length > 30) return { ok: false, problem: "fine" };
+  const numeric = (coarse + fine + m[3]!)
+    .toUpperCase()
+    .split("")
+    .map((c) => (/[A-Z]/.test(c) ? String(c.charCodeAt(0) - 55) : c))
+    .join("");
+  return mod97(numeric) === 1 ? { ok: true } : { ok: false, problem: "check-digit" };
+}
+
+/** The two check digits for a Leitweg-ID without them, e.g. "04011000-1234512345" → "06". */
+export function leitwegCheckDigits(withoutCheck: string): string {
+  const numeric = withoutCheck
+    .replace(/-/g, "")
+    .toUpperCase()
+    .split("")
+    .map((c) => (/[A-Z]/.test(c) ? String(c.charCodeAt(0) - 55) : c))
+    .join("");
+  return String(98 - mod97(`${numeric}00`)).padStart(2, "0");
+}
+
+/**
+ * Whether a buyer reference (BT-10) is written like a Leitweg-ID: digits, optionally a
+ * hyphen and letters/digits, then a hyphen and two digits. Order numbers such as
+ * "PO-4711" or "4500012345" don't qualify, so only intended Leitweg-IDs are checked.
+ */
+export function looksLikeLeitwegId(input: string): boolean {
+  return /^[0-9]{2,12}(?:-[A-Za-z0-9]{1,40})?-[0-9]{2}$/.test(input.trim());
+}

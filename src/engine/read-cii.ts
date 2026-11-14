@@ -61,6 +61,7 @@ function readParty(ctx: ReadCtx, node: XNode | null): Party {
     L["identifier"] ??= ctx.loc(gid);
   }
   p.name = ctx.str(node, "Name", L, "name");
+  p.legalForm = ctx.str(node, "Description", L, "legalForm");
   const legal = at(node, "SpecifiedLegalOrganization");
   if (legal) {
     const lid = at(legal, "ID");
@@ -199,6 +200,8 @@ export function readCii(root: XNode): InvoiceModel {
       locs,
       "paymentTerms",
     ),
+    paymentTermsRaw: at(settlement, "SpecifiedTradePaymentTerms/Description")?.raw,
+    creditorId: text(settlement, "CreditorReferenceID"),
     notes: all(doc, "IncludedNote").map((n) => text(n, "Content") ?? ""),
     precedingInvoices: kids(settlement, "InvoiceReferencedDocument").map((r) => ({
       id: text(r, "IssuerAssignedID"),
@@ -220,6 +223,7 @@ export function readCii(root: XNode): InvoiceModel {
       description: text(d, "Name"),
       filename: at(d, "AttachmentBinaryObject")?.attrs["filename"],
       mime: at(d, "AttachmentBinaryObject")?.attrs["mimeCode"],
+      loc: ctx.loc(d),
     })),
     amountCurrencies: [],
     decimals: [],
@@ -286,6 +290,10 @@ export function readCii(root: XNode): InvoiceModel {
       cardPan: ctx.str(pm, "ApplicableTradeSettlementFinancialCard/ID", pl, "cardPan"),
       mandateRef: mandate,
       debitedAccount: ctx.str(pm, "PayerPartyDebtorFinancialAccount/IBANID", pl, "debitedAccount"),
+      hasCreditTransfer: !!at(pm, "PayeePartyCreditorFinancialAccount"),
+      hasCard: !!at(pm, "ApplicableTradeSettlementFinancialCard"),
+      // CII has no element for BG-19; it exists when any of its three terms is given
+      hasDirectDebit: !!(mandate || text(settlement, "CreditorReferenceID") || text(pm, "PayerPartyDebtorFinancialAccount/IBANID")),
       locs: pl,
       loc: ctx.loc(pm),
     };

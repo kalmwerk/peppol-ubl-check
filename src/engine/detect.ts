@@ -1,6 +1,7 @@
 import {
   EN16931_ID,
   FACTURX_PROFILES,
+  isNlciusId,
   PEPPOL_CUSTOMIZATION_ID,
   XRECHNUNG_CUSTOMIZATION_PREFIX,
 } from "./codes";
@@ -12,6 +13,8 @@ export type FormatId =
   | "peppol-bis-3"
   | "xrechnung-ubl"
   | "xrechnung-cii"
+  | "si-ubl-2"
+  | "nlcius-cii"
   | "ubl-en16931"
   | "ubl-generic"
   | "factur-x"
@@ -64,6 +67,15 @@ export function detectFormat(root: XNode): FormatInfo {
         peppol: false,
       };
     }
+    if (isNlciusId(cid)) {
+      return {
+        ...base,
+        id: "si-ubl-2",
+        label: "SI-UBL 2.0 · NLCIUS (UBL 2.1)",
+        en16931: true,
+        peppol: false,
+      };
+    }
     if (cid?.startsWith(EN16931_ID)) {
       return {
         ...base,
@@ -93,6 +105,15 @@ export function detectFormat(root: XNode): FormatInfo {
         ...base,
         id: "xrechnung-cii",
         label: "XRechnung 3.0 (UN/CEFACT CII)",
+        en16931: true,
+        peppol: false,
+      };
+    }
+    if (isNlciusId(cid)) {
+      return {
+        ...base,
+        id: "nlcius-cii",
+        label: "NLCIUS (UN/CEFACT CII)",
         en16931: true,
         peppol: false,
       };
