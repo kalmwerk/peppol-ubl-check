@@ -7,7 +7,7 @@ import { validateInvoiceXml, type ValidationProfile, type ValidationReport } fro
 import { MAX_XML_BYTES } from "./engine/xml";
 import { SITE_URL, TOOL_NAME, VERSION } from "./version";
 
-export const PROFILES = ["peppol", "auto", "en16931", "xrechnung"] as const satisfies readonly ValidationProfile[];
+export const PROFILES = ["peppol", "auto", "en16931", "xrechnung", "nlcius"] as const satisfies readonly ValidationProfile[];
 export type Profile = (typeof PROFILES)[number];
 export const FAIL_ON = ["error", "warning", "never"] as const;
 export type FailOn = (typeof FAIL_ON)[number];
@@ -19,7 +19,7 @@ export const INVOICE_ROOTS = ["Invoice", "CreditNote", "CrossIndustryInvoice"] a
 
 /** Rules in the engine, by source; the README and website quote these numbers. */
 export function ruleCounts(): { total: number } & Record<RuleSource, number> {
-  const counts = { total: RULES.length, EN16931: 0, Peppol: 0, XRechnung: 0, InvoiceVerify: 0 };
+  const counts = { total: RULES.length, EN16931: 0, Peppol: 0, XRechnung: 0, NLCIUS: 0, InvoiceVerify: 0 };
   for (const r of RULES) counts[r.source]++;
   return counts;
 }
@@ -55,7 +55,7 @@ export interface FileResult {
   format?: string;
   formatId?: string;
   document?: string;
-  /** Rule set applied: peppol, en16931, xrechnung or none */
+  /** Rule set applied: peppol, en16931, xrechnung, nlcius or none */
   profileApplied?: string;
   invoiceNumber?: string;
   rulesChecked: number;

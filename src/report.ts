@@ -46,7 +46,7 @@ export function coverageNote(): string {
   const c = ruleCounts();
   return (
     `Checked offline with InvoiceVerify's ${c.total} rules (${c.EN16931} EN 16931, ${c.Peppol} Peppol BIS Billing 3.0, ` +
-    `${c.XRechnung} XRechnung, ${c.InvoiceVerify} extra checks for tax IDs, IBANs and syntax): a partial version of the official ` +
+    `${c.XRechnung} XRechnung, ${c.NLCIUS} SI-UBL 2.0, ${c.InvoiceVerify} extra checks for tax IDs, IBANs and syntax): a partial version of the official ` +
     "Schematron rule sets, without XSD schema validation or PDF/A checks. Nothing was sent anywhere."
   );
 }
