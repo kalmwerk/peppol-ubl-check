@@ -1,5 +1,5 @@
 name: Peppol UBL check by InvoiceVerify
-description: Check UBL and Peppol BIS Billing 3.0 e-invoices offline with 153 EN 16931 and Peppol rules, with a fix for each error.
+description: Check UBL / Peppol BIS 3.0 e-invoices offline with 214 EN 16931, Peppol, XRechnung and SI-UBL rules, with a fix per error.
 author: Kalmwerk
 branding:
   icon: check-circle
@@ -15,7 +15,7 @@ inputs:
     required: false
     default: ""
   profile:
-    description: '"peppol" checks every UBL file against Peppol BIS Billing 3.0 and EN 16931, so a wrong CustomizationID is reported. "auto" picks the rule set from each file''s CustomizationID; "en16931" and "xrechnung" force those.'
+    description: '"peppol" checks every UBL file against Peppol BIS Billing 3.0 and EN 16931, so a wrong CustomizationID is reported. "auto" picks the rule set from each file''s CustomizationID; "en16931", "xrechnung" and "nlcius" (Dutch SI-UBL 2.0) force those.'
     required: false
     default: peppol
   fail-on:
