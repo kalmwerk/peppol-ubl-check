@@ -19,13 +19,13 @@ describe("job summary", () => {
     expect(md).toContain(
       "| ❌ | [BR-CO-17](https://peppol-invoice-compass.lovable.app/rules/br-co-17) | 91 | **VAT amount does not match rate.** 1960.00 × 21% = 411.60, but the VAT amount is 392.00. | Calculate VAT per category on the taxable total (not per line) and round once to 2 decimals. |",
     );
-    expect(md).toContain("Invoice **2026/0918** · Peppol BIS Billing 3.0 (UBL 2.1) · 140 rules checked");
+    expect(md).toContain("Invoice **2026/0918** · Peppol BIS Billing 3.0 (UBL 2.1) · 151 rules checked");
   });
 
   it("lists skipped files and says honestly what wasn't checked", () => {
     expect(md).toContain("1 file skipped: not an invoice");
     expect(md).toContain("`other/pom.xml`: Not an invoice: the root element is &lt;project&gt;");
-    expect(md).toContain("153 rules (101 EN 16931, 28 Peppol BIS Billing 3.0, 13 XRechnung, 11 extra checks");
+    expect(md).toContain("214 rules (103 EN 16931, 37 Peppol BIS Billing 3.0, 32 XRechnung, 30 SI-UBL 2.0, 12 extra checks");
     expect(md).toMatch(/partial version of the official\s+Schematron/);
     expect(md).toContain("without XSD schema validation or PDF/A checks. Nothing was sent anywhere.");
     expect(md).toContain("[InvoiceVerify validator](https://peppol-invoice-compass.lovable.app/validate)");
@@ -81,7 +81,7 @@ describe("console report", () => {
 
 describe("coverage note", () => {
   it("adds up to the engine's rule count", () => {
-    const n = coverageNote().match(/(\d+) EN 16931, (\d+) Peppol BIS Billing 3\.0, (\d+) XRechnung, (\d+) extra/)!;
+    const n = coverageNote().match(/(\d+) EN 16931, (\d+) Peppol BIS Billing 3\.0, (\d+) XRechnung, (\d+) SI-UBL 2\.0, (\d+) extra/)!;
     const total = Number(coverageNote().match(/InvoiceVerify's (\d+) rules/)![1]);
     expect(n.slice(1).map(Number).reduce((a, b) => a + b, 0)).toBe(total);
     expect((mixed as CheckResult).rulesAvailable).toBe(total);

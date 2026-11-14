@@ -77,7 +77,7 @@ describe("the Action (dist/index.js)", () => {
   it("fails clearly on a wrong input value", () => {
     const r = runAction({ profile: "ubl" }, repo);
     expect(r.code).toBe(1);
-    expect(r.stdout).toContain('::error::Input "profile" must be one of peppol, auto, en16931, xrechnung, not "ubl".');
+    expect(r.stdout).toContain('::error::Input "profile" must be one of peppol, auto, en16931, xrechnung, nlcius, not "ubl".');
   });
 
   it("writes no summary when summary is false", () => {

@@ -42,7 +42,7 @@ describe("the command-line tool (dist/cli.js)", () => {
   });
 
   it("exits 2 on usage errors and when no invoices are found", () => {
-    expect(cli(["--profile", "ubl"]).stderr).toContain("--profile must be one of peppol, auto, en16931, xrechnung");
+    expect(cli(["--profile", "ubl"]).stderr).toContain("--profile must be one of peppol, auto, en16931, xrechnung, nlcius");
     expect(cli(["--profile", "ubl"]).code).toBe(2);
     expect(cli(["--wat"]).code).toBe(2);
     const none = cli(["other"]);
