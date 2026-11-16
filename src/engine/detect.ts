@@ -9,6 +9,11 @@ import { CII_NS } from "./read-cii";
 import { UBL_CREDITNOTE_NS, UBL_INVOICE_NS } from "./read-ubl";
 import { text, at, type XNode } from "./xml";
 
+/** Part of every Peppol BIS billing identifier (BT-24 and BT-23). */
+const PEPPOL_BILLING_MARK = "urn:fdc:peppol.eu:2017:poacc:billing:";
+/** Part of every XRechnung specification identifier, whatever the version. */
+const XRECHNUNG_MARK = "urn:xeinkauf.de:kosit:xrechnung_";
+
 export type FormatId =
   | "peppol-bis-3"
   | "xrechnung-ubl"
@@ -49,7 +54,9 @@ export function detectFormat(root: XNode): FormatInfo {
       customizationId: cid,
       rootNamespace: ns,
     } as const;
-    if (cid === PEPPOL_CUSTOMIZATION_ID || cid?.startsWith(PEPPOL_CUSTOMIZATION_ID)) {
+    // A Peppol-looking but malformed ID (e.g. the ProfileID pasted into CustomizationID) is still
+    // checked as Peppol, so PEPPOL-EN16931-R004 explains it, as a Peppol access point would.
+    if (cid === PEPPOL_CUSTOMIZATION_ID || cid?.startsWith(PEPPOL_CUSTOMIZATION_ID) || cid?.includes(PEPPOL_BILLING_MARK)) {
       return {
         ...base,
         id: "peppol-bis-3",
@@ -58,11 +65,12 @@ export function detectFormat(root: XNode): FormatInfo {
         peppol: true,
       };
     }
-    if (cid?.startsWith(XRECHNUNG_CUSTOMIZATION_PREFIX)) {
+    // Older XRechnung versions are still checked as XRechnung, so BR-DE-21 names the version to use
+    if (cid?.startsWith(XRECHNUNG_CUSTOMIZATION_PREFIX) || cid?.includes(XRECHNUNG_MARK)) {
       return {
         ...base,
         id: "xrechnung-ubl",
-        label: "XRechnung 3.0 (UBL 2.1)",
+        label: cid.startsWith(XRECHNUNG_CUSTOMIZATION_PREFIX) ? "XRechnung 3.0 (UBL 2.1)" : "XRechnung, older version (UBL 2.1)",
         en16931: true,
         peppol: false,
       };

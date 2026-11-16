@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-11-16
+
+Official code lists: units, MIME types, legal-ID and endpoint schemes, business processes.
+
+### Added
+- BR-CL-23: a unit code (BT-130, BT-150) that is not on the full UN/ECE Recommendation 20/21 list of the CEN validation artefacts 1.3.17 is an error.
+- BR-CL-24 and PEPPOL-EN16931-CL001: the MIME code of an embedded attachment must be one of the six codes EN 16931 and Peppol allow (PDF, PNG, JPEG, CSV, XLSX, ODS).
+- BR-CL-11: the schemeID of a legal registration number must be an ISO/IEC 6523 ICD code.
+- PEPPOL-EN16931-CL008: Peppol's own, shorter list of electronic address schemes (Peppol BIS Billing 3.0.22); `EM` (e-mail) and other schemes EN 16931 still accepts are rejected in Peppol.
+- PEPPOL-EN16931-P0112: invoice type codes 326, 384 and 389 only between two German parties (384 also between two Slovak parties).
+- BR-E-02 and BR-Z-02: exempt and zero-rated lines need a seller VAT number, tax registration number or tax representative.
+
+### Changed
+- PEPPOL-EN16931-R007 accepts exactly the four business processes Peppol BIS Billing 3.0.22 approves (billing 01, billing with response and the two French reform processes) instead of any `billing:NN:1.0`.
+- PEPPOL-EN16931-R004 also flags a CustomizationID with an empty segment (`::`), and files whose CustomizationID merely contains the Peppol billing identifier are checked as Peppol, so R004 explains them.
+- Peppol invoice and credit-note type codes follow Peppol BIS Billing 3.0.22 (P0100/P0101): 326 and 384 are invoice codes, 261, 262, 296, 308, 420 and 458 are no longer credit-note codes.
+- BR-CO-09 compares the VAT prefix case-sensitively and accepts EL, XI and 1A besides ISO country codes.
+- Files that declare an older XRechnung version are checked as XRechnung, so BR-DE-21 names the version to use.
+- 222 rules in total (was 214).
+
 ## [1.2.0] - 2026-11-14
 
 Netherlands: the Dutch SI-UBL 2.0 (NLCIUS) rules.
