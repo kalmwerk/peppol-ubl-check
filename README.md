@@ -4,13 +4,13 @@ A free GitHub Action and command-line tool that checks the UBL / Peppol BIS Bill
 
 It runs entirely offline: no API key, no account, and nothing is sent anywhere. The rules are the same engine that runs the [InvoiceVerify validator](https://peppol-invoice-compass.lovable.app/validate), copied into this repository.
 
-- **214 rules:** 103 EN 16931 business rules, 37 Peppol BIS Billing 3.0 rules, 32 XRechnung rules, 30 Dutch SI-UBL 2.0 (NLCIUS) rules and 12 extra checks (syntax, VAT number, Belgian enterprise number and German Leitweg-ID check digits, IBAN, dates).
+- **222 rules:** 108 EN 16931 business rules, 40 Peppol BIS Billing 3.0 rules, 32 XRechnung rules, 30 Dutch SI-UBL 2.0 (NLCIUS) rules and 12 extra checks (syntax, VAT number, Belgian enterprise number and German Leitweg-ID check digits, IBAN, dates).
 - **Job summary** with a table per invoice: rule ID (linked to its explanation), line, what's wrong and how to fix it.
 - **Annotations** on the file and line, so findings show up in pull requests.
 - **Optional JSON report** for your own tooling or an artifact.
 - **No dependencies at run time.** `dist/` is one JavaScript file per entry point, built from `src/` and checked in CI.
 
-> **What it does not do.** The 214 rules are a partial version of the official EN 16931, Peppol, XRechnung and SI-UBL 2.0 Schematron rule sets, not all of them. There is no XSD schema validation (element order and unknown elements are not checked) and no PDF/A check: it reads XML files only, not Factur-X / ZUGFeRD PDFs. A pass is a strong signal, not a guarantee; your access point still validates every invoice against the official rules before sending it. See [What it checks](#what-it-checks).
+> **What it does not do.** The 222 rules are a partial version of the official EN 16931, Peppol, XRechnung and SI-UBL 2.0 Schematron rule sets, not all of them. There is no XSD schema validation (element order and unknown elements are not checked) and no PDF/A check: it reads XML files only, not Factur-X / ZUGFeRD PDFs. A pass is a strong signal, not a guarantee; your access point still validates every invoice against the official rules before sending it. See [What it checks](#what-it-checks).
 
 ## Quick start
 
@@ -131,8 +131,8 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 ```json
 {
   "tool": "peppol-ubl-check",
-  "version": "1.2.0",
-  "rulesAvailable": 214,
+  "version": "1.3.0",
+  "rulesAvailable": 222,
   "profile": "peppol",
   "failOn": "error",
   "result": "failed",
@@ -146,7 +146,7 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
       "document": "Invoice",
       "profileApplied": "peppol",
       "invoiceNumber": "2026/0918",
-      "rulesChecked": 151,
+      "rulesChecked": 159,
       "counts": { "error": 5, "warning": 0, "info": 0 },
       "findings": [
         {
@@ -171,7 +171,7 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 }
 ```
 
-`status` is `ok`, `warnings`, `errors` or `skipped` (with a `skipped` reason). `rulesChecked` is the part of the 214 rules that applies to that file's format and profile.
+`status` is `ok`, `warnings`, `errors` or `skipped` (with a `skipped` reason). `rulesChecked` is the part of the 222 rules that applies to that file's format and profile.
 
 ## What it checks
 
