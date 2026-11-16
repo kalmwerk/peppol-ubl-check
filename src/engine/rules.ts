@@ -1,7 +1,9 @@
 import {
+  ATTACHMENT_MIME_CODES,
   CREDIT_TRANSFER_CODES,
   DIRECT_DEBIT_CODES,
   EAS_CODES,
+  ICD_CODES,
   INVOICE_TYPE_CODES,
   isNlciusId,
   ISO_3166,
@@ -10,7 +12,11 @@ import {
   PAYMENT_MEANS,
   PEPPOL_CREDIT_NOTE_TYPE_CODES,
   PEPPOL_CUSTOMIZATION_ID,
+  PEPPOL_EAS_CODES,
   PEPPOL_INVOICE_TYPE_CODES,
+  PEPPOL_PROFILE_ID,
+  PEPPOL_PROFILE_IDS,
+  REC20_UNIT_CODES,
   UNIT_CODES,
   VAT_CATEGORIES,
 } from "./codes";
@@ -97,6 +103,9 @@ const LEITWEG_PROBLEM: Record<LeitwegProblem, string> = {
 
 const f2 = (n: number | undefined) =>
   n === undefined || Number.isNaN(n) ? "—" : round2(n).toFixed(2);
+
+/** VAT prefixes BR-CO-09 accepts besides ISO 3166-1 alpha-2 country codes. */
+const VAT_PREFIX_EXTRAS = new Set(["EL", "XI", "1A"]);
 
 const rateKey = (rate: number | undefined) => (rate === undefined ? "" : String(round2(rate)));
 
@@ -186,8 +195,15 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       `Tax currency ${m.taxCurrency} is set, but no VAT total in that currency was found.`,
       at(m.locs, "taxCurrency"),
     );
-  for (const a of m.attachments)
+  for (const a of m.attachments) {
     if (!a.id) emit("BR-52", "A supporting document (BG-24) has no document reference (BT-122).", a.loc);
+    // BR-CL-24 (EN 16931) and PEPPOL-EN16931-CL001 check the same six MIME codes
+    if (a.mime !== undefined && !ATTACHMENT_MIME_CODES.has(a.mime.trim())) {
+      const what = `Attachment ${a.filename ? `"${a.filename}" ` : ""}has mimeCode "${a.mime}", which is not an allowed MIME code.`;
+      emit("BR-CL-24", what, a.loc, { actual: a.mime, expected: "application/pdf" });
+      if (opts.peppol) emit("PEPPOL-EN16931-CL001", what, a.loc, { actual: a.mime, expected: "application/pdf" });
+    }
+  }
   if (m.taxPointDate && m.taxPointCode)
     emit(
       "BR-CO-03",
@@ -224,17 +240,21 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
 
   if (opts.peppol) {
     if (!m.profileId) emit("PEPPOL-EN16931-R001", "cbc:ProfileID (business process) is missing.");
-    else if (!/^urn:fdc:peppol\.eu:2017:poacc:billing:\d{2}:1\.0$/.test(m.profileId))
+    // Peppol BIS 3.0.22 approves a fixed list of business processes, not a pattern
+    else if (!PEPPOL_PROFILE_IDS.has(m.profileId.trim()))
       emit(
         "PEPPOL-EN16931-R007",
-        `ProfileID "${m.profileId}" does not follow the Peppol format.`,
+        `ProfileID "${m.profileId}" is not an approved Peppol business process.`,
         at(m.locs, "profileId"),
         {
           actual: m.profileId,
-          expected: "urn:fdc:peppol.eu:2017:poacc:billing:01:1.0",
+          expected: PEPPOL_PROFILE_ID,
         },
       );
-    if (m.customizationId && !m.customizationId.startsWith(PEPPOL_CUSTOMIZATION_ID))
+    if (
+      m.customizationId &&
+      (!m.customizationId.startsWith(PEPPOL_CUSTOMIZATION_ID) || m.customizationId.includes("::"))
+    )
       emit(
         "PEPPOL-EN16931-R004",
         `CustomizationID is "${m.customizationId}".`,
@@ -279,6 +299,25 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
           `Credit note type code ${m.typeCode} is not allowed in Peppol BIS 3.`,
           at(m.locs, "typeCode"),
         );
+      // P0112: 326 and 389 only between two German parties; 384 also between two Slovak ones.
+      // "German" reads the postal address only; "Slovak" the VAT prefix first (Peppol BIS 3.0.22).
+      if (m.kind === "invoice" && m.syntax === "UBL" && ["326", "384", "389"].includes(m.typeCode)) {
+        const addressCountry = (p: Party | undefined) => p?.address?.country?.trim().toUpperCase();
+        const vatCountry = (p: Party | undefined) => (p?.vatId ? p.vatId.trim().slice(0, 2).toUpperCase() : undefined);
+        const bothGerman = addressCountry(m.seller) === "DE" && addressCountry(m.buyer) === "DE";
+        const sellerCountry = vatCountry(m.seller) ?? vatCountry(m.taxRepresentative) ?? addressCountry(m.seller);
+        const buyerCountry = vatCountry(m.buyer) ?? addressCountry(m.buyer);
+        const bothSlovak = sellerCountry === "SK" && buyerCountry === "SK";
+        if (!bothGerman && !(m.typeCode === "384" && bothSlovak))
+          emit(
+            "PEPPOL-EN16931-P0112",
+            m.typeCode === "384"
+              ? "Invoice type code 384 (corrected invoice) is only allowed between two German or two Slovak parties."
+              : `Invoice type code ${m.typeCode} is only allowed when seller and buyer are both in Germany.`,
+            at(m.locs, "typeCode"),
+            { actual: m.typeCode, expected: "380" },
+          );
+      }
     }
     const withSub = m.taxTotals.filter((t) => t.hasSubtotals);
     if (withSub.length > 1)
@@ -400,6 +439,29 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       emit("IV-BE-01", `${who} enterprise number "${p.endpoint.id}" fails the mod-97 check.`, loc, {
         actual: p.endpoint.id,
       });
+    // Peppol checks its own, shorter list as well (both rules can fire on one EndpointID)
+    if (opts.peppol && p.endpoint.scheme && !PEPPOL_EAS_CODES.has(p.endpoint.scheme.trim()))
+      emit(
+        "PEPPOL-EN16931-CL008",
+        `${who} endpoint scheme "${p.endpoint.scheme}" is not an electronic address scheme Peppol accepts.`,
+        loc,
+        { actual: p.endpoint.scheme, expected: "0208, 9925, 0088 …" },
+      );
+  }
+  // BR-CL-11: the scheme of a legal registration number (any PartyLegalEntity/CompanyID) is an ISO 6523 ICD
+  for (const [p, who] of [
+    [seller, "Seller"],
+    [buyer, "Buyer"],
+    [m.payee, "Payee"],
+  ] as const) {
+    const scheme = p?.legalId?.scheme?.trim();
+    if (p && scheme !== undefined && !ICD_CODES.has(scheme))
+      emit(
+        "BR-CL-11",
+        `${who} legal registration number "${p.legalId!.id}" has schemeID "${scheme}", which is not an ISO 6523 ICD code.`,
+        at(p.locs, "legalId", p.loc),
+        { actual: scheme, expected: "0208, 0106, 0002 …" },
+      );
   }
   for (const [p, who] of [
     [seller, "Seller"],
@@ -440,8 +502,10 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
   for (const [p, who, bt] of vatParties) {
     if (!p?.vatId) continue;
     const loc = at(p.locs, "vatId", p.loc);
-    const prefix = p.vatId.slice(0, 2).toUpperCase();
-    if (!/^[A-Z]{2}$/.test(prefix) || (!ISO_3166[prefix] && prefix !== "EL")) {
+    // BR-CO-09 compares the first two characters exactly (lowercase "be" fails), against
+    // ISO 3166-1 alpha-2 plus EL (Greece), XI (Northern Ireland) and 1A, as CEN 1.3.16 lists them
+    const prefix = p.vatId.slice(0, 2);
+    if (!/^[A-Z1][A-Z]$/.test(prefix) || (!ISO_3166[prefix] && !VAT_PREFIX_EXTRAS.has(prefix))) {
       emit(
         "BR-CO-09",
         `${who} VAT identifier "${p.vatId}" (${bt}) does not start with a country prefix.`,
@@ -622,7 +686,16 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         emit("BR-22", `${label} has no invoiced quantity.`, ln.loc);
       if (ln.locs["quantity"] && !ln.unitCode)
         emit("BR-23", `${label} quantity has no unit code.`, L("quantity"));
-      if (ln.unitCode && !UNIT_CODES[ln.unitCode] && !unitWarned.has(ln.unitCode)) {
+      if (ln.baseQuantityUnit && !REC20_UNIT_CODES.has(ln.baseQuantityUnit.trim()))
+        emit("BR-CL-23", `${label} base quantity unit "${ln.baseQuantityUnit}" is not a UN/ECE Recommendation 20 or 21 code.`, L("baseQuantity"), {
+          actual: ln.baseQuantityUnit,
+        });
+      if (ln.unitCode && !REC20_UNIT_CODES.has(ln.unitCode.trim()))
+        emit("BR-CL-23", `${label} unit code "${ln.unitCode}" is not a UN/ECE Recommendation 20 or 21 code.`, L("unitCode"), {
+          actual: ln.unitCode,
+          expected: "C62, HUR, KGM …",
+        });
+      else if (ln.unitCode && !UNIT_CODES[ln.unitCode] && !unitWarned.has(ln.unitCode)) {
         unitWarned.add(ln.unitCode);
         emit(
           "IV-UNIT-01",
@@ -993,6 +1066,20 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       emit(
         "BR-S-02",
         "Standard-rated items require the seller VAT number or tax registration number.",
+        seller.loc,
+      );
+    // BR-E-02 / BR-Z-02 look at the invoice lines only (BT-151), as the CEN Schematron does
+    const lineCats = new Set(m.lines.map((l) => l.vatCategory));
+    if (lineCats.has("E") && !sellerVat && !seller.taxRegistrationId)
+      emit(
+        "BR-E-02",
+        "Lines exempt from VAT (category E) require the seller VAT number, tax registration number or tax representative VAT number.",
+        seller.loc,
+      );
+    if (lineCats.has("Z") && !sellerVat && !seller.taxRegistrationId)
+      emit(
+        "BR-Z-02",
+        "Zero-rated lines (category Z) require the seller VAT number, tax registration number or tax representative VAT number.",
         seller.loc,
       );
     if (cats.has("AE") && (!sellerVat || !(buyer.vatId || buyer.legalId)))
