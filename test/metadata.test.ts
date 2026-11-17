@@ -44,6 +44,12 @@ describe("action.yml", () => {
   });
 });
 
+describe("package.json", () => {
+  it("names the real rule count in its description", () => {
+    expect(JSON.parse(read("package.json")).description).toContain(`: ${ruleCounts().total} `);
+  });
+});
+
 describe("README", () => {
   it("documents every input and output", () => {
     for (const n of names("inputs")) expect(readme, n).toContain(`| \`${n}\` |`);
