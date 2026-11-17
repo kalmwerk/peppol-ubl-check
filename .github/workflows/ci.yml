@@ -23,6 +23,8 @@ jobs:
       - name: dist/ is up to date
         run: git diff --exit-code -- dist/ || (echo "::error::dist/ is stale. Run npm run build and commit it." && exit 1)
       - run: npm test
+      # Reruns the official CEN and Peppol unit tests; fails when conformance.json or the README statement is stale
+      - run: npm run compare-official -- --check
 
   # Runs the committed Action on a real runner against the test invoices.
   self-test:
