@@ -1,24 +1,10 @@
 # Peppol UBL check
 
-A free GitHub Action and command-line tool that checks the UBL / Peppol BIS Billing 3.0 invoices your code generates, before they reach an access point. It fails the job on errors and tells you, per finding, the rule ID, the line and how to fix it.
-
-It runs entirely offline: no API key, no account, and nothing is sent anywhere. The rules are the same engine that runs the [InvoiceVerify validator](https://peppol-invoice-compass.lovable.app/validate), copied into this repository.
-
-- **222 rules:** 108 EN 16931 business rules, 40 Peppol BIS Billing 3.0 rules, 32 XRechnung rules, 30 Dutch SI-UBL 2.0 (NLCIUS) rules and 12 extra checks (syntax, VAT number, Belgian enterprise number and German Leitweg-ID check digits, IBAN, dates).
-- **Job summary** with a table per invoice: rule ID (linked to its explanation), line, what's wrong and how to fix it.
-- **Annotations** on the file and line, so findings show up in pull requests.
-- **Optional JSON report** for your own tooling or an artifact.
-- **No dependencies at run time.** `dist/` is one JavaScript file per entry point, built from `src/` and checked in CI.
-
-<!-- conformance:summary:start -->
-**Conformance, checked 17 November 2026:** same verdict as the official EN 16931 and Peppol Schematron for every rule this tool checks, on all 1,919 official unit-test cases of the [CEN EN 16931 validation artefacts 1.3.17](https://github.com/ConnectingEurope/eInvoicing-EN16931/tree/validation-1.3.17/test) and the [Peppol BIS Billing 3.0 rules 3.0.22](https://github.com/OpenPEPPOL/peppol-bis-invoice-3/tree/3.0.22/rules): 929 verdicts compared, 0 different. Not covered: 177 rules those tests exercise (64 EN 16931, 17 Peppol, 96 national), listed in [`conformance.json`](conformance.json). Reproduce it with `npm run compare-official`; CI reruns it on every push and pull request.
-<!-- conformance:summary:end -->
-
-> **What it does not do.** The 222 rules are a partial version of the official EN 16931, Peppol, XRechnung and SI-UBL 2.0 Schematron rule sets, not all of them. There is no XSD schema validation (element order and unknown elements are not checked) and no PDF/A check: it reads XML files only, not Factur-X / ZUGFeRD PDFs. A pass is a strong signal, not a guarantee; your access point still validates every invoice against the official rules before sending it. See [What it checks](#what-it-checks).
+Checks the UBL / Peppol BIS Billing 3.0 e-invoices your code generates against 222 EN 16931, Peppol, XRechnung and SI-UBL 2.0 rules, in GitHub Actions or on the command line, before they reach an access point. Every error comes with its rule ID, line and fix. It runs offline: no API key, no account, nothing sent anywhere.
 
 ## Quick start
 
-Save this as `.github/workflows/peppol-ubl-check.yml`:
+Copy this into `.github/workflows/peppol-ubl-check.yml`:
 
 ```yaml
 name: Peppol UBL check
@@ -41,7 +27,29 @@ jobs:
           files: "invoices/**/*.xml"
 ```
 
-Point `files` at the folder your invoices or test fixtures are in. Without it, every `*.xml` in the repository is checked; XML files that aren't invoices (a `pom.xml`, configs) are listed as skipped, not failed.
+Point `files` at the folder your invoices or test fixtures are in. Without it, every `*.xml` in the repository is checked; XML files that aren't invoices (a `pom.xml`, configs) are listed as skipped, not failed. More workflows: [invoices your tests generate](#check-the-invoices-your-code-generates), [a copy in your own repository](#use-a-copy-in-your-own-repository) and [`examples/`](examples/).
+
+## Conformance
+
+<!-- conformance:summary:start -->
+**Conformance, checked 17 November 2026:** same verdict as the official EN 16931 and Peppol Schematron for every rule this tool checks, on all 1,919 official unit-test cases of the [CEN EN 16931 validation artefacts 1.3.17](https://github.com/ConnectingEurope/eInvoicing-EN16931/tree/validation-1.3.17/test) and the [Peppol BIS Billing 3.0 rules 3.0.22](https://github.com/OpenPEPPOL/peppol-bis-invoice-3/tree/3.0.22/rules): 929 verdicts compared, 0 different. Not covered: 177 rules those tests exercise (64 EN 16931, 17 Peppol, 96 national), listed in [`conformance.json`](conformance.json). Reproduce it with `npm run compare-official`; CI reruns it on every push and pull request.
+<!-- conformance:summary:end -->
+
+> **What it does not do.** The 222 rules are a partial version of the official EN 16931, Peppol, XRechnung and SI-UBL 2.0 Schematron rule sets, not all of them. There is no XSD schema validation (element order and unknown elements are not checked) and no PDF/A check: it reads XML files only, not Factur-X / ZUGFeRD PDFs. A pass is a strong signal, not a guarantee; your access point still validates every invoice against the official rules before sending it. See [What it checks](#what-it-checks).
+
+**Disclosure:** the links to peppol-invoice-compass.lovable.app in this README and in the job summary go to InvoiceVerify, the website of Kalmwerk, who also make this Action. Its free [online checker](https://peppol-invoice-compass.lovable.app/validate) runs the same rules on one invoice at a time and shows a visual report of it. The Action itself never contacts the site; the links are only links.
+
+## What you get
+
+- **222 rules:** 108 EN 16931 business rules, 40 Peppol BIS Billing 3.0 rules, 32 XRechnung rules, 30 Dutch SI-UBL 2.0 (NLCIUS) rules and 12 extra checks (syntax, VAT number, Belgian enterprise number and German Leitweg-ID check digits, IBAN, dates).
+- **Job summary** with a table per invoice: rule ID (linked to its explanation), line, what's wrong and how to fix it.
+- **Annotations** on the file and line, so findings show up in pull requests.
+- **Optional JSON report** for your own tooling or an artifact.
+- **No dependencies at run time.** `dist/` is one JavaScript file per entry point, built from `src/` and checked in CI.
+
+The rule engine is InvoiceVerify's, copied into this repository (`src/engine/`), so the Action, the command line and the online checker apply the same rules.
+
+## More workflows
 
 ### Check the invoices your code generates
 
@@ -135,7 +143,7 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 ```json
 {
   "tool": "peppol-ubl-check",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "rulesAvailable": 222,
   "profile": "peppol",
   "failOn": "error",

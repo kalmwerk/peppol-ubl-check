@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkFiles, ruleCounts } from "../src/check";
 import { summaryMarkdown } from "../src/report";
-import { REPO, SITE_URL, VERSION } from "../src/version";
+import { REPO, SITE_URL, VALIDATOR_URL, VERSION } from "../src/version";
 import { FIXTURES } from "./helpers";
 
 const root = resolve(__dirname, "..");
@@ -27,6 +27,23 @@ describe("version", () => {
 });
 
 describe("action.yml", () => {
+  // The runner refuses the whole file over one bad value ("Mapping values are not allowed in this
+  // context"), which would break every workflow on @v1, so check what YAML allows in unquoted values.
+  it("is YAML the Actions runner can load: unquoted values hold no ': ' or ' #', quoted ones are closed", () => {
+    for (const [i, line] of actionYml.split("\n").entries()) {
+      const m = line.match(/^ *[\w-]+: (.+)$/);
+      if (!m) continue;
+      const value = m[1]!;
+      const where = `action.yml line ${i + 1}`;
+      if (value.startsWith('"')) expect(value, where).toMatch(/^"(?:[^"\\]|\\.)*"$/);
+      else if (value.startsWith("'")) expect(value, where).toMatch(/^'(?:[^']|'')*'$/);
+      else {
+        expect(value, where).not.toMatch(/: |:$| #/);
+        expect(value, where).not.toMatch(/^[-?:,[\]{}#&*!|>%@`]/);
+      }
+    }
+  });
+
   it("reads exactly the inputs the Action uses, and sets exactly its outputs", () => {
     const source = read("src/action.ts");
     const used = [...source.matchAll(/get(?:Boolean|Choice)?Input\("([\w-]+)"/g)].map((m) => m[1]);
@@ -69,6 +86,53 @@ describe("README", () => {
     expect(readme).toContain(`uses: ${REPO}@v${VERSION.split(".")[0]}`);
     for (const f of ["peppol-ubl-check.yml", "json-report.yml"]) expect(read(`examples/${f}`), f).toContain(`uses: ${REPO}@v1`);
     expect(read("examples/downloaded-copy.yml")).toContain("uses: ./.github/actions/peppol-ubl-check");
+  });
+});
+
+// What GitHub needs to list the Action on Marketplace, and what makes people find and trust it there
+// (docs.github.com: "Publishing actions in GitHub Marketplace", "Metadata syntax", checked 17 Nov 2026).
+describe("GitHub Marketplace listing", () => {
+  it("has a single action metadata file, at the repository root", () => {
+    const skip = /(^|\/)(node_modules|coverage|\.git)(\/|$)/;
+    const files = (readdirSync(root, { recursive: true }) as string[]).map((f) => f.split("\\").join("/"));
+    expect(files.filter((f) => !skip.test(f) && /(^|\/)action\.ya?ml$/.test(f))).toEqual(["action.yml"]);
+  });
+
+  it("has a description within Marketplace's 125 characters, with the words people search for", () => {
+    const description = actionYml.match(/^description: (.+)$/m)![1]!;
+    expect(description.length).toBeLessThanOrEqual(125);
+    for (const term of ["Peppol", "UBL", "EN 16931", "EN16931", "e-invoice"]) expect(description, term).toContain(term);
+  });
+
+  it("uses a badge colour and icon GitHub supports", () => {
+    const [, icon, color] = actionYml.match(/^branding:\n {2}icon: ([\w-]+)\n {2}color: ([\w-]+)$/m)!;
+    expect(["white", "black", "yellow", "blue", "green", "orange", "red", "purple", "gray-dark"]).toContain(color);
+    // Feather icons, minus the brand icons and these, which GitHub leaves out
+    const omitted = ["coffee", "columns", "divide-circle", "divide-square", "divide", "frown", "hexagon", "key", "meh", "mouse-pointer", "smile", "tool", "x-octagon"];
+    expect(omitted).not.toContain(icon);
+    expect(icon).toBe("check-circle");
+  });
+
+  it("leads the README with the copy-paste workflow, then the conformance statement", () => {
+    const sections = [...readme.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+    expect(sections.slice(0, 2)).toEqual(["Quick start", "Conformance"]);
+    const quickStart = readme.split("\n## Quick start\n")[1]!.split("\n## ")[0]!;
+    const workflow = quickStart.split("```yaml\n")[1]!.split("\n```")[0]!;
+    const example = read("examples/peppol-ubl-check.yml").split("\n").filter((l) => !l.startsWith("#")).join("\n");
+    expect(workflow + "\n").toBe(example);
+    const conformance = readme.split("\n## Conformance\n")[1]!.split("\n## ")[0]!;
+    expect(conformance.trimStart().startsWith("<!-- conformance:summary:start -->\n**Conformance, checked ")).toBe(true);
+  });
+
+  it("says the website it links to is Kalmwerk's own before the first link to it, and links its checker", () => {
+    const disclosure = readme.indexOf("**Disclosure:**");
+    expect(disclosure).toBeGreaterThan(-1);
+    expect(disclosure).toBeLessThan(readme.indexOf(SITE_URL));
+    expect(disclosure).toBeLessThan(readme.indexOf("\n## What you get\n"));
+    const paragraph = readme.slice(disclosure).split("\n\n")[0]!;
+    expect(paragraph).toContain("Kalmwerk");
+    expect(paragraph).toContain(`](${VALIDATOR_URL})`);
+    expect(paragraph).toContain("never contacts the site");
   });
 });
 

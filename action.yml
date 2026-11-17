@@ -1,5 +1,5 @@
 name: Peppol UBL check by InvoiceVerify
-description: Check UBL / Peppol BIS 3.0 e-invoices offline with 222 EN 16931, Peppol, XRechnung and SI-UBL rules, with a fix per error.
+description: Offline Peppol BIS 3.0 / UBL e-invoice check with 222 EN 16931 (EN16931), Peppol, XRechnung and SI-UBL rules and fixes.
 author: Kalmwerk
 branding:
   icon: check-circle
