@@ -794,11 +794,11 @@ export const RULES: RuleMeta[] = [
   R(
     "BR-CO-25",
     "EN16931",
-    "error",
+    "warning",
     "payment",
     ["BT-9", "BT-20"],
     "No due date or payment terms",
-    "In case the Amount due for payment (BT-115) is positive, either the Payment due date (BT-9) or the Payment terms (BT-20) shall be present.",
+    "In case the Amount due for payment (BT-115) is positive, either the Payment due date (BT-9) or the Payment terms (BT-20) shall be present. The official CEN rules stopped checking this in 1.3.16, so it is a warning on invoices, an error for Factur-X / ZUGFeRD (whose rules still check it) and not checked on credit notes.",
     'Add cbc:DueDate or cac:PaymentTerms/cbc:Note, e.g. "Net 30 days".',
   ),
   R(
@@ -1070,8 +1070,8 @@ export const RULES: RuleMeta[] = [
     "vat",
     ["BT-118"],
     "VAT category used but missing in breakdown",
-    "An Invoice that contains a line, allowance or charge with a given VAT category code shall contain a VAT breakdown group with the same category (BR-Z-01, BR-E-01, BR-AE-01, BR-IC-01, BR-G-01, BR-O-01).",
-    "Add a cac:TaxSubtotal for every VAT category and rate used on lines, allowances and charges.",
+    "An Invoice that contains a line, allowance or charge with a given VAT category code shall contain exactly one VAT breakdown group with that category (BR-Z-01, BR-E-01, BR-AE-01, BR-IC-01, BR-G-01, BR-O-01); for IGIC and IPSI, at least one per rate (BR-IG-01, BR-IP-01).",
+    "Add one cac:TaxSubtotal for every VAT category used on lines, allowances and charges, and merge duplicate rows of the same category.",
   ),
 
   // ---------- Code lists ----------

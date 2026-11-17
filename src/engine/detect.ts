@@ -16,6 +16,7 @@ const XRECHNUNG_MARK = "urn:xeinkauf.de:kosit:xrechnung_";
 
 export type FormatId =
   | "peppol-bis-3"
+  | "peppol-bis-3-cii"
   | "xrechnung-ubl"
   | "xrechnung-cii"
   | "si-ubl-2"
@@ -108,6 +109,16 @@ export function detectFormat(root: XNode): FormatInfo {
       customizationId: cid,
       rootNamespace: ns,
     } as const;
+    // Peppol BIS 3.0 allows CII as an optional syntax, checked with OpenPeppol's CII rules
+    if (cid?.startsWith(PEPPOL_CUSTOMIZATION_ID) || cid?.includes(PEPPOL_BILLING_MARK)) {
+      return {
+        ...base,
+        id: "peppol-bis-3-cii",
+        label: "Peppol BIS Billing 3.0 (UN/CEFACT CII)",
+        en16931: true,
+        peppol: true,
+      };
+    }
     if (cid?.startsWith(XRECHNUNG_CUSTOMIZATION_PREFIX)) {
       return {
         ...base,

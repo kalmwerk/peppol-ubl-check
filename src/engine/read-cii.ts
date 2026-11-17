@@ -4,12 +4,13 @@ import {
   type AllowanceCharge,
   type InvoiceLine,
   type InvoiceModel,
+  type Loc,
   type LocMap,
   type Party,
   type PaymentMeans,
   type VatBreakdown,
 } from "./model";
-import { ReadCtx, collectEmptyElements } from "./read-utils";
+import { ReadCtx, collectBinaryObjects, collectCiiSchemeIds, collectEmptyElements } from "./read-utils";
 import { all, at, kids, text, type XNode } from "./xml";
 
 export const CII_NS = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100";
@@ -226,6 +227,7 @@ export function readCii(root: XNode): InvoiceModel {
       loc: ctx.loc(d),
     })),
     amountCurrencies: [],
+    schemeIds: [],
     decimals: [],
     typeErrors: [],
     emptyElements: [],
@@ -234,12 +236,17 @@ export function readCii(root: XNode): InvoiceModel {
   };
   const firstNote = at(doc, "IncludedNote");
   if (firstNote) locs["notes"] = ctx.loc(firstNote);
+  const subjectCode = kids(doc, "IncludedNote")
+    .map((n) => at(n, "SubjectCode"))
+    .find((n): n is XNode => !!n);
+  if (subjectCode) model.noteSubjectCode = ctx.loc(subjectCode);
 
   const taxRep = at(agreement, "SellerTaxRepresentativeTradeParty");
   if (taxRep) model.taxRepresentative = readParty(ctx, taxRep);
   const payee = at(settlement, "PayeeTradeParty");
   if (payee) model.payee = readParty(ctx, payee);
 
+  model.deliveryDateGiven = !!at(deliveryNode, "ActualDeliverySupplyChainEvent/OccurrenceDateTime/DateTimeString");
   if (deliveryNode) {
     const dl: LocMap = {};
     model.delivery = {
@@ -268,6 +275,7 @@ export function readCii(root: XNode): InvoiceModel {
   const period = at(settlement, "BillingSpecifiedPeriod");
   if (period) {
     model.hasPeriod = true;
+    model.periodHasContent = !!(at(period, "StartDateTime") || at(period, "EndDateTime"));
     locs["period"] = ctx.loc(period);
     model.periodStart = ctx.ciiDate(period, "StartDateTime", locs, "periodStart", "BT-73");
     model.periodEnd = ctx.ciiDate(period, "EndDateTime", locs, "periodEnd", "BT-74");
@@ -276,6 +284,10 @@ export function readCii(root: XNode): InvoiceModel {
   const paymentRef = ctx.str(settlement, "PaymentReference", locs, "paymentRef");
   const terms = at(settlement, "SpecifiedTradePaymentTerms");
   const mandate = text(terms, "DirectDebitMandateID");
+  // PEPPOL-EN16931-R061 asks for the element in any payment terms group, filled or not
+  const mandateNode = kids(settlement, "SpecifiedTradePaymentTerms")
+    .map((t) => at(t, "DirectDebitMandateID"))
+    .find((n): n is XNode => !!n);
   for (const pm of kids(settlement, "SpecifiedTradeSettlementPaymentMeans")) {
     const pl: LocMap = {};
     const means: PaymentMeans = {
@@ -301,6 +313,7 @@ export function readCii(root: XNode): InvoiceModel {
       const acct = at(pm, "PayeePartyCreditorFinancialAccount");
       if (acct) pl["account"] = ctx.loc(acct);
     }
+    if (mandateNode) pl["mandateRef"] = ctx.loc(mandateNode);
     model.paymentMeans.push(means);
   }
 
@@ -346,6 +359,9 @@ export function readCii(root: XNode): InvoiceModel {
       amount: true,
     });
     const taxTotals = kids(sum, "TaxTotalAmount");
+    // BT-110 is the total in the invoice currency (the first one, as the official rules read it);
+    // without one, the first total that isn't in the accounting currency
+    let docPick: { v: number | undefined; loc: Loc; exact: boolean } | undefined;
     for (const tt of taxTotals) {
       const cur = tt.attrs["currencyID"];
       const isAccounting = Boolean(
@@ -359,14 +375,21 @@ export function readCii(root: XNode): InvoiceModel {
         isAccounting ? "BT-111" : "BT-110",
         { amount: true },
       );
-      if (isAccounting) T.taxAmountAccounting = v;
-      else T.taxAmount = v;
+      if (isAccounting) T.taxAmountAccounting ??= v;
+      else {
+        const exact = cur === model.currency;
+        if (!docPick || (exact && !docPick.exact)) docPick = { v, loc: ctx.loc(tt), exact };
+      }
       model.taxTotals.push({
         amount: v,
         currency: cur,
         hasSubtotals: !isAccounting,
         loc: ctx.loc(tt),
       });
+    }
+    if (docPick) {
+      T.taxAmount = docPick.v;
+      T.locs["taxAmount"] = docPick.loc;
     }
     T.rounding = ctx.num(sum, "RoundingAmount", T.locs, "rounding", "BT-114", { amount: true });
     T.taxInclusive = ctx.num(sum, "GrandTotalAmount", T.locs, "taxInclusive", "BT-112", {
@@ -440,6 +463,11 @@ export function readCii(root: XNode): InvoiceModel {
     const gross = at(la, "GrossPriceProductTradePrice");
     if (gross) {
       line.grossPrice = ctx.num(gross, "ChargeAmount", L, "grossPrice", "BT-148");
+      const gbq = at(gross, "BasisQuantity");
+      if (gbq) {
+        line.grossBaseQuantity = ctx.num(gbq, "", L, "grossBaseQuantity", "BT-149");
+        line.grossBaseQuantityUnit = gbq.attrs["unitCode"];
+      }
       for (const ac of kids(gross, "AppliedTradeAllowanceCharge")) {
         if (text(ac, "ChargeIndicator/Indicator")?.toLowerCase() === "true") {
           line.hasPriceCharge = true;
@@ -449,6 +477,13 @@ export function readCii(root: XNode): InvoiceModel {
         }
       }
     }
+    // PEPPOL-EN16931-R043 also checks price-level allowances and charges (AppliedTradeAllowanceCharge)
+    line.priceIndicators = [net, gross].flatMap((p) =>
+      kids(p, "AppliedTradeAllowanceCharge").map((ac) => ({
+        raw: text(ac, "ChargeIndicator/Indicator"),
+        loc: ctx.loc(at(ac, "ChargeIndicator") ?? ac),
+      })),
+    );
     const lineTax = at(ls, "ApplicableTradeTax");
     if (lineTax) {
       line.vatCategory = ctx.str(lineTax, "CategoryCode", L, "vatCategory");
@@ -468,6 +503,8 @@ export function readCii(root: XNode): InvoiceModel {
     model.lines.push(line);
   }
 
+  model.schemeIds = collectCiiSchemeIds(root, ctx);
+  model.binaryObjects = collectBinaryObjects(root, "AttachmentBinaryObject", ctx);
   model.decimals = ctx.decimals;
   model.typeErrors = ctx.typeErrors;
   model.emptyElements = collectEmptyElements(root, ctx);

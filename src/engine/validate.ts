@@ -120,6 +120,9 @@ function rulesApplicable(peppol: boolean, en16931: boolean, xrechnung: boolean, 
   }).length;
 }
 
+/** CII formats with a rule set of their own, which the "peppol" profile leaves to it. */
+const CII_WITH_OWN_RULES: ReadonlySet<string> = new Set(["factur-x", "xrechnung-cii", "nlcius-cii"]);
+
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
 export function validateInvoiceXml(
@@ -202,9 +205,12 @@ export function validateInvoiceXml(
   }
 
   const model = format.syntax === "UBL" ? readUbl(root) : readCii(root);
+  // "peppol" applies Peppol BIS 3.0 to every UBL file and to CII files other than Factur-X /
+  // ZUGFeRD, XRechnung and NLCIUS (those CII documents follow their own rules), so a wrong
+  // CustomizationID is reported instead of quietly checking less; "auto" only to files that declare it.
   const peppol =
     profile === "peppol"
-      ? format.syntax === "UBL"
+      ? format.syntax === "UBL" || !CII_WITH_OWN_RULES.has(format.id)
       : profile === "en16931" || profile === "xrechnung" || profile === "nlcius"
         ? false
         : format.peppol;
