@@ -10,6 +10,10 @@ It runs entirely offline: no API key, no account, and nothing is sent anywhere. 
 - **Optional JSON report** for your own tooling or an artifact.
 - **No dependencies at run time.** `dist/` is one JavaScript file per entry point, built from `src/` and checked in CI.
 
+<!-- conformance:summary:start -->
+**Conformance, checked 17 November 2026:** same verdict as the official EN 16931 and Peppol Schematron for every rule this tool checks, on all 1,919 official unit-test cases of the [CEN EN 16931 validation artefacts 1.3.17](https://github.com/ConnectingEurope/eInvoicing-EN16931/tree/validation-1.3.17/test) and the [Peppol BIS Billing 3.0 rules 3.0.22](https://github.com/OpenPEPPOL/peppol-bis-invoice-3/tree/3.0.22/rules): 929 verdicts compared, 0 different. Not covered: 177 rules those tests exercise (64 EN 16931, 17 Peppol, 96 national), listed in [`conformance.json`](conformance.json). Reproduce it with `npm run compare-official`; CI reruns it on every push and pull request.
+<!-- conformance:summary:end -->
+
 > **What it does not do.** The 222 rules are a partial version of the official EN 16931, Peppol, XRechnung and SI-UBL 2.0 Schematron rule sets, not all of them. There is no XSD schema validation (element order and unknown elements are not checked) and no PDF/A check: it reads XML files only, not Factur-X / ZUGFeRD PDFs. A pass is a strong signal, not a guarantee; your access point still validates every invoice against the official rules before sending it. See [What it checks](#what-it-checks).
 
 ## Quick start
@@ -131,7 +135,7 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 ```json
 {
   "tool": "peppol-ubl-check",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "rulesAvailable": 222,
   "profile": "peppol",
   "failOn": "error",
@@ -186,7 +190,11 @@ Calculations are judged the way the official Schematron judges them, with exact 
 
 ### Compared with the official rules
 
-`npm run compare-official` downloads the official unit tests of the CEN EN 16931 validation artefacts 1.3.17 and the Peppol BIS Billing 3.0 rules 3.0.22 (1,919 test invoices in UBL and CII; the Peppol files may not be redistributed, so they aren't in this repository) and compares every expected verdict of a rule this tool checks: 929 compared, 0 different. 177 rules those tests exercise aren't checked here; `--list-uncovered` lists them (64 EN 16931 rules, mostly VAT details of allowances and charges and the VAT amount per category; 17 Peppol rules; 96 national rules for Denmark, Germany, Greece, Italy, Norway and Sweden). `test/official-peppol.test.ts` restates the Peppol cases the tool once got wrong.
+<!-- conformance:details:start -->
+`npm run compare-official` downloads the official unit tests of the [CEN EN 16931 validation artefacts 1.3.17](https://github.com/ConnectingEurope/eInvoicing-EN16931/tree/validation-1.3.17/test) and the [Peppol BIS Billing 3.0 rules 3.0.22](https://github.com/OpenPEPPOL/peppol-bis-invoice-3/tree/3.0.22/rules) (1,919 test cases in UBL and CII: 913 from CEN, 1,006 from Peppol; the Peppol files may not be redistributed, so they aren't in this repository), compares every expected verdict of a rule this tool checks, and writes the result to [`conformance.json`](conformance.json) and the statement at the top of this README. Last run, 17 November 2026: 929 verdicts compared, 0 different. 177 rules those tests exercise aren't checked here: 64 EN 16931 rules (mostly VAT details of allowances and charges and the VAT amount per category), 17 Peppol BIS rules and 96 national rules (Denmark, Germany, Greece, Italy, Norway, Sweden and Peppol's identifier formats); `conformance.json` lists every one, and `--list-uncovered` prints them. `npm run compare-official -- --check` (run in CI) fails when the committed result no longer matches a fresh run or the engine.
+<!-- conformance:details:end -->
+
+`test/official-peppol.test.ts` restates the Peppol cases the tool once got wrong.
 
 Deliberate differences:
 
