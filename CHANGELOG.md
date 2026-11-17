@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-11-17
+
+No rule changes: the same verdicts as 1.3.3. Ready for the GitHub Marketplace listing.
+
+### Changed
+- The README starts with the copy-paste workflow and the dated conformance statement, and says that InvoiceVerify, the website the README and the job summary link to, is Kalmwerk's own.
+- The `action.yml` description names what people search GitHub Marketplace for (Peppol, UBL, EN 16931 / EN16931, e-invoice), within Marketplace's 125 characters.
+
+### Added
+- `test/metadata.test.ts` checks what a Marketplace listing needs: a single `action.yml`, at the root; an icon and colour GitHub supports; the search words in the description; the README's order and its disclosure.
+
 ## [1.3.3] - 2026-11-17
 
 No rule changes: the same verdicts as 1.3.2.

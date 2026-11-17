@@ -10,8 +10,9 @@ folder as a zip with its SHA-256 checksum.
 The repository, the zip and this folder hold the same files: everything here
 except `node_modules/` and `coverage/`.
 
-Status (12 Nov 2026): public on GitHub since v1.0.0; the GitHub Marketplace
-listing and the npm package are still to do.
+Status (17 Nov 2026): public on GitHub since v1.0.0 and ready for the GitHub
+Marketplace listing (see below), which waits on the account owner; the npm
+package is still to do.
 
 ## Before every release
 
@@ -68,20 +69,50 @@ listing and the npm package are still to do.
 
 ## GitHub Marketplace (once)
 
-1. Signed in as kalmwerk, open the newest release, choose **Edit**, tick
-   **Publish this Action to the GitHub Marketplace** and accept the GitHub
-   Marketplace Developer Agreement when asked.
-2. GitHub checks `action.yml` here. If it says the name is taken, change
-   `name:` in `action.yml` and `ACTION_NAME` in `src/lib/peppol-action.ts`
-   together, rebuild, and release again.
-3. Primary category: **Continuous integration**. Secondary: **Code quality**.
-4. Copy the Marketplace link (it looks like
-   `https://github.com/marketplace/actions/peppol-ubl-check-by-invoiceverify`),
-   set `ACTION_MARKETPLACE_URL` to it in `src/lib/peppol-action.ts`, update the
-   status check in `src/lib/peppol-action.test.ts` and publish the site. The
-   status line on every page ("On GitHub now; Marketplace listing coming
-   soon") becomes "On GitHub Marketplace", the page gets a Marketplace button
-   and the structured data lists the listing.
+GitHub lists an Action straight away, without review, when its repository is
+public, holds a single `action.yml` at the root, and its `name` isn't already
+used by another listing, a GitHub user or organisation, a Marketplace category
+or a GitHub feature. Workflow files no longer stand in the way (GitHub dropped
+that rule from its docs). `test/metadata.test.ts` checks the rest: the one
+`action.yml`, a supported badge icon and colour, a description of at most 125
+characters with the words people search for (Peppol, UBL, EN 16931 / EN16931,
+e-invoice), and a README that starts with the workflow, then the conformance
+statement and the disclosure of the links to InvoiceVerify.
+
+Checked 17 Nov 2026: no listing, user or organisation uses the name
+`Peppol UBL check by InvoiceVerify`
+(`https://github.com/marketplace/actions/peppol-ubl-check-by-invoiceverify`
+was free).
+
+Signed in as kalmwerk, the first time (about 15 minutes):
+
+1. Two-factor authentication: **Settings → Password and authentication →
+   Enable two-factor authentication**, with an authenticator app; keep the
+   recovery codes. GitHub asks for it when publishing to Marketplace, and the
+   account needs it before 28 Dec 2026 anyway.
+2. Open the release to list, the newest `v1.x.y` (not the release called `v1`,
+   which only describes the moving tag), and choose **Edit** (or, for a draft,
+   open it).
+3. Under **Release Action**, tick **Publish this Action to the GitHub
+   Marketplace**. The first time the box is greyed out: follow the link
+   **accept the GitHub Marketplace Developer Agreement**, accept it, and come
+   back to the release.
+4. Wait for **Everything looks good!** If GitHub says the name is taken,
+   change `name:` in `action.yml` and `ACTION_NAME` in
+   `src/lib/peppol-action.ts` together, rebuild, and release again.
+5. **Primary Category: Continuous integration. Another Category: Code
+   quality** (what the other e-invoice validators use).
+6. **Update release** (or **Publish release** for a draft) and confirm with
+   the two-factor code.
+7. Copy the Marketplace link, set `ACTION_MARKETPLACE_URL` to it in
+   `src/lib/peppol-action.ts`, update the status check in
+   `src/lib/peppol-action.test.ts` and publish the site. The status line on
+   every page ("On GitHub now; Marketplace listing coming soon") becomes "On
+   GitHub Marketplace", the page gets a Marketplace button and the structured
+   data lists the listing.
+
+Later releases appear on the listing by ticking the same box when publishing
+them (step 3 of "Release v1.x.y"); the agreement and categories are kept.
 
 ## npm, for `npx peppol-ubl-check` (later)
 
