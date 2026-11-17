@@ -20,11 +20,10 @@ import {
   UNIT_CODES,
   VAT_CATEGORIES,
 } from "./codes";
+import * as D from "./decimal";
 import type { FormatInfo } from "./detect";
 import {
   round2,
-  sameAmount,
-  sum,
   type AllowanceCharge,
   type Identifier,
   type InvoiceModel,
@@ -103,9 +102,17 @@ const LEITWEG_PROBLEM: Record<LeitwegProblem, string> = {
 
 const f2 = (n: number | undefined) =>
   n === undefined || Number.isNaN(n) ? "—" : round2(n).toFixed(2);
+/** An exact value for a message: two decimals, or up to four when it has more */
+const fd = (x: D.Dec) => {
+  const v = D.toNumber(x);
+  return D.eq(D.round2(x), x) ? v.toFixed(2) : String(Math.round(v * 10000) / 10000);
+};
 
 /** VAT prefixes BR-CO-09 accepts besides ISO 3166-1 alpha-2 country codes. */
 const VAT_PREFIX_EXTRAS = new Set(["EL", "XI", "1A"]);
+
+/** VAT categories whose -08 rule groups by rate (standard rate, IGIC, IPSI); the others group by category */
+const PER_RATE_CATEGORIES = new Set(["S", "L", "M"]);
 
 const rateKey = (rate: number | undefined) => (rate === undefined ? "" : String(round2(rate)));
 
@@ -657,16 +664,17 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         "A base amount is given without a percentage.",
         at(ac.locs, "baseAmount", ac.loc),
       );
-    if (ac.amount !== undefined && ac.baseAmount !== undefined && ac.percent !== undefined) {
-      const expected = round2((ac.baseAmount * ac.percent) / 100);
-      if (Math.abs(expected - ac.amount) > 0.02)
+    if (ac.baseAmount !== undefined && ac.percent !== undefined) {
+      // Official: u:slack(Amount (or 0), BaseAmount × percentage div 100, 0.02) — unrounded, 0.02 itself passes
+      const expected = D.div(D.mul(D.dec(ac.baseAmount), D.dec(ac.percent)), D.dec(100));
+      if (!D.withinOrEqual(D.dec(ac.amount ?? 0), expected, D.TWO_CENTS))
         emit(
           "PEPPOL-EN16931-R040",
-          `Amount ${f2(ac.amount)} ≠ ${f2(ac.baseAmount)} × ${ac.percent}% = ${f2(expected)}.`,
+          `Amount ${f2(ac.amount ?? 0)} ≠ ${f2(ac.baseAmount)} × ${ac.percent}% = ${fd(expected)}.`,
           at(ac.locs, "amount", ac.loc),
           {
-            expected: f2(expected),
-            actual: f2(ac.amount),
+            expected: fd(expected),
+            actual: f2(ac.amount ?? 0),
           },
         );
     }
@@ -800,34 +808,39 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
             L("baseQuantity"),
           );
         if (ln.grossPrice !== undefined && ln.priceAmount !== undefined) {
-          const expectedNet = ln.grossPrice - (ln.priceDiscount ?? 0);
-          if (Math.abs(expectedNet - ln.priceAmount) > 0.0001)
+          // Official: PriceAmount = BaseAmount − Amount, compared exactly
+          const expectedNet = D.sub(D.dec(ln.grossPrice), D.dec(ln.priceDiscount ?? 0));
+          if (!D.eq(expectedNet, D.dec(ln.priceAmount)))
             emit(
               "PEPPOL-EN16931-R046",
               `${label} net price ${ln.priceAmount} ≠ gross ${ln.grossPrice} − discount ${ln.priceDiscount ?? 0}.`,
               L("priceAmount"),
               {
-                expected: String(round2(expectedNet)),
+                expected: fd(expectedNet),
                 actual: String(ln.priceAmount),
               },
             );
         }
-        if (
-          ln.quantity !== undefined &&
-          ln.priceAmount !== undefined &&
-          ln.netAmount !== undefined
-        ) {
-          const base = ln.baseQuantity && ln.baseQuantity > 0 ? ln.baseQuantity : 1;
-          const expected =
-            (ln.quantity * ln.priceAmount) / base +
-            sum(ln.charges.map((c) => c.amount)) -
-            sum(ln.allowances.map((a) => a.amount));
-          if (Math.abs(round2(expected) - ln.netAmount) > 0.02)
+        {
+          // Official: u:slack(line amount, quantity × (price ÷ base quantity) + charges − allowances, 0.02),
+          // with quantity 1, price 0, line amount 0 and base quantity 1 when absent (base also when 0),
+          // and each sum of line allowances / charges rounded to two decimals; 0.02 itself passes.
+          const quantity = ln.quantity ?? 1;
+          const price = ln.priceAmount ?? 0;
+          const base = ln.baseQuantity !== undefined && ln.baseQuantity !== 0 ? ln.baseQuantity : 1;
+          const expected = D.sub(
+            D.add(
+              D.mul(D.dec(quantity), D.div(D.dec(price), D.dec(base))),
+              D.round2(D.total(ln.charges.map((c) => c.amount))),
+            ),
+            D.round2(D.total(ln.allowances.map((a) => a.amount))),
+          );
+          if (!D.withinOrEqual(D.dec(ln.netAmount ?? 0), expected, D.TWO_CENTS))
             emit(
               "PEPPOL-EN16931-R120",
-              `${label}: ${ln.quantity} × ${ln.priceAmount}${base !== 1 ? ` / ${base}` : ""} = ${f2(expected)}, but the line amount is ${f2(ln.netAmount)}.`,
+              `${label}: ${quantity} × ${price}${base !== 1 ? ` / ${base}` : ""} = ${f2(D.toNumber(expected))}, but the line amount is ${f2(ln.netAmount ?? 0)}.`,
               L("netAmount"),
-              { expected: f2(expected), actual: f2(ln.netAmount) },
+              { expected: f2(D.toNumber(expected)), actual: f2(ln.netAmount ?? 0) },
             );
         }
       }
@@ -835,98 +848,110 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
   }
 
   /* ---------------- totals: calculations ---------------- */
-  const lineSum = sum(m.lines.map((l) => l.netAmount));
-  const allowanceSum = sum(m.allowances.map((a) => a.amount));
-  const chargeSum = sum(m.charges.map((c) => c.amount));
-  if (
-    opts.en16931 &&
-    T.lineExtension !== undefined &&
-    m.lines.length > 0 &&
-    !sameAmount(T.lineExtension, lineSum)
-  )
+  // As the official Schematron: exact decimals, the declared amount against the computed one
+  // rounded to two decimals (`round(x * 10 * 10) div 100`), with no margin on either side.
+  const lineTotal = D.total(m.lines.map((l) => l.netAmount));
+  const allowanceTotal = D.total(m.allowances.map((a) => a.amount));
+  const chargeTotal = D.total(m.charges.map((c) => c.amount));
+  const is = (declared: number, computed: D.Dec) => D.eq(D.dec(declared), computed);
+  const fa = (n: number | undefined) => (n === undefined || Number.isNaN(n) ? "—" : fd(D.dec(n)));
+  if (opts.en16931 && T.lineExtension !== undefined && !is(T.lineExtension, D.round2(lineTotal)))
     emit(
       "BR-CO-10",
-      `Sum of line amounts is ${f2(lineSum)}, but LineExtensionAmount is ${f2(T.lineExtension)}.`,
+      `Sum of line amounts is ${fd(lineTotal)}, but LineExtensionAmount is ${fa(T.lineExtension)}.`,
       tLoc("lineExtension"),
       {
-        expected: f2(lineSum),
-        actual: f2(T.lineExtension),
+        expected: fd(D.round2(lineTotal)),
+        actual: fa(T.lineExtension),
       },
     );
   if (m.allowances.length > 0 || T.allowanceTotal !== undefined) {
-    if (
-      (T.allowanceTotal ?? 0) !== allowanceSum &&
-      !sameAmount(T.allowanceTotal ?? 0, allowanceSum)
-    )
+    if (T.allowanceTotal === undefined || !is(T.allowanceTotal, D.round2(allowanceTotal)))
       emit(
         "BR-CO-11",
-        `Document allowances add up to ${f2(allowanceSum)}, but AllowanceTotalAmount is ${f2(T.allowanceTotal)}.`,
+        `Document allowances add up to ${fd(allowanceTotal)}, but AllowanceTotalAmount is ${fa(T.allowanceTotal)}.`,
         tLoc("allowanceTotal"),
         {
-          expected: f2(allowanceSum),
-          actual: f2(T.allowanceTotal),
+          expected: fd(D.round2(allowanceTotal)),
+          actual: fa(T.allowanceTotal),
         },
       );
   }
   if (m.charges.length > 0 || T.chargeTotal !== undefined) {
-    if (!sameAmount(T.chargeTotal ?? 0, chargeSum))
+    if (T.chargeTotal === undefined || !is(T.chargeTotal, D.round2(chargeTotal)))
       emit(
         "BR-CO-12",
-        `Document charges add up to ${f2(chargeSum)}, but ChargeTotalAmount is ${f2(T.chargeTotal)}.`,
+        `Document charges add up to ${fd(chargeTotal)}, but ChargeTotalAmount is ${fa(T.chargeTotal)}.`,
         tLoc("chargeTotal"),
         {
-          expected: f2(chargeSum),
-          actual: f2(T.chargeTotal),
+          expected: fd(D.round2(chargeTotal)),
+          actual: fa(T.chargeTotal),
         },
       );
   }
   if (T.taxExclusive !== undefined && T.lineExtension !== undefined) {
-    const expected = round2(T.lineExtension - (T.allowanceTotal ?? 0) + (T.chargeTotal ?? 0));
-    if (!sameAmount(T.taxExclusive, expected))
+    // UBL compares the plain line total unrounded when there are no allowance or charge totals
+    const plain = T.allowanceTotal === undefined && T.chargeTotal === undefined && m.syntax === "UBL";
+    const raw = D.add(D.sub(D.dec(T.lineExtension), D.dec(T.allowanceTotal ?? 0)), D.dec(T.chargeTotal ?? 0));
+    const expected = plain ? raw : D.round2(raw);
+    if (!is(T.taxExclusive, expected))
       emit(
         "BR-CO-13",
-        `${f2(T.lineExtension)} − ${f2(T.allowanceTotal ?? 0)} + ${f2(T.chargeTotal ?? 0)} = ${f2(expected)}, but TaxExclusiveAmount is ${f2(T.taxExclusive)}.`,
+        `${f2(T.lineExtension)} − ${f2(T.allowanceTotal ?? 0)} + ${f2(T.chargeTotal ?? 0)} = ${fd(expected)}, but TaxExclusiveAmount is ${fa(T.taxExclusive)}.`,
         tLoc("taxExclusive"),
         {
-          expected: f2(expected),
-          actual: f2(T.taxExclusive),
+          expected: fd(expected),
+          actual: fa(T.taxExclusive),
         },
       );
   }
-  const vatSum = sum(m.vat.map((v) => v.taxAmount));
-  if (T.taxAmount !== undefined && m.vat.length > 0 && !sameAmount(T.taxAmount, vatSum))
+  const vatTotal = D.total(m.vat.map((v) => v.taxAmount));
+  if (T.taxAmount !== undefined && m.vat.length > 0 && !is(T.taxAmount, D.round2(vatTotal)))
     emit(
       "BR-CO-14",
-      `VAT breakdown adds up to ${f2(vatSum)}, but the VAT total is ${f2(T.taxAmount)}.`,
+      `VAT breakdown adds up to ${fd(vatTotal)}, but the VAT total is ${fa(T.taxAmount)}.`,
       tLoc("taxAmount"),
       {
-        expected: f2(vatSum),
-        actual: f2(T.taxAmount),
+        expected: fd(D.round2(vatTotal)),
+        actual: fa(T.taxAmount),
       },
     );
   if (T.taxInclusive !== undefined && T.taxExclusive !== undefined) {
-    const expected = round2(T.taxExclusive + (T.taxAmount ?? 0));
-    if (!sameAmount(T.taxInclusive, expected))
+    const expected = D.round2(D.add(D.dec(T.taxExclusive), D.dec(T.taxAmount ?? 0)));
+    if (!is(T.taxInclusive, expected))
       emit(
         "BR-CO-15",
-        `${f2(T.taxExclusive)} + VAT ${f2(T.taxAmount ?? 0)} = ${f2(expected)}, but TaxInclusiveAmount is ${f2(T.taxInclusive)}.`,
+        `${f2(T.taxExclusive)} + VAT ${f2(T.taxAmount ?? 0)} = ${fd(expected)}, but TaxInclusiveAmount is ${fa(T.taxInclusive)}.`,
         tLoc("taxInclusive"),
         {
-          expected: f2(expected),
-          actual: f2(T.taxInclusive),
+          expected: fd(expected),
+          actual: fa(T.taxInclusive),
         },
       );
   }
   if (T.payable !== undefined && T.taxInclusive !== undefined) {
-    const expected = round2(T.taxInclusive - (T.prepaid ?? 0) + (T.rounding ?? 0));
-    if (!sameAmount(T.payable, expected))
+    const payable = D.dec(T.payable);
+    const inclusive = D.dec(T.taxInclusive);
+    const prepaid = D.dec(T.prepaid ?? 0);
+    const rounding = D.dec(T.rounding ?? 0);
+    // CII: due = grand total − prepaid + rounding, exactly. UBL rounds each side to two decimals
+    // when a prepaid or rounding amount is present: round(payable − rounding) = round(total − prepaid).
+    const ok =
+      m.syntax === "CII"
+        ? D.eq(payable, D.add(D.sub(inclusive, prepaid), rounding))
+        : D.eq(
+            T.rounding === undefined ? payable : D.round2(D.sub(payable, rounding)),
+            T.prepaid === undefined ? inclusive : D.round2(D.sub(inclusive, prepaid)),
+          );
+    const expected = D.round2(D.add(D.sub(inclusive, prepaid), rounding));
+    if (!ok)
       emit(
         "BR-CO-16",
-        `${f2(T.taxInclusive)} − prepaid ${f2(T.prepaid ?? 0)} + rounding ${f2(T.rounding ?? 0)} = ${f2(expected)}, but PayableAmount is ${f2(T.payable)}.`,
+        `${f2(T.taxInclusive)} − prepaid ${f2(T.prepaid ?? 0)} + rounding ${f2(T.rounding ?? 0)} = ${fd(expected)}, but PayableAmount is ${fa(T.payable)}.`,
         tLoc("payable"),
         {
-          expected: f2(expected),
-          actual: f2(T.payable),
+          expected: fd(expected),
+          actual: fa(T.payable),
         },
       );
   }
@@ -948,35 +973,33 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         });
       if (v.category && v.category !== "O" && v.rate === undefined)
         emit("BR-48", `${label} has no rate.`, V("category"));
-      if (
-        v.taxableAmount !== undefined &&
-        v.taxAmount !== undefined &&
-        v.rate !== undefined &&
-        v.category !== "O"
-      ) {
-        const expected = round2((v.taxableAmount * v.rate) / 100);
-        const diff = Math.abs(expected - v.taxAmount);
-        if (diff >= 1)
+      if (v.taxableAmount !== undefined && v.taxAmount !== undefined && v.rate !== undefined) {
+        // Official BR-CO-17: when the rate rounds to 0 the VAT amount must round to 0; otherwise
+        // |VAT amount| must be within 1.00 of round(|taxable amount| × rate ÷ 100) to the cent —
+        // strictly within in UBL, 1.00 itself still passes in CII.
+        const rate = D.dec(v.rate);
+        const tax = D.dec(v.taxAmount);
+        const zeroRate = D.isZero(D.round(rate));
+        const expected = zeroRate
+          ? D.ZERO
+          : D.round2(D.div(D.mul(D.abs(D.dec(v.taxableAmount)), rate), D.dec(100)));
+        const ok = zeroRate
+          ? D.isZero(D.round(tax))
+          : m.syntax === "CII"
+            ? D.withinOrEqual(D.abs(tax), expected, D.ONE_UNIT)
+            : D.within(D.abs(tax), expected, D.ONE_UNIT);
+        if (!ok) {
+          const shown = v.taxableAmount < 0 ? D.neg(expected) : expected;
           emit(
             "BR-CO-17",
-            `${f2(v.taxableAmount)} × ${v.rate}% = ${f2(expected)}, but the VAT amount is ${f2(v.taxAmount)}.`,
+            `${f2(v.taxableAmount)} × ${v.rate}% = ${fd(shown)}, but the VAT amount is ${f2(v.taxAmount)}.`,
             V("taxAmount"),
             {
-              expected: f2(expected),
+              expected: fd(shown),
               actual: f2(v.taxAmount),
             },
           );
-        else if (diff >= 0.005)
-          emit(
-            "BR-CO-17",
-            `${f2(v.taxableAmount)} × ${v.rate}% = ${f2(expected)}; ${f2(v.taxAmount)} is within the ±1.00 tolerance of the standard but not correctly rounded.`,
-            V("taxAmount"),
-            {
-              expected: f2(expected),
-              actual: f2(v.taxAmount),
-              severity: "warning",
-            },
-          );
+        }
       }
       const hasReason = Boolean(v.exemptionCode || v.exemptionReason);
       if ((v.category === "S" || v.category === "Z") && hasReason)
@@ -1047,15 +1070,47 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
             expected: `TaxSubtotal ${label}`,
           },
         );
-        continue;
       }
-      if (breakdown.taxableAmount !== undefined && !sameAmount(breakdown.taxableAmount, u.taxable))
-        emit(
-          u.category === "S" ? "BR-S-08" : "BR-VAT-08",
-          `Lines, allowances and charges in ${label} add up to ${f2(u.taxable)}, but the taxable amount is ${f2(breakdown.taxableAmount)}.`,
-          at(breakdown.locs, "taxableAmount", breakdown.loc),
-          { expected: f2(u.taxable), actual: f2(breakdown.taxableAmount) },
-        );
+    }
+
+    // BR-S-08 and the other categories' -08 rules (BR-VAT-08 here): one check per VAT breakdown
+    // row, as in the official Schematron. S, L and M sum the lines, document allowances and
+    // charges at the row's rate, the other categories at the row's category. The margin depends
+    // on the syntax: UBL allows a difference of less than 1.00 for S, L and M and none for the
+    // others; CII sums are rounded to the cent first, S, L, M and O must then match exactly and
+    // Z, E, AE, K and G may differ by less than 1.00.
+    for (const v of m.vat) {
+      if (!v.category || !VAT_CATEGORIES[v.category] || v.taxableAmount === undefined) continue;
+      const perRate = PER_RATE_CATEGORIES.has(v.category);
+      if (perRate && v.rate === undefined) continue; // `every $rate in ()` holds; BR-48 reports the rate
+      const rate = perRate ? D.dec(v.rate) : undefined;
+      const inRow = (category: string | undefined, r: number | undefined) =>
+        category === v.category && (!rate || (r !== undefined && D.eq(D.dec(r), rate)));
+      const lines = m.lines.filter((l) => inRow(l.vatCategory, l.vatRate));
+      const charges = m.charges.filter((c) => inRow(c.vatCategory, c.vatRate));
+      const allowances = m.allowances.filter((a) => inRow(a.vatCategory, a.vatRate));
+      const cii = m.syntax === "CII";
+      const part = (xs: (number | undefined)[]) => (cii ? D.round2(D.total(xs)) : D.total(xs));
+      const computed = D.sub(
+        D.add(part(lines.map((l) => l.netAmount)), part(charges.map((c) => c.amount))),
+        part(allowances.map((a) => a.amount)),
+      );
+      const declared = D.dec(v.taxableAmount);
+      const margin = cii ? !perRate && v.category !== "O" : perRate;
+      const hasUse = lines.length + charges.length + allowances.length > 0;
+      // UBL also needs the row's rate to be used (S, L, M), or any invoice line (the others)
+      const used = cii || (perRate ? hasUse : m.lines.length > 0);
+      if (used && (margin ? D.within(declared, computed, D.ONE_UNIT) : D.eq(declared, computed)))
+        continue;
+      const label = `${v.category}${v.rate !== undefined ? ` ${v.rate}%` : ""}`;
+      emit(
+        v.category === "S" ? "BR-S-08" : "BR-VAT-08",
+        hasUse
+          ? `Lines, allowances and charges in ${label} add up to ${fd(computed)}, but the taxable amount is ${f2(v.taxableAmount)}.`
+          : `No line, document allowance or charge uses ${label}, but its VAT breakdown has a taxable amount of ${f2(v.taxableAmount)}.`,
+        at(v.locs, "taxableAmount", v.loc),
+        { expected: fd(computed), actual: f2(v.taxableAmount) },
+      );
     }
 
     // party VAT requirements per category
