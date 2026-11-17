@@ -72,7 +72,13 @@ export interface InvoiceLine {
   grossPrice?: number; // BT-148
   baseQuantity?: number; // BT-149
   baseQuantityUnit?: string; // BT-150
+  /** A price-level allowance/charge whose ChargeIndicator isn't exactly "false" (UBL, PEPPOL-EN16931-R044) */
   hasPriceCharge?: boolean;
+  /** CII gross-price base quantity (Peppol R121/R130 also check it) */
+  grossBaseQuantity?: number;
+  grossBaseQuantityUnit?: string;
+  /** CII price-level allowances/charges (AppliedTradeAllowanceCharge): raw ChargeIndicator, for PEPPOL-EN16931-R043 */
+  priceIndicators?: { raw?: string; loc: Loc }[];
   vatCategory?: string; // BT-151
   vatRate?: number; // BT-152
   itemName?: string; // BT-153
@@ -134,6 +140,23 @@ export interface Totals {
 
 export type Syntax = "UBL" | "CII";
 
+/** An identifier element carrying a schemeID, wherever it sits (the Peppol identifier rules check them all). */
+export interface SchemeIdentifier {
+  /** UBL: EndpointID, PartyIdentification/ID or CompanyID; CII: URIID, ID or GlobalID */
+  element: string;
+  /** schemeID exactly as written */
+  scheme: string;
+  /** Element text, trimmed */
+  id: string;
+  /** Whose identifier it is in plain words: "Seller", "Buyer", "Payee", "Item" … */
+  owner: string;
+  /** What kind of identifier it is: "EndpointID", "party identifier", "legal registration number" … */
+  kind: string;
+  /** Seller or buyer electronic address (BT-34 / BT-49) */
+  endpoint?: boolean;
+  loc: Loc;
+}
+
 export interface InvoiceModel {
   syntax: Syntax;
   kind: "invoice" | "creditnote";
@@ -165,6 +188,12 @@ export interface InvoiceModel {
   periodStart?: string; // BT-73
   periodEnd?: string; // BT-74
   hasPeriod: boolean;
+  /** BG-14 carries something the official rules accept: UBL any child element, CII a start or end date element */
+  periodHasContent?: boolean;
+  /** An actual delivery date is written (UBL: longer than one character; CII: a DateTimeString element) */
+  deliveryDateGiven?: boolean;
+  /** CII: first document note with a subject code (PEPPOL-EN16931-R002 forbids them) */
+  noteSubjectCode?: Loc;
   seller: Party; // BG-4
   buyer: Party; // BG-7
   payee?: Party; // BG-10
@@ -178,8 +207,15 @@ export interface InvoiceModel {
   totals: Totals; // BG-22
   lines: InvoiceLine[]; // BG-25
   attachments: { id?: string; description?: string; filename?: string; mime?: string; loc?: Loc }[]; // BG-24
-  /** Amount nodes with their currencyID attribute, for currency consistency checks */
+  /**
+   * Amount nodes with their currencyID attribute, for currency consistency checks. UBL lists every
+   * element PEPPOL-EN16931-R051 checks (`bt` names the term or element); CII only amounts that carry one.
+   */
   amountCurrencies: { bt: string; currency?: string; loc: Loc }[];
+  /** Every identifier with a schemeID (PEPPOL-COMMON-R040/R043, PEPPOL-EN16931-CL008) */
+  schemeIds: SchemeIdentifier[];
+  /** Every embedded binary object with a mimeCode, wherever it sits (BR-CL-24, PEPPOL-EN16931-CL001) */
+  binaryObjects?: { mime: string; filename?: string; loc: Loc }[];
   /** Raw amount strings for decimal-precision checks */
   decimals: { bt: string; raw: string; loc: Loc }[];
   /** Fields that failed basic type parsing (bad dates, non-numeric amounts) */

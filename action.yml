@@ -15,7 +15,7 @@ inputs:
     required: false
     default: ""
   profile:
-    description: '"peppol" checks every UBL file against Peppol BIS Billing 3.0 and EN 16931, so a wrong CustomizationID is reported. "auto" picks the rule set from each file''s CustomizationID; "en16931", "xrechnung" and "nlcius" (Dutch SI-UBL 2.0) force those.'
+    description: '"peppol" checks every UBL file, and CII files other than Factur-X / ZUGFeRD, XRechnung and SI-UBL 2.0, against Peppol BIS Billing 3.0 and EN 16931, so a wrong CustomizationID is reported. "auto" picks the rule set from each file''s CustomizationID; "en16931", "xrechnung" and "nlcius" (Dutch SI-UBL 2.0) force those.'
     required: false
     default: peppol
   fail-on:

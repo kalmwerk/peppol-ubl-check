@@ -933,3 +933,8 @@ export const PEPPOL_PROFILE_IDS: ReadonlySet<string> = new Set([
   "urn:peppol:france:billing:non-regulated",
   "urn:peppol:bis:billing_with_response",
 ]);
+/** Business processes Peppol BIS 3.0.22's CII rules approve (PEPPOL-EN16931-CII.sch): no French ones. */
+export const PEPPOL_CII_PROFILE_IDS: ReadonlySet<string> = new Set([
+  PEPPOL_PROFILE_ID,
+  "urn:peppol:bis:billing_with_response",
+]);

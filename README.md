@@ -92,7 +92,7 @@ All inputs are optional.
 | --- | --- | --- |
 | `files` | `**/*.xml` | Invoice files, as globs relative to the repository root, one per line or comma separated. A folder means every `*.xml` in it; `!pattern` leaves files out. Hidden folders (`.github`) and `node_modules` are skipped unless the pattern names them. |
 | `ignore` | | Globs to leave out, e.g. `test/fixtures/broken/**`. |
-| `profile` | `peppol` | `peppol`: Peppol BIS Billing 3.0 and EN 16931 rules on every UBL file, so a wrong `CustomizationID` is reported instead of quietly checking less. `auto`: pick the rule set from each file's `CustomizationID` (use this for a mix of Peppol, XRechnung, SI-UBL 2.0 and plain EN 16931 files). `en16931`, `xrechnung` or `nlcius` (Dutch SI-UBL 2.0): force those. |
+| `profile` | `peppol` | `peppol`: Peppol BIS Billing 3.0 and EN 16931 rules on every UBL file, and on CII files other than Factur-X / ZUGFeRD, XRechnung and SI-UBL 2.0 (those keep their own rules), so a wrong `CustomizationID` is reported instead of quietly checking less. `auto`: pick the rule set from each file's `CustomizationID` (use this for a mix of Peppol, XRechnung, SI-UBL 2.0 and plain EN 16931 files). `en16931`, `xrechnung` or `nlcius` (Dutch SI-UBL 2.0): force those. |
 | `fail-on` | `error` | `error` fails the job when any invoice has errors, `warning` also on warnings, `never` only reports. |
 | `non-invoice` | `skip` | XML files whose root element isn't `Invoice`, `CreditNote` or `CrossIndustryInvoice`: `skip` lists them as skipped, `fail` reports them as errors. An `Invoice` in the wrong namespace is always an error. |
 | `if-no-files-found` | `error` | No invoice found: `error` fails the job, `warn` only warns, `ignore` says nothing. |
@@ -131,7 +131,7 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 ```json
 {
   "tool": "peppol-ubl-check",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "rulesAvailable": 222,
   "profile": "peppol",
   "failOn": "error",
@@ -177,12 +177,24 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 
 - **Syntax:** well-formed XML, with the line and column of the first problem; UBL 2.1 `Invoice` / `CreditNote` (and UN/CEFACT CII) in the right namespace; dates and amounts in the right format.
 - **EN 16931 (108 rules):** mandatory content (BR-01…), VAT categories and exemption reasons (BR-S, BR-AE, BR-E, BR-Z, BR-O…), calculations of lines, totals and the VAT breakdown (BR-CO), decimals, and code lists for currencies, countries, units, VAT categories, payment means and electronic address schemes.
-- **Peppol BIS Billing 3.0 (40 rules):** business process and specification IDs, buyer reference, buyer and seller endpoint IDs, GLNs and Belgian 0208 enterprise numbers, empty elements, allowance, charge and line calculations, invoice periods, currencies, the invoice and credit note type codes Peppol allows, and the Netherlands rules (NL-R-001 … NL-R-009) for Dutch suppliers.
+- **Peppol BIS Billing 3.0 (40 rules)**, in UBL and, from OpenPeppol's CII rules, in CII (the few UBL-only rules such as R008, R044, R046 and R051 aside): business process and specification IDs, buyer reference, buyer and seller endpoint IDs, GLNs and Belgian 0208 enterprise numbers, empty elements, allowance, charge and line calculations, invoice periods, currencies, the invoice and credit note type codes Peppol allows, and the Netherlands rules (NL-R-001 … NL-R-009) for Dutch suppliers.
 - **XRechnung (32 rules)** with `profile: xrechnung`, or `auto` for files that declare XRechnung: every business rule of the XRechnung 3.0 CIUS (BR-DE-1 … BR-DE-31 and BR-DE-TMP-32 from the KoSIT Schematron), in UBL and CII: buyer reference / Leitweg-ID, seller contact, addresses, payment instructions and the payment-means groups, the Skonto syntax, attachments and the specification identifier. Not the rules of the XRechnung Extension (BR-DEX) or CVD, and no ZUGFeRD PDFs (XML files only).
 - **SI-UBL 2.0 / NLCIUS (30 rules)** with `profile: nlcius`, or `auto` for files that declare SI-UBL 2.0: the Dutch rules of the official SI-UBL 2.0 Schematron (validation artefacts 2.0.3.13 of the Dutch Peppol Authority, BR-NL-* and SI-UBL warnings), in UBL and CII: KvK and OIN identifiers, buyer reference or order reference, addresses of Dutch parties, payment means, credit-note references and the specification identifier. Not the UBL syntax rules (UBL-SR) of that set or its CII-only warning BR-NL-22.
 - **Extra checks (12):** well-formed XML and document type, data types, Factur-X profiles below EN 16931, VAT number format and check digits, VAT prefix versus the seller's country, Belgian enterprise number check digits, German Leitweg-ID structure and check digits (KoSIT format specification 2.0.2), IBAN check digits, due date before issue date, uncommon unit codes.
 
 Calculations are judged the way the official Schematron judges them, with exact decimals (no floating point) and the same margins: none for the totals (BR-CO-10 … BR-CO-16); for the VAT breakdown less than 1.00 per rate in UBL and none in CII (BR-S-08; the other categories as their own rules say); for the VAT amount less than 1.00 in UBL and up to 1.00 in CII (BR-CO-17); and up to 0.02 for Peppol's allowance, charge and line calculations (R040, R120). The CEN unit tests for these rules are in `test/fixtures/en16931-cen/`.
+
+### Compared with the official rules
+
+`npm run compare-official` downloads the official unit tests of the CEN EN 16931 validation artefacts 1.3.17 and the Peppol BIS Billing 3.0 rules 3.0.22 (1,919 test invoices in UBL and CII; the Peppol files may not be redistributed, so they aren't in this repository) and compares every expected verdict of a rule this tool checks: 929 compared, 0 different. 177 rules those tests exercise aren't checked here; `--list-uncovered` lists them (64 EN 16931 rules, mostly VAT details of allowances and charges and the VAT amount per category; 17 Peppol rules; 96 national rules for Denmark, Germany, Greece, Italy, Norway and Sweden). `test/official-peppol.test.ts` restates the Peppol cases the tool once got wrong.
+
+Deliberate differences:
+
+- **BR-CO-25** (no due date or payment terms) is a warning on invoices, not an error: EN 16931 still states it, but the official CEN rules stopped checking it in 1.3.16. Credit notes aren't checked, as in the official tests; Factur-X / ZUGFeRD keeps it as an error.
+- **BR-S-01** asks for a VAT breakdown entry for every standard rate used, not only one standard-rated entry overall (the same for IGIC and IPSI under BR-VAT-01).
+- **IV-VAT-01** (VAT number format) and the file checks are errors of this tool's own, not in any official rule set; the other extra checks are warnings or notes.
+- Several official rules share one ID here: BR-VAT-01 (BR-Z-01 … BR-IP-01), BR-VAT-08 (BR-Z-08 … BR-IP-08) and BR-DEC (BR-DEC-01 … 28). Same verdicts, different ID.
+- With `profile: peppol`, Factur-X / ZUGFeRD, XRechnung and SI-UBL 2.0 CII files keep their own rules instead of Peppol's.
 
 Not checked: XSD schema validation, the official rule sets in full, PDF/A and Factur-X / ZUGFeRD PDFs, digital signatures, and whether the buyer can actually receive invoices on Peppol (that needs a network lookup; the website's free [Peppol ID lookup](https://peppol-invoice-compass.lovable.app/tools/peppol-lookup) does it).
 

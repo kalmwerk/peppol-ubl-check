@@ -9,7 +9,7 @@ import {
   type PaymentMeans,
   type VatBreakdown,
 } from "./model";
-import { ReadCtx, collectEmptyElements } from "./read-utils";
+import { ReadCtx, collectBinaryObjects, collectEmptyElements, collectUblAmountCurrencies, collectUblSchemeIds } from "./read-utils";
 import { all, at, kids, text, type XNode } from "./xml";
 
 export const UBL_INVOICE_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
@@ -161,6 +161,7 @@ export function readUbl(root: XNode): InvoiceModel {
       loc: ctx.loc(d),
     })),
     amountCurrencies: [],
+    schemeIds: [],
     decimals: [],
     typeErrors: [],
     emptyElements: [],
@@ -173,6 +174,7 @@ export function readUbl(root: XNode): InvoiceModel {
   const period = at(root, "InvoicePeriod");
   if (period) {
     model.hasPeriod = true;
+    model.periodHasContent = period.children.length > 0;
     locs["period"] = ctx.loc(period);
     model.periodStart = ctx.isoDate(period, "StartDate", locs, "periodStart", "BT-73");
     model.periodEnd = ctx.isoDate(period, "EndDate", locs, "periodEnd", "BT-74");
@@ -201,6 +203,7 @@ export function readUbl(root: XNode): InvoiceModel {
   model.creditorId = sepa(model.seller) ?? sepa(model.payee);
 
   const delivery = at(root, "Delivery");
+  model.deliveryDateGiven = (at(delivery, "ActualDeliveryDate")?.text.trim().length ?? 0) > 1;
   if (delivery) {
     const dl: LocMap = {};
     model.delivery = {
@@ -380,11 +383,13 @@ export function readUbl(root: XNode): InvoiceModel {
         line.baseQuantityUnit = bq.attrs["unitCode"];
       }
       for (const pac of kids(price, "AllowanceCharge")) {
-        const ind = text(pac, "ChargeIndicator")?.toLowerCase();
-        if (ind === "true") {
+        const raw = text(pac, "ChargeIndicator");
+        // PEPPOL-EN16931-R044 accepts exactly "false"; "0", "FALSE" or a missing indicator count as a charge
+        if (raw !== "false" && !line.hasPriceCharge) {
           line.hasPriceCharge = true;
-          L["priceCharge"] = ctx.loc(pac);
-        } else {
+          L["priceCharge"] = ctx.loc(at(pac, "ChargeIndicator") ?? pac);
+        }
+        if (raw?.toLowerCase() !== "true") {
           line.priceDiscount = ctx.num(pac, "Amount", L, "priceDiscount", "BT-147");
           line.grossPrice = ctx.num(pac, "BaseAmount", L, "grossPrice", "BT-148");
         }
@@ -393,7 +398,9 @@ export function readUbl(root: XNode): InvoiceModel {
     model.lines.push(line);
   }
 
-  model.amountCurrencies = ctx.amountCurrencies;
+  model.amountCurrencies = collectUblAmountCurrencies(root, ctx);
+  model.schemeIds = collectUblSchemeIds(root, ctx);
+  model.binaryObjects = collectBinaryObjects(root, "EmbeddedDocumentBinaryObject", ctx);
   model.decimals = ctx.decimals;
   model.typeErrors = ctx.typeErrors;
   model.emptyElements = collectEmptyElements(root, ctx);

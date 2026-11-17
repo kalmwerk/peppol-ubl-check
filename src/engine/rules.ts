@@ -10,6 +10,7 @@ import {
   NLCIUS_CUSTOMIZATION_ID,
   ISO_4217,
   PAYMENT_MEANS,
+  PEPPOL_CII_PROFILE_IDS,
   PEPPOL_CREDIT_NOTE_TYPE_CODES,
   PEPPOL_CUSTOMIZATION_ID,
   PEPPOL_EAS_CODES,
@@ -73,6 +74,18 @@ const NLCIUS_TYPE_CODES = new Set(["380", "381", "384", "389"]);
 const isKvkOrOin = (id: Identifier | undefined) =>
   !!id && (id.scheme?.trim() === "0106" || id.scheme?.trim() === "0190") && id.id.trim() !== "";
 const isNL = (country: string | undefined) => country?.trim().toUpperCase() === "NL";
+/** XPath normalize-space(): trimmed, inner whitespace runs collapsed to one space. */
+const normSpace = (v: string | undefined) => (v ?? "").replace(/\s+/g, " ").trim();
+/** The party's postal country, as the Peppol national rules read it (upper-case, trimmed). */
+const countryIs = (p: Party | undefined, code: string) => p?.address?.country?.trim().toUpperCase() === code;
+/** Street, city and post code elements that are missing (present but empty still counts as given). */
+function missingAddressElements(locs: Record<string, Loc>): string[] {
+  return [
+    !locs["address.line1"] && "street name",
+    !locs["address.city"] && "city",
+    !locs["address.postalCode"] && "post code",
+  ].filter((x): x is string => !!x);
+}
 /** Street, city and post code (BT-35/37/38 and their buyer / representative twins) — the ones missing. */
 function missingAddressParts(a: { line1?: string; city?: string; postalCode?: string }): string[] {
   return [!a.line1 && "street name", !a.city && "city", !a.postalCode && "post code"].filter((x): x is string => !!x);
@@ -114,6 +127,8 @@ const VAT_PREFIX_EXTRAS = new Set(["EL", "XI", "1A"]);
 /** VAT categories whose -08 rule groups by rate (standard rate, IGIC, IPSI); the others group by category */
 const PER_RATE_CATEGORIES = new Set(["S", "L", "M"]);
 
+/** VAT categories whose -01 rule asks for exactly one VAT breakdown row (BR-VAT-01 here). */
+const ONE_BREAKDOWN_ROW: ReadonlySet<string> = new Set(["Z", "E", "AE", "K", "G", "O"]);
 const rateKey = (rate: number | undefined) => (rate === undefined ? "" : String(round2(rate)));
 
 export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): Finding[] {
@@ -154,7 +169,8 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       actual: te.raw,
     });
   }
-  if (opts.peppol) {
+  // R008 exists in Peppol's UBL rules only
+  if (opts.peppol && m.syntax === "UBL") {
     for (const loc of m.emptyElements.slice(0, 25)) {
       emit("PEPPOL-EN16931-R008", `Element ${loc.xpath.split("/").pop()} is empty.`, loc);
     }
@@ -204,12 +220,14 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     );
   for (const a of m.attachments) {
     if (!a.id) emit("BR-52", "A supporting document (BG-24) has no document reference (BT-122).", a.loc);
-    // BR-CL-24 (EN 16931) and PEPPOL-EN16931-CL001 check the same six MIME codes
-    if (a.mime !== undefined && !ATTACHMENT_MIME_CODES.has(a.mime.trim())) {
-      const what = `Attachment ${a.filename ? `"${a.filename}" ` : ""}has mimeCode "${a.mime}", which is not an allowed MIME code.`;
-      emit("BR-CL-24", what, a.loc, { actual: a.mime, expected: "application/pdf" });
-      if (opts.peppol) emit("PEPPOL-EN16931-CL001", what, a.loc, { actual: a.mime, expected: "application/pdf" });
-    }
+  }
+  // BR-CL-24 (EN 16931) and PEPPOL-EN16931-CL001 check the same six MIME codes, on every embedded
+  // binary object with a mimeCode
+  for (const b of m.binaryObjects ?? []) {
+    if (ATTACHMENT_MIME_CODES.has(b.mime.trim())) continue;
+    const what = `Attachment ${b.filename ? `"${b.filename}" ` : ""}has mimeCode "${b.mime}", which is not an allowed MIME code.`;
+    emit("BR-CL-24", what, b.loc, { actual: b.mime, expected: "application/pdf" });
+    if (opts.peppol) emit("PEPPOL-EN16931-CL001", what, b.loc, { actual: b.mime, expected: "application/pdf" });
   }
   if (m.taxPointDate && m.taxPointCode)
     emit(
@@ -218,10 +236,12 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       at(m.locs, "taxPointDate"),
     );
   if (m.hasPeriod) {
+    // BR-CO-19 asks for a start or end date element; UBL also accepts the VAT point date code (BT-8)
+    // on its own in the period, the official UBL binding's exception for partial invoices
     if (
-      !m.periodStart &&
-      !m.periodEnd &&
-      !m.typeErrors.some((t) => t.bt === "BT-73" || t.bt === "BT-74")
+      !m.locs["periodStart"] &&
+      !m.locs["periodEnd"] &&
+      !(m.syntax === "UBL" && m.locs["taxPointCode"])
     )
       emit(
         "BR-CO-19",
@@ -246,25 +266,34 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     );
 
   if (opts.peppol) {
-    if (!m.profileId) emit("PEPPOL-EN16931-R001", "cbc:ProfileID (business process) is missing.");
-    // Peppol BIS 3.0.22 approves a fixed list of business processes, not a pattern
-    else if (!PEPPOL_PROFILE_IDS.has(m.profileId.trim()))
+    const cii = m.syntax === "CII";
+    // The official $profile: an approved business process, else "Unknown". R001 asks for the element,
+    // R007 for an approved value, so a missing ProfileID breaks both, as in the official rules.
+    const profileApproved = (cii ? PEPPOL_CII_PROFILE_IDS : PEPPOL_PROFILE_IDS).has(normSpace(m.profileId));
+    if (!m.locs["profileId"])
+      emit(
+        "PEPPOL-EN16931-R001",
+        cii
+          ? "The business process (BusinessProcessSpecifiedDocumentContextParameter/ID) is missing."
+          : "cbc:ProfileID (business process) is missing.",
+      );
+    if (!profileApproved)
       emit(
         "PEPPOL-EN16931-R007",
-        `ProfileID "${m.profileId}" is not an approved Peppol business process.`,
+        m.profileId
+          ? `ProfileID "${m.profileId}" is not an approved Peppol business process${cii ? " for CII invoices" : ""}.`
+          : "No business process is given, so it is not an approved Peppol one.",
         at(m.locs, "profileId"),
         {
           actual: m.profileId,
           expected: PEPPOL_PROFILE_ID,
         },
       );
-    if (
-      m.customizationId &&
-      (!m.customizationId.startsWith(PEPPOL_CUSTOMIZATION_ID) || m.customizationId.includes("::"))
-    )
+    const cid = normSpace(m.customizationId);
+    if (!cid.startsWith(PEPPOL_CUSTOMIZATION_ID) || cid.includes("::"))
       emit(
         "PEPPOL-EN16931-R004",
-        `CustomizationID is "${m.customizationId}".`,
+        m.customizationId ? `CustomizationID is "${m.customizationId}".` : "No CustomizationID is given.",
         at(m.locs, "customizationId"),
         {
           actual: m.customizationId,
@@ -277,35 +306,42 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         `TaxCurrencyCode equals the invoice currency (${m.currency}).`,
         at(m.locs, "taxCurrency"),
       );
-    const bothGerman = m.seller.address?.country === "DE" && m.buyer.address?.country === "DE";
+    // UBL allows more notes between two German parties (postal countries); CII never, and no subject code
+    const bothGerman = !cii && countryIs(m.seller, "DE") && countryIs(m.buyer, "DE");
     if (m.notes.length > 1 && !bothGerman)
       emit(
         "PEPPOL-EN16931-R002",
         `The invoice has ${m.notes.length} notes; Peppol allows one.`,
         at(m.locs, "notes"),
       );
-    if (!m.buyerReference && !m.orderRef)
+    else if (cii && m.noteSubjectCode)
+      emit("PEPPOL-EN16931-R002", "The document note has a subject code, which Peppol doesn't allow in CII.", m.noteSubjectCode);
+    // Both rules ask for the element, empty or not (PEPPOL-EN16931-R008 reports empty ones)
+    if (!m.locs["buyerReference"] && !m.locs["orderRef"])
       emit(
         "PEPPOL-EN16931-R003",
         "Neither a buyer reference nor a purchase order reference is present.",
       );
-    if (m.typeCode) {
-      if (m.kind === "invoice" && m.syntax === "UBL" && !PEPPOL_INVOICE_TYPE_CODES.has(m.typeCode))
+    const tc = normSpace(m.typeCode);
+    // P0100/P0101 only apply under an approved business process ($profile 01 or 02)
+    if (m.locs["typeCode"] && profileApproved) {
+      if (cii) {
+        if (!PEPPOL_INVOICE_TYPE_CODES.has(tc) && !PEPPOL_CREDIT_NOTE_TYPE_CODES.has(tc))
+          emit("PEPPOL-EN16931-P0100", `Document type code ${m.typeCode ?? "(empty)"} is not allowed in Peppol BIS 3.`, at(m.locs, "typeCode"));
+      } else if (m.kind === "invoice" && !PEPPOL_INVOICE_TYPE_CODES.has(tc))
         emit(
           "PEPPOL-EN16931-P0100",
-          `Invoice type code ${m.typeCode} is not allowed in Peppol BIS 3.`,
+          `Invoice type code ${m.typeCode ?? "(empty)"} is not allowed in Peppol BIS 3.`,
           at(m.locs, "typeCode"),
         );
-      if (
-        m.kind === "creditnote" &&
-        m.syntax === "UBL" &&
-        !PEPPOL_CREDIT_NOTE_TYPE_CODES.has(m.typeCode)
-      )
+      else if (m.kind === "creditnote" && !PEPPOL_CREDIT_NOTE_TYPE_CODES.has(tc))
         emit(
           "PEPPOL-EN16931-P0101",
-          `Credit note type code ${m.typeCode} is not allowed in Peppol BIS 3.`,
+          `Credit note type code ${m.typeCode ?? "(empty)"} is not allowed in Peppol BIS 3.`,
           at(m.locs, "typeCode"),
         );
+    }
+    if (m.typeCode) {
       // P0112: 326 and 389 only between two German parties; 384 also between two Slovak ones.
       // "German" reads the postal address only; "Slovak" the VAT prefix first (Peppol BIS 3.0.22).
       if (m.kind === "invoice" && m.syntax === "UBL" && ["326", "384", "389"].includes(m.typeCode)) {
@@ -326,39 +362,71 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
           );
       }
     }
-    const withSub = m.taxTotals.filter((t) => t.hasSubtotals);
-    if (withSub.length > 1)
-      emit(
-        "PEPPOL-EN16931-R053",
-        `${withSub.length} TaxTotal groups contain subtotals.`,
-        withSub[1]?.loc,
-      );
-    if (
-      T.taxAmount !== undefined &&
-      T.taxAmountAccounting !== undefined &&
-      Math.sign(T.taxAmount) !== Math.sign(T.taxAmountAccounting) &&
-      T.taxAmount !== 0 &&
-      T.taxAmountAccounting !== 0
-    )
-      emit(
-        "PEPPOL-EN16931-R055",
-        "The VAT total and the VAT total in accounting currency have different signs.",
-        tLoc("taxAmountAccounting"),
-      );
-    if (m.currency) {
-      for (const ac of m.amountCurrencies) {
-        if (ac.bt === "BT-111") continue;
-        if (ac.currency && ac.currency !== m.currency) {
+    // R053: exactly one TaxTotal with subtotals (UBL); exactly one VAT total in the invoice currency (CII)
+    if (cii) {
+      const inCurrency = m.taxTotals.filter((t) => m.currency !== undefined && t.currency === m.currency);
+      if (inCurrency.length !== 1)
+        emit(
+          "PEPPOL-EN16931-R053",
+          inCurrency.length === 0
+            ? `No VAT total (TaxTotalAmount) is in the invoice currency${m.currency ? ` ${m.currency}` : ""}.`
+            : `${inCurrency.length} VAT totals (TaxTotalAmount) are in the invoice currency ${m.currency}; Peppol allows one.`,
+          inCurrency[1]?.loc ?? tLoc("taxAmount"),
+        );
+    } else {
+      const withSub = m.taxTotals.filter((t) => t.hasSubtotals);
+      if (withSub.length !== 1)
+        emit(
+          "PEPPOL-EN16931-R053",
+          withSub.length === 0
+            ? "No TaxTotal contains VAT subtotals (TaxSubtotal); Peppol needs exactly one."
+            : `${withSub.length} TaxTotal groups contain subtotals.`,
+          withSub[1]?.loc,
+        );
+    }
+    // R055: when TaxCurrencyCode is given, the VAT totals in both currencies share a sign. UBL treats
+    // zero as either sign, CII as positive; a missing total in either currency fails the test.
+    if (m.locs["taxCurrency"]) {
+      const amounts = (c: string | undefined) =>
+        m.taxTotals.filter((t) => c !== undefined && t.currency === c && t.amount !== undefined).map((t) => t.amount!);
+      const inTax = amounts(m.taxCurrency);
+      const inDoc = amounts(m.currency);
+      const some = (xs: number[], ok: (x: number) => boolean) => xs.some(ok);
+      const same = cii
+        ? (some(inTax, (x) => x < 0) && some(inDoc, (x) => x < 0)) || (some(inTax, (x) => x >= 0) && some(inDoc, (x) => x >= 0))
+        : (some(inTax, (x) => x <= 0) && some(inDoc, (x) => x <= 0)) || (some(inTax, (x) => x >= 0) && some(inDoc, (x) => x >= 0));
+      if (!same)
+        emit(
+          "PEPPOL-EN16931-R055",
+          inTax.length === 0 || inDoc.length === 0
+            ? `TaxCurrencyCode ${m.taxCurrency ?? ""} is given, but there is no VAT total in ${inTax.length === 0 ? "that currency" : "the invoice currency"} to compare signs with.`.replace("  ", " ")
+            : `The VAT total (${f2(inDoc[0])} ${m.currency}) and the VAT total in accounting currency (${f2(inTax[0])} ${m.taxCurrency}) have different signs.`,
+          tLoc("taxAmountAccounting"),
+        );
+    }
+    // R051 (UBL only; obsolete in CII): every listed amount carries the invoice currency
+    if (!cii) {
+      if (!m.currency) {
+        if (m.amountCurrencies.length > 0)
           emit(
             "PEPPOL-EN16931-R051",
-            `${ac.bt} uses currencyID="${ac.currency}" but the invoice currency is ${m.currency}.`,
+            `No invoice currency (BT-5) is given, so none of the ${m.amountCurrencies.length} amounts' currencyID can match it.`,
+            m.amountCurrencies[0]!.loc,
+          );
+      } else {
+        const wrong = m.amountCurrencies.filter((ac) => ac.currency !== m.currency);
+        for (const ac of wrong.slice(0, 25))
+          emit(
+            "PEPPOL-EN16931-R051",
+            ac.currency === undefined
+              ? `${ac.bt} has no currencyID; it must be the invoice currency ${m.currency}.`
+              : `${ac.bt} uses currencyID="${ac.currency}" but the invoice currency is ${m.currency}.`,
             ac.loc,
             {
               actual: ac.currency,
               expected: m.currency,
             },
           );
-        }
       }
     }
   }
@@ -437,20 +505,19 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
           actual: p.endpoint.scheme,
         },
       );
-    else if (p.endpoint.scheme === "0088" && !checkGln(p.endpoint.id))
-      emit("PEPPOL-COMMON-R040", `${who} GLN "${p.endpoint.id}" has an invalid check digit.`, loc, {
-        actual: p.endpoint.id,
-      });
     else if (p.endpoint.scheme === "0208" && !opts.peppol && !checkBelgianEnterprise(p.endpoint.id))
       // Outside Peppol only our own warning; Peppol has the fatal PEPPOL-COMMON-R043 below.
       emit("IV-BE-01", `${who} enterprise number "${p.endpoint.id}" fails the mod-97 check.`, loc, {
         actual: p.endpoint.id,
       });
-    // Peppol checks its own, shorter list as well (both rules can fire on one EndpointID)
-    if (opts.peppol && p.endpoint.scheme && !PEPPOL_EAS_CODES.has(p.endpoint.scheme.trim()))
+    // CII: Peppol's own, shorter list for the seller and buyer address, schemeID or not (CL008).
+    // UBL checks every EndpointID with a schemeID, below.
+    if (opts.peppol && m.syntax === "CII" && !PEPPOL_EAS_CODES.has(p.endpoint.scheme ?? ""))
       emit(
         "PEPPOL-EN16931-CL008",
-        `${who} endpoint scheme "${p.endpoint.scheme}" is not an electronic address scheme Peppol accepts.`,
+        p.endpoint.scheme === undefined
+          ? `${who} electronic address "${p.endpoint.id}" has no schemeID from the list Peppol accepts.`
+          : `${who} endpoint scheme "${p.endpoint.scheme}" is not an electronic address scheme Peppol accepts.`,
         loc,
         { actual: p.endpoint.scheme, expected: "0208, 9925, 0088 …" },
       );
@@ -470,34 +537,30 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         { actual: scheme, expected: "0208, 0106, 0002 …" },
       );
   }
-  for (const [p, who] of [
-    [seller, "Seller"],
-    [buyer, "Buyer"],
-  ] as const) {
-    for (const idn of p.identifiers) {
-      if (idn.scheme === "0088" && !checkGln(idn.id))
+  // Peppol's identifier rules look at every identifier with that scheme, wherever it sits: GLN (0088)
+  // and Belgian enterprise numbers (0208) in EndpointID / party identifiers / CompanyID (UBL) or
+  // URIID / ID / GlobalID (CII), and the Peppol address scheme list for each UBL EndpointID (CL008)
+  if (opts.peppol) {
+    for (const sid of m.schemeIds) {
+      const what = `${sid.owner} ${sid.kind}`;
+      if (sid.scheme === "0088" && !checkGln(sid.id))
+        emit("PEPPOL-COMMON-R040", `${what} GLN "${sid.id}" has an invalid check digit.`, sid.loc, {
+          actual: sid.id,
+        });
+      if (sid.scheme === "0208" && !isPeppol0208(sid.id))
         emit(
-          "PEPPOL-COMMON-R040",
-          `${who} identifier GLN "${idn.id}" has an invalid check digit.`,
-          p.locs["identifier"],
+          "PEPPOL-COMMON-R043",
+          `${what} "${sid.id}" uses scheme 0208 but is not a 10-digit Belgian enterprise number with valid check digits (no BE, dots or spaces).`,
+          sid.loc,
+          { actual: sid.id, expected: "0123456749" },
         );
-    }
-    if (!opts.peppol) continue;
-    // PEPPOL-COMMON-R043: every identifier with scheme 0208 (EndpointID, party
-    // identifier, CompanyID) must be exactly 10 digits and pass the mod-97 test.
-    const belgianIds: [Identifier | undefined, string, Loc | undefined][] = [
-      [p.endpoint, "EndpointID", at(p.locs, "endpoint", p.loc)],
-      ...p.identifiers.map((i): [Identifier, string, Loc | undefined] => [i, "party identifier", p.locs["identifier"] ?? p.loc]),
-      [p.legalId, "legal registration number", at(p.locs, "legalId", p.loc)],
-    ];
-    for (const [idn, what, loc] of belgianIds) {
-      if (idn?.scheme !== "0208" || isPeppol0208(idn.id)) continue;
-      emit(
-        "PEPPOL-COMMON-R043",
-        `${who} ${what} "${idn.id}" uses scheme 0208 but is not a 10-digit Belgian enterprise number with valid check digits (no BE, dots or spaces).`,
-        loc,
-        { actual: idn.id, expected: "0123456749" },
-      );
+      if (m.syntax === "UBL" && sid.element === "EndpointID" && !PEPPOL_EAS_CODES.has(sid.scheme))
+        emit(
+          "PEPPOL-EN16931-CL008",
+          `${sid.owner} endpoint scheme "${sid.scheme}" is not an electronic address scheme Peppol accepts.`,
+          sid.loc,
+          { actual: sid.scheme, expected: "0208, 9925, 0088 …" },
+        );
     }
   }
 
@@ -588,18 +651,24 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
           actual: pm.account,
         },
       );
-    if (opts.peppol && DIRECT_DEBIT_CODES.has(pm.code) && !pm.mandateRef)
+    // The mandate reference element must be there (an empty one is PEPPOL-EN16931-R008's concern)
+    if (opts.peppol && DIRECT_DEBIT_CODES.has(pm.code) && !pm.locs["mandateRef"])
       emit(
         "PEPPOL-EN16931-R061",
         "Direct debit is used but no mandate reference is given.",
         codeLoc,
       );
   }
-  if ((T.payable ?? 0) > 0 && !m.dueDate && !m.paymentTerms)
+  // BR-CO-25 is still in the EN 16931 text, but the official CEN rules dropped it in 1.3.16 (CEN
+  // issues #232/#477), and Peppol, XRechnung and SI-UBL 2.0 run those rules: a warning on invoices.
+  // Factur-X's own rule packs still check it on every document, so it stays an error there.
+  const facturx = fmt.id === "factur-x";
+  if ((T.payable ?? 0) > 0 && !m.dueDate && !m.paymentTerms && (facturx || m.kind === "invoice"))
     emit(
       "BR-CO-25",
       `Amount due is ${f2(T.payable)} but there is no due date and no payment terms.`,
       tLoc("payable"),
+      { severity: facturx ? "error" : "warning" },
     );
 
   /* ---------------- totals: presence ---------------- */
@@ -626,12 +695,7 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
   /* ---------------- allowances & charges (document level) ---------------- */
   const docAc = (ac: AllowanceCharge) => {
     const kind = ac.isCharge ? "charge" : "allowance";
-    if (ac.rawIndicator && ac.rawIndicator !== "true" && ac.rawIndicator !== "false" && opts.peppol)
-      emit(
-        "PEPPOL-EN16931-R043",
-        `ChargeIndicator is "${ac.rawIndicator}".`,
-        at(ac.locs, "indicator", ac.loc),
-      );
+    peppolIndicator(ac.rawIndicator, at(ac.locs, "indicator", ac.loc), "A document allowance/charge");
     if (ac.amount === undefined)
       emit(ac.isCharge ? "BR-36" : "BR-31", `A document ${kind} has no amount.`, ac.loc);
     if (!ac.vatCategory)
@@ -649,6 +713,16 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         ac.loc,
       );
     peppolPercent(ac);
+  };
+  // PEPPOL-EN16931-R043: exactly "true" or "false" (a missing indicator fails too)
+  const peppolIndicator = (raw: string | undefined, loc: Loc, what: string) => {
+    if (opts.peppol && raw !== "true" && raw !== "false")
+      emit(
+        "PEPPOL-EN16931-R043",
+        raw === undefined ? `${what} has no ChargeIndicator.` : `${what} has ChargeIndicator "${raw}"; use true or false.`,
+        loc,
+        { actual: raw, expected: "true or false" },
+      );
   };
   const peppolPercent = (ac: AllowanceCharge) => {
     if (!opts.peppol) return;
@@ -770,6 +844,9 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       if (cat === "O" && rate !== undefined)
         emit("BR-O-05", `${label} is out of scope of VAT but carries rate ${rate}%.`, L("vatRate"));
 
+      for (const ac of [...ln.allowances, ...ln.charges])
+        peppolIndicator(ac.rawIndicator, at(ac.locs, "indicator", ac.loc), `${label}: an allowance/charge`);
+      for (const pi of ln.priceIndicators ?? []) peppolIndicator(pi.raw, pi.loc, `${label}: a price allowance/charge`);
       for (const ac of ln.allowances) {
         if (ac.amount === undefined)
           emit("BR-41", `${label} has an allowance without amount.`, ac.loc);
@@ -793,21 +870,30 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         emit("BR-65", `${label} item classification has no listID.`, L("item"));
 
       if (opts.peppol) {
-        if (ln.hasPriceCharge)
-          emit("PEPPOL-EN16931-R044", `${label} has a charge on price level.`, L("priceCharge"));
-        if (ln.baseQuantity !== undefined && ln.baseQuantity <= 0)
-          emit(
-            "PEPPOL-EN16931-R121",
-            `${label} base quantity is ${ln.baseQuantity}.`,
-            L("baseQuantity"),
-          );
-        if (ln.baseQuantityUnit && ln.unitCode && ln.baseQuantityUnit !== ln.unitCode)
+        const ubl = m.syntax === "UBL";
+        // R044 and R046 exist in the UBL rules only (CII has no element for them)
+        if (ubl && ln.hasPriceCharge)
+          emit("PEPPOL-EN16931-R044", `${label} has a price-level allowance/charge whose ChargeIndicator isn't "false" (a charge on price level).`, L("priceCharge"));
+        // R121: a base quantity above zero; CII checks the gross price's base quantity as well
+        const bases: [number | undefined, string | undefined, string, string][] = [
+          [ln.baseQuantity, ln.baseQuantityUnit, "baseQuantity", "base quantity"],
+          ...(ubl ? [] : [[ln.grossBaseQuantity, ln.grossBaseQuantityUnit, "grossBaseQuantity", "gross price base quantity"] as [number | undefined, string | undefined, string, string]]),
+        ];
+        for (const [qty, , key, what] of bases)
+          if (qty !== undefined && qty <= 0) emit("PEPPOL-EN16931-R121", `${label} ${what} is ${qty}.`, L(key));
+        // R130: a base quantity with a unit code uses the invoiced quantity's unit (UBL only when the
+        // line has a quantity; CII always, so a quantity without unit code fails)
+        for (const [, unit, key, what] of bases) {
+          if (unit === undefined || (ubl && !ln.locs["quantity"]) || unit === ln.unitCode) continue;
           emit(
             "PEPPOL-EN16931-R130",
-            `${label} base quantity unit ${ln.baseQuantityUnit} differs from ${ln.unitCode}.`,
-            L("baseQuantity"),
+            ln.unitCode === undefined
+              ? `${label} ${what} has unit ${unit}, but the invoiced quantity has no unit code.`
+              : `${label} ${what} unit ${unit} differs from ${ln.unitCode}.`,
+            L(key),
           );
-        if (ln.grossPrice !== undefined && ln.priceAmount !== undefined) {
+        }
+        if (ubl && ln.grossPrice !== undefined && ln.priceAmount !== undefined) {
           // Official: PriceAmount = BaseAmount − Amount, compared exactly
           const expectedNet = D.sub(D.dec(ln.grossPrice), D.dec(ln.priceDiscount ?? 0));
           if (!D.eq(expectedNet, D.dec(ln.priceAmount)))
@@ -916,18 +1002,48 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         actual: fa(T.taxAmount),
       },
     );
-  if (T.taxInclusive !== undefined && T.taxExclusive !== undefined) {
-    const expected = D.round2(D.add(D.dec(T.taxExclusive), D.dec(T.taxAmount ?? 0)));
-    if (!is(T.taxInclusive, expected))
-      emit(
-        "BR-CO-15",
-        `${f2(T.taxExclusive)} + VAT ${f2(T.taxAmount ?? 0)} = ${fd(expected)}, but TaxInclusiveAmount is ${fa(T.taxInclusive)}.`,
-        tLoc("taxInclusive"),
-        {
-          expected: fd(expected),
-          actual: fa(T.taxInclusive),
-        },
-      );
+  // BR-CO-15 as the official rules: exactly one VAT total in the invoice currency (BT-110), and
+  // BT-112 = round(BT-109 + BT-110); CII also accepts BT-112 = BT-109 (an invoice without VAT).
+  // Without an invoice currency there is nothing to compare (`every $Currency in ()` holds).
+  if (m.currency !== undefined) {
+    const inCurrency = m.taxTotals.filter((t) => t.currency === m.currency);
+    const vat = inCurrency.length === 1 ? inCurrency[0]!.amount : undefined;
+    const sumOk =
+      vat !== undefined &&
+      T.taxInclusive !== undefined &&
+      T.taxExclusive !== undefined &&
+      is(T.taxInclusive, D.round2(D.add(D.dec(T.taxExclusive), D.dec(vat))));
+    const noVatOk =
+      m.syntax === "CII" &&
+      T.taxInclusive !== undefined &&
+      T.taxExclusive !== undefined &&
+      is(T.taxInclusive, D.dec(T.taxExclusive));
+    if (!sumOk && !noVatOk) {
+      const where = tLoc("taxInclusive");
+      if (T.taxInclusive === undefined || T.taxExclusive === undefined)
+        emit("BR-CO-15", `${T.taxInclusive === undefined ? "TaxInclusiveAmount (BT-112)" : "TaxExclusiveAmount (BT-109)"} is missing, so the VAT total can't be added up.`, where);
+      else if (inCurrency.length !== 1)
+        emit(
+          "BR-CO-15",
+          inCurrency.length === 0
+            ? `No VAT total (BT-110) is in the invoice currency ${m.currency}${m.taxTotals.length ? ` (found: ${m.taxTotals.map((t) => t.currency ?? "no currencyID").join(", ")})` : ""}.`
+            : `${inCurrency.length} VAT totals are in the invoice currency ${m.currency}; there must be exactly one.`,
+          inCurrency[1]?.loc ?? m.taxTotals[0]?.loc ?? where,
+          { expected: `one VAT total in ${m.currency}`, actual: String(inCurrency.length) },
+        );
+      else {
+        const expected = D.round2(D.add(D.dec(T.taxExclusive), D.dec(vat ?? 0)));
+        emit(
+          "BR-CO-15",
+          `${f2(T.taxExclusive)} + VAT ${f2(vat ?? 0)} = ${fd(expected)}, but TaxInclusiveAmount is ${fa(T.taxInclusive)}.`,
+          where,
+          {
+            expected: fd(expected),
+            actual: fa(T.taxInclusive),
+          },
+        );
+      }
+    }
   }
   if (T.payable !== undefined && T.taxInclusive !== undefined) {
     const payable = D.dec(T.payable);
@@ -1017,18 +1133,6 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       const nr = v.category ? needReason[v.category] : undefined;
       if (nr && !hasReason)
         emit(nr, `${label} needs an exemption reason code or text.`, V("category"));
-      if (
-        v.category === "AE" &&
-        hasReason &&
-        v.exemptionCode !== "VATEX-EU-AE" &&
-        !/reverse charge/i.test(v.exemptionReason ?? "")
-      )
-        emit(
-          "BR-AE-10",
-          `${label} reason should be VATEX-EU-AE or "Reverse charge".`,
-          V("exemptionReason"),
-          { severity: "warning" },
-        );
     }
 
     // Category usage vs. breakdown
@@ -1056,6 +1160,7 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     for (const c of m.charges) addUse(c.vatCategory, c.vatRate, c.amount ?? 0, c.loc ?? m.loc);
 
     for (const [key, u] of used) {
+      if (ONE_BREAKDOWN_ROW.has(u.category)) continue;
       const breakdown = m.vat.find((v) => `${v.category}|${rateKey(v.rate ?? 0)}` === key);
       const label = `${u.category}${u.rate !== undefined ? ` ${u.rate}%` : ""}`;
       if (!breakdown) {
@@ -1071,6 +1176,31 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
           },
         );
       }
+    }
+
+    // BR-Z-01, BR-E-01, BR-AE-01, BR-IC-01, BR-G-01 and BR-O-01 (BR-VAT-01 here): a category that
+    // is used needs exactly one VAT breakdown row, whatever the rates. In UBL a breakdown row
+    // counts as use; in CII a row needs a line, allowance or charge with that category.
+    for (const category of ONE_BREAKDOWN_ROW) {
+      const usedBy = [...m.lines, ...m.allowances, ...m.charges].find((x) => x.vatCategory === category);
+      const rows = m.vat.filter((v) => v.category === category);
+      const loc = rows[1]?.loc ?? usedBy?.loc ?? rows[0]?.loc ?? m.loc;
+      if (rows.length > 1)
+        emit("BR-VAT-01", `Category ${category} has ${rows.length} VAT breakdown rows; it must have exactly one.`, loc, {
+          expected: `one TaxSubtotal ${category}`,
+          actual: String(rows.length),
+        });
+      else if (rows.length === 0 && usedBy)
+        emit("BR-VAT-01", `Category ${category} is used but has no VAT breakdown.`, loc, {
+          expected: `TaxSubtotal ${category}`,
+        });
+      else if (rows.length === 1 && !usedBy && m.syntax === "CII")
+        emit(
+          "BR-VAT-01",
+          `The VAT breakdown has category ${category}, but no line, allowance or charge uses it.`,
+          loc,
+          { expected: `a line, allowance or charge with category ${category}` },
+        );
     }
 
     // BR-S-08 and the other categories' -08 rules (BR-VAT-08 here): one check per VAT breakdown
@@ -1150,8 +1280,18 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
           `Intra-community supply requires both VAT numbers (seller: ${seller.vatId ?? "missing"}, buyer: ${buyer.vatId ?? "missing"}).`,
           buyer.vatId ? seller.loc : buyer.loc,
         );
-      if (!m.delivery?.date && !m.hasPeriod)
-        emit("BR-IC-11", "Intra-community supply needs an actual delivery date or invoice period.");
+    }
+    // BR-IC-11 and BR-IC-12 start from a VAT breakdown row with category K, as the official rules do
+    if (m.vat.some((v) => v.category === "K")) {
+      // A delivery date, or an invoice period that isn't blank (UBL: any child; CII: a start or end date)
+      if (!m.deliveryDateGiven && !m.periodHasContent)
+        emit(
+          "BR-IC-11",
+          m.hasPeriod
+            ? "Intra-community supply needs an actual delivery date or invoice period dates; the invoice period is empty."
+            : "Intra-community supply needs an actual delivery date or invoice period.",
+          m.hasPeriod ? at(m.locs, "period") : undefined,
+        );
       if (!m.delivery?.address?.country)
         emit("BR-IC-12", "Intra-community supply needs a deliver-to country.", m.delivery?.loc);
     }
@@ -1170,15 +1310,20 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
   }
 
   /* ---------------- Peppol BIS 3.0: national rules for Dutch suppliers ---------------- */
-  // OpenPeppol PEPPOL-EN16931-UBL.sch, "NETHERLANDS" pattern (NL-R-001 … NL-R-009).
-  if (opts.peppol && m.syntax === "UBL" && isNL(m.seller.address?.country)) {
+  // OpenPeppol PEPPOL-EN16931-UBL.sch and -CII.sch, "NETHERLANDS" pattern (NL-R-001 … NL-R-009).
+  // "Dutch" reads the postal country; the address rules ask for the elements, filled or not.
+  if (opts.peppol && isNL(m.seller.address?.country)) {
     const s = m.seller;
     const b = m.buyer;
+    const cii = m.syntax === "CII";
     const buyerNl = isNL(b.address?.country);
-    if (m.kind === "creditnote" && !m.precedingInvoices.some((p) => p.id))
+    const tc = normSpace(m.typeCode);
+    // UBL: a CreditNote; CII: type codes 81, 83, 381, 396 and 532
+    const isCreditNote = cii ? ["81", "83", "381", "396", "532"].includes(tc) : m.kind === "creditnote" && !!m.locs["typeCode"];
+    if (isCreditNote && !m.precedingInvoices.some((p) => p.id))
       emit("NL-R-001", "This credit note from a Dutch supplier doesn't reference the invoice it corrects (BT-25).", at(m.locs, "typeCode"));
     if (s.address) {
-      const miss = missingAddressParts(s.address);
+      const miss = missingAddressElements(s.locs);
       if (miss.length) emit("NL-R-002", `The seller address has no ${miss.join(", ")}.`, at(s.locs, "address", s.loc));
     }
     if (s.legalId && !isKvkOrOin(s.legalId))
@@ -1187,7 +1332,7 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         actual: s.legalId.scheme ?? "no schemeID",
       });
     if (buyerNl && b.address) {
-      const miss = missingAddressParts(b.address);
+      const miss = missingAddressElements(b.locs);
       if (miss.length) emit("NL-R-004", `The Dutch buyer's address has no ${miss.join(", ")}.`, at(b.locs, "address", b.loc));
     }
     if (buyerNl && b.legalId && !isKvkOrOin(b.legalId))
@@ -1197,12 +1342,23 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       });
     const rep = m.taxRepresentative;
     if (rep?.address && isNL(rep.address.country)) {
-      const miss = missingAddressParts(rep.address);
+      const miss = missingAddressElements(rep.locs);
       if (miss.length) emit("NL-R-006", `The Dutch tax representative's address has no ${miss.join(", ")}.`, at(rep.locs, "address", rep.loc));
     }
-    const due = m.totals.payable;
-    if (due !== undefined && m.paymentMeans.length === 0 && ((m.kind === "invoice" && due > 0) || (m.kind === "creditnote" && due < 0)))
-      emit("NL-R-007", `There is an amount due of ${f2(due)} but no payment instructions.`, tLoc("payable"));
+    // NL-R-007: payment instructions unless nothing is due from the buyer (invoice ≤ 0, credit note ≥ 0;
+    // in CII only type 381 counts as a credit note here). A missing amount due needs them too.
+    if (T.loc && m.paymentMeans.length === 0) {
+      const credit = cii ? tc === "381" : m.kind === "creditnote";
+      const due = T.payable;
+      if (due === undefined || (credit ? due < 0 : due > 0))
+        emit(
+          "NL-R-007",
+          due === undefined
+            ? "The amount due (BT-115) is missing and there are no payment instructions."
+            : `There is an amount due of ${f2(due)} but no payment instructions.`,
+          tLoc("payable"),
+        );
+    }
     if (buyerNl)
       for (const pm of m.paymentMeans) {
         const code = pm.code?.trim();
@@ -1212,9 +1368,9 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
             actual: code,
           });
       }
-    if (!m.orderRef)
-      for (const ln of m.lines.filter((l) => l.orderLineRef).slice(0, 25))
-        emit("NL-R-009", `Line ${ln.id ?? "?"} references order line ${ln.orderLineRef}, but the invoice has no order reference (BT-13).`, at(ln.locs, "orderLineRef", ln.loc));
+    if (!m.locs["orderRef"])
+      for (const ln of m.lines.filter((l) => l.locs["orderLineRef"]).slice(0, 25))
+        emit("NL-R-009", `Line ${ln.id ?? "?"} references order line ${ln.orderLineRef ?? "(empty)"}, but the invoice has no order reference (BT-13).`, at(ln.locs, "orderLineRef", ln.loc));
   }
 
   /* ---------------- SI-UBL 2.0 / NLCIUS ---------------- */

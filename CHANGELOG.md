@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-11-17
+
+The official verdict on every official unit test of the rules this tool checks: 1,919 CEN 1.3.17 and Peppol BIS 3.0.22 test invoices, 929 expected verdicts, 0 different (`npm run compare-official`). 1.3.1 differed on 66 of them.
+
+### Fixed
+- BR-CO-15: the VAT total must be stated exactly once in the invoice currency; a second VAT total in that currency, or one in another currency only, is an error. In CII a grand total equal to the tax basis without a VAT total passes, as the official CII rule allows.
+- BR-CO-19: an invoice period with only a period description code (BT-8) counts as an invoice period in UBL.
+- BR-IC-11: an intra-community supply needs an actual delivery date or an invoice period with a start or end date; an empty period no longer counts.
+- BR-CO-25 is not checked on credit notes, as in the official tests. On invoices it is a warning: EN 16931 still states it, but the official CEN rules stopped checking it in 1.3.16. Factur-X / ZUGFeRD keeps it as an error, because its own rules still check it.
+- BR-AE-10 no longer warns about an exemption reason code other than VATEX-EU-AE: any code or text meets the rule.
+- BR-VAT-01 (BR-Z-01, BR-E-01, BR-AE-01, BR-IC-01, BR-G-01, BR-O-01): exactly one VAT breakdown entry per category; two entries for one category are an error, and in CII so is an entry that no line, allowance or charge uses.
+- PEPPOL-EN16931-R001, R003 and R061 ask for the element, as the official rules do: an empty ProfileID, buyer reference, order reference or mandate ID passes them (R008 still reports empty elements).
+- R043 also checks line-level allowances and charges; R044 accepts only the literal `false` at price level; R051 covers every amount it lists, including the line price, and leaves a VAT total in the accounting currency alone; R053 needs exactly one VAT total with a breakdown, so none fails too.
+- P0100 and P0101 only apply under an approved Peppol business process, as officially.
+- CL008 checks every `EndpointID` with a `schemeID`, wherever it sits; COMMON-R040 (GLN) and COMMON-R043 (Belgian enterprise number) check every identifier with that scheme, not only the seller's and buyer's.
+
+### Added
+- Peppol BIS Billing 3.0 on CII, from OpenPeppol's CII rules: CII files that declare Peppol BIS 3.0 are recognised as "Peppol BIS Billing 3.0 (CII)" and get the Peppol rules that exist for CII, including the Dutch NL-R-001 … 009. The UBL-only rules (R008, R044, R046, R051, P0101) don't run on CII.
+- `npm run compare-official` (`scripts/compare-official-tests.mjs`): downloads the official CEN and Peppol unit tests and compares every verdict; `--list-uncovered` lists the 177 rules they exercise that this tool doesn't check.
+- `test/official-peppol.test.ts`: the Peppol cases above, restated in our own invoices (the Peppol test files may not be redistributed), and the CEN unit tests for BR-CO-19, BR-IC-11, BR-AE-10, BR-CO-25 on credit notes and the BR-*-01 rules in `test/fixtures/en16931-cen/`.
+
+### Changed
+- With `profile: peppol` (the default), CII files other than Factur-X / ZUGFeRD, XRechnung and SI-UBL 2.0 are checked as Peppol too, like UBL files; those three keep their own rules.
+- The README lists the deliberate differences from the official rules.
+
 ## [1.3.1] - 2026-11-17
 
 Calculation margins exactly as in the official Schematron.
