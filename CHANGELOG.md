@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-11-17
+
+No rule changes: the same verdicts as 1.3.2.
+
+### Added
+- A dated conformance statement at the top of this README, written by `npm run compare-official` with the numbers of its run, the official rule-set versions and links to their test files.
+- `conformance.json`: that run's result (date, rule-set versions, test cases per source, verdicts compared, every difference, and every official rule the tests exercise that this tool doesn't check, by family).
+- `npm run compare-official -- --check` writes nothing and fails when the committed result isn't what a fresh run finds; CI runs it on every push and pull request.
+- `test/conformance.test.ts`: `conformance.json` belongs to the current engine, and the README says what it says.
+
 ## [1.3.2] - 2026-11-17
 
 The official verdict on every official unit test of the rules this tool checks: 1,919 CEN 1.3.17 and Peppol BIS 3.0.22 test invoices, 929 expected verdicts, 0 different (`npm run compare-official`). 1.3.1 differed on 66 of them.
