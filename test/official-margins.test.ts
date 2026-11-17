@@ -10,18 +10,10 @@ import { validateInvoiceXml } from "../src/engine/validate";
 const FIXTURES = resolve(__dirname, "fixtures");
 const CEN = resolve(FIXTURES, "en16931-cen");
 
-/** The engine checks every non-S category's -08 rule as BR-VAT-08. */
-const ourId = (id: string) => (/^BR-(Z|E|AE|IC|G|O|IG|IP)-08$/.test(id) ? "BR-VAT-08" : id);
+/** The engine checks every non-S category's -08 rule as BR-VAT-08 and their -01 rules as BR-VAT-01. */
+const ourId = (id: string) =>
+  /^BR-(Z|E|AE|IC|G|O|IG|IP)-08$/.test(id) ? "BR-VAT-08" : /^BR-(Z|E|AE|IC|G|O)-01$/.test(id) ? "BR-VAT-01" : id;
 
-/**
- * Official cases still answered differently, for a reason other than a margin (BR-CO-15 also
- * counts the VAT totals in the invoice currency). Each must still differ, so a fix shows up here.
- */
-const NOT_A_MARGIN: Record<string, string> = {
-  "ubl-invoice/BR-CO-15.xml#7": "two VAT totals in the invoice currency",
-  "ubl-credit-note/BR-CO-15.xml#7": "two VAT totals in the invoice currency",
-  "cii/BR-CO-15-2.xml#2": "the VAT total is in another currency than the invoice",
-};
 
 interface OfficialCase {
   key: string;
@@ -70,12 +62,15 @@ describe.each(["ubl-invoice", "ubl-credit-note", "cii"])("CEN unit tests: %s", (
   });
 
   it.each(cases.map((c) => [c.key, c] as const))("%s", (key, c) => {
-    const errors = new Set(errorIds(c.xml));
-    const verdict = (id: string) => (errors.has(ourId(id)) ? "error" : "success");
+    // Strict: a rule the official test expects to pass may not even warn
+    const findings = validateInvoiceXml(c.xml, "en16931").findings.filter((f) => f.severity !== "info");
+    const verdict = (id: string) => {
+      const own = findings.filter((f) => f.ruleId === ourId(id));
+      return own.some((f) => f.severity === "error") ? "error" : own.length ? "warning" : "success";
+    };
     const expected = [...c.success.map((id) => `${id}: success`), ...c.error.map((id) => `${id}: error`)];
     const actual = [...c.success, ...c.error].map((id) => `${id}: ${verdict(id)}`);
-    if (NOT_A_MARGIN[key]) expect(actual, NOT_A_MARGIN[key]).not.toEqual(expected);
-    else expect(actual, c.description).toEqual(expected);
+    expect(actual, `${key}: ${c.description}`).toEqual(expected);
   });
 });
 
