@@ -4958,10 +4958,6 @@ function emptyParty() {
 function round2(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
-function sameAmount(a, b) {
-  if (a === void 0 || b === void 0) return false;
-  return Math.abs(round2(a) - round2(b)) < 1e-4;
-}
 function sum(values) {
   return round2(values.reduce((acc, v) => acc + (v ?? 0), 0));
 }
@@ -6122,6 +6118,62 @@ function detectFormat(root) {
   };
 }
 
+// src/engine/decimal.ts
+var ZERO_N = 0n;
+var ONE = 1n;
+function gcd(a, b) {
+  let x = a < ZERO_N ? -a : a;
+  let y = b < ZERO_N ? -b : b;
+  while (y !== ZERO_N) [x, y] = [y, x % y];
+  return x === ZERO_N ? ONE : x;
+}
+function make(n, d) {
+  if (d < ZERO_N) [n, d] = [-n, -d];
+  const g = gcd(n, d);
+  return { n: n / g, d: d / g };
+}
+var ZERO = { n: 0n, d: 1n };
+function dec(x) {
+  if (x === void 0 || !Number.isFinite(x)) return ZERO;
+  const m = /^(-?)(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/i.exec(String(x));
+  if (!m) return ZERO;
+  const frac = m[3] ?? "";
+  let n = BigInt(`${m[2]}${frac}`);
+  let d = 10n ** BigInt(frac.length);
+  const exp = Number(m[4] ?? 0);
+  if (exp > 0) n *= 10n ** BigInt(exp);
+  else if (exp < 0) d *= 10n ** BigInt(-exp);
+  return make(m[1] ? -n : n, d);
+}
+var add = (a, b) => make(a.n * b.d + b.n * a.d, a.d * b.d);
+var sub = (a, b) => make(a.n * b.d - b.n * a.d, a.d * b.d);
+var mul = (a, b) => make(a.n * b.n, a.d * b.d);
+var div = (a, b) => make(a.n * b.d, a.d * b.n);
+var abs = (a) => a.n < ZERO_N ? { n: -a.n, d: a.d } : a;
+var neg = (a) => ({ n: -a.n, d: a.d });
+var isZero = (a) => a.n === ZERO_N;
+function cmp(a, b) {
+  const l = a.n * b.d;
+  const r = b.n * a.d;
+  return l < r ? -1 : l > r ? 1 : 0;
+}
+var eq = (a, b) => cmp(a, b) === 0;
+function floor(a) {
+  let q = a.n / a.d;
+  if (a.n < ZERO_N && q * a.d !== a.n) q -= ONE;
+  return { n: q, d: ONE };
+}
+var round = (a) => floor(add(a, { n: 1n, d: 2n }));
+var round22 = (a) => div(round(mul(a, { n: 100n, d: 1n })), { n: 100n, d: 1n });
+function total(values) {
+  return values.reduce((acc, v) => v === void 0 ? acc : add(acc, dec(v)), ZERO);
+}
+var toNumber = (a) => Number(a.n) / Number(a.d);
+var within = (a, b, limit) => cmp(abs(sub(a, b)), limit) < 0;
+var withinOrEqual = (a, b, limit) => cmp(abs(sub(a, b)), limit) <= 0;
+var ONE_UNIT = { n: 1n, d: 1n };
+var TWO_CENTS = { n: 2n, d: 100n };
+
 // src/engine/vat-id.ts
 var dg = (s, i) => Number(s[i]);
 function mod11_10(n) {
@@ -6528,7 +6580,12 @@ var LEITWEG_PROBLEM = {
   "check-digit": "has check digits that don't match (ISO/IEC 7064 MOD 97-10)"
 };
 var f2 = (n) => n === void 0 || Number.isNaN(n) ? "—" : round2(n).toFixed(2);
+var fd = (x) => {
+  const v = toNumber(x);
+  return eq(round22(x), x) ? v.toFixed(2) : String(Math.round(v * 1e4) / 1e4);
+};
 var VAT_PREFIX_EXTRAS = /* @__PURE__ */ new Set(["EL", "XI", "1A"]);
+var PER_RATE_CATEGORIES = /* @__PURE__ */ new Set(["S", "L", "M"]);
 var rateKey = (rate) => rate === void 0 ? "" : String(round2(rate));
 function runRules(m, fmt, opts) {
   const out = [];
@@ -6961,11 +7018,11 @@ function runRules(m, fmt, opts) {
   if (T.taxInclusive === void 0) emit("BR-14", "TaxInclusiveAmount (BT-112) is missing.", T.loc);
   if (T.payable === void 0) emit("BR-15", "PayableAmount (BT-115) is missing.", T.loc);
   for (const d of m.decimals) {
-    const dec = d.raw.split(".")[1];
-    if (dec && dec.length > 2)
+    const dec2 = d.raw.split(".")[1];
+    if (dec2 && dec2.length > 2)
       emit(
         "BR-DEC",
-        `${d.bt} has ${dec.length} decimals ("${d.raw}"); at most 2 are allowed.`,
+        `${d.bt} has ${dec2.length} decimals ("${d.raw}"); at most 2 are allowed.`,
         d.loc,
         {
           actual: d.raw,
@@ -7013,16 +7070,16 @@ function runRules(m, fmt, opts) {
         "A base amount is given without a percentage.",
         at2(ac.locs, "baseAmount", ac.loc)
       );
-    if (ac.amount !== void 0 && ac.baseAmount !== void 0 && ac.percent !== void 0) {
-      const expected = round2(ac.baseAmount * ac.percent / 100);
-      if (Math.abs(expected - ac.amount) > 0.02)
+    if (ac.baseAmount !== void 0 && ac.percent !== void 0) {
+      const expected = div(mul(dec(ac.baseAmount), dec(ac.percent)), dec(100));
+      if (!withinOrEqual(dec(ac.amount ?? 0), expected, TWO_CENTS))
         emit(
           "PEPPOL-EN16931-R040",
-          `Amount ${f2(ac.amount)} ≠ ${f2(ac.baseAmount)} × ${ac.percent}% = ${f2(expected)}.`,
+          `Amount ${f2(ac.amount ?? 0)} ≠ ${f2(ac.baseAmount)} × ${ac.percent}% = ${fd(expected)}.`,
           at2(ac.locs, "amount", ac.loc),
           {
-            expected: f2(expected),
-            actual: f2(ac.amount)
+            expected: fd(expected),
+            actual: f2(ac.amount ?? 0)
           }
         );
     }
@@ -7151,116 +7208,136 @@ function runRules(m, fmt, opts) {
             L("baseQuantity")
           );
         if (ln.grossPrice !== void 0 && ln.priceAmount !== void 0) {
-          const expectedNet = ln.grossPrice - (ln.priceDiscount ?? 0);
-          if (Math.abs(expectedNet - ln.priceAmount) > 1e-4)
+          const expectedNet = sub(dec(ln.grossPrice), dec(ln.priceDiscount ?? 0));
+          if (!eq(expectedNet, dec(ln.priceAmount)))
             emit(
               "PEPPOL-EN16931-R046",
               `${label} net price ${ln.priceAmount} ≠ gross ${ln.grossPrice} − discount ${ln.priceDiscount ?? 0}.`,
               L("priceAmount"),
               {
-                expected: String(round2(expectedNet)),
+                expected: fd(expectedNet),
                 actual: String(ln.priceAmount)
               }
             );
         }
-        if (ln.quantity !== void 0 && ln.priceAmount !== void 0 && ln.netAmount !== void 0) {
-          const base = ln.baseQuantity && ln.baseQuantity > 0 ? ln.baseQuantity : 1;
-          const expected = ln.quantity * ln.priceAmount / base + sum(ln.charges.map((c) => c.amount)) - sum(ln.allowances.map((a) => a.amount));
-          if (Math.abs(round2(expected) - ln.netAmount) > 0.02)
+        {
+          const quantity = ln.quantity ?? 1;
+          const price = ln.priceAmount ?? 0;
+          const base = ln.baseQuantity !== void 0 && ln.baseQuantity !== 0 ? ln.baseQuantity : 1;
+          const expected = sub(
+            add(
+              mul(dec(quantity), div(dec(price), dec(base))),
+              round22(total(ln.charges.map((c) => c.amount)))
+            ),
+            round22(total(ln.allowances.map((a) => a.amount)))
+          );
+          if (!withinOrEqual(dec(ln.netAmount ?? 0), expected, TWO_CENTS))
             emit(
               "PEPPOL-EN16931-R120",
-              `${label}: ${ln.quantity} × ${ln.priceAmount}${base !== 1 ? ` / ${base}` : ""} = ${f2(expected)}, but the line amount is ${f2(ln.netAmount)}.`,
+              `${label}: ${quantity} × ${price}${base !== 1 ? ` / ${base}` : ""} = ${f2(toNumber(expected))}, but the line amount is ${f2(ln.netAmount ?? 0)}.`,
               L("netAmount"),
-              { expected: f2(expected), actual: f2(ln.netAmount) }
+              { expected: f2(toNumber(expected)), actual: f2(ln.netAmount ?? 0) }
             );
         }
       }
     }
   }
-  const lineSum = sum(m.lines.map((l) => l.netAmount));
-  const allowanceSum = sum(m.allowances.map((a) => a.amount));
-  const chargeSum = sum(m.charges.map((c) => c.amount));
-  if (opts.en16931 && T.lineExtension !== void 0 && m.lines.length > 0 && !sameAmount(T.lineExtension, lineSum))
+  const lineTotal = total(m.lines.map((l) => l.netAmount));
+  const allowanceTotal = total(m.allowances.map((a) => a.amount));
+  const chargeTotal = total(m.charges.map((c) => c.amount));
+  const is = (declared, computed) => eq(dec(declared), computed);
+  const fa = (n) => n === void 0 || Number.isNaN(n) ? "—" : fd(dec(n));
+  if (opts.en16931 && T.lineExtension !== void 0 && !is(T.lineExtension, round22(lineTotal)))
     emit(
       "BR-CO-10",
-      `Sum of line amounts is ${f2(lineSum)}, but LineExtensionAmount is ${f2(T.lineExtension)}.`,
+      `Sum of line amounts is ${fd(lineTotal)}, but LineExtensionAmount is ${fa(T.lineExtension)}.`,
       tLoc("lineExtension"),
       {
-        expected: f2(lineSum),
-        actual: f2(T.lineExtension)
+        expected: fd(round22(lineTotal)),
+        actual: fa(T.lineExtension)
       }
     );
   if (m.allowances.length > 0 || T.allowanceTotal !== void 0) {
-    if ((T.allowanceTotal ?? 0) !== allowanceSum && !sameAmount(T.allowanceTotal ?? 0, allowanceSum))
+    if (T.allowanceTotal === void 0 || !is(T.allowanceTotal, round22(allowanceTotal)))
       emit(
         "BR-CO-11",
-        `Document allowances add up to ${f2(allowanceSum)}, but AllowanceTotalAmount is ${f2(T.allowanceTotal)}.`,
+        `Document allowances add up to ${fd(allowanceTotal)}, but AllowanceTotalAmount is ${fa(T.allowanceTotal)}.`,
         tLoc("allowanceTotal"),
         {
-          expected: f2(allowanceSum),
-          actual: f2(T.allowanceTotal)
+          expected: fd(round22(allowanceTotal)),
+          actual: fa(T.allowanceTotal)
         }
       );
   }
   if (m.charges.length > 0 || T.chargeTotal !== void 0) {
-    if (!sameAmount(T.chargeTotal ?? 0, chargeSum))
+    if (T.chargeTotal === void 0 || !is(T.chargeTotal, round22(chargeTotal)))
       emit(
         "BR-CO-12",
-        `Document charges add up to ${f2(chargeSum)}, but ChargeTotalAmount is ${f2(T.chargeTotal)}.`,
+        `Document charges add up to ${fd(chargeTotal)}, but ChargeTotalAmount is ${fa(T.chargeTotal)}.`,
         tLoc("chargeTotal"),
         {
-          expected: f2(chargeSum),
-          actual: f2(T.chargeTotal)
+          expected: fd(round22(chargeTotal)),
+          actual: fa(T.chargeTotal)
         }
       );
   }
   if (T.taxExclusive !== void 0 && T.lineExtension !== void 0) {
-    const expected = round2(T.lineExtension - (T.allowanceTotal ?? 0) + (T.chargeTotal ?? 0));
-    if (!sameAmount(T.taxExclusive, expected))
+    const plain = T.allowanceTotal === void 0 && T.chargeTotal === void 0 && m.syntax === "UBL";
+    const raw = add(sub(dec(T.lineExtension), dec(T.allowanceTotal ?? 0)), dec(T.chargeTotal ?? 0));
+    const expected = plain ? raw : round22(raw);
+    if (!is(T.taxExclusive, expected))
       emit(
         "BR-CO-13",
-        `${f2(T.lineExtension)} − ${f2(T.allowanceTotal ?? 0)} + ${f2(T.chargeTotal ?? 0)} = ${f2(expected)}, but TaxExclusiveAmount is ${f2(T.taxExclusive)}.`,
+        `${f2(T.lineExtension)} − ${f2(T.allowanceTotal ?? 0)} + ${f2(T.chargeTotal ?? 0)} = ${fd(expected)}, but TaxExclusiveAmount is ${fa(T.taxExclusive)}.`,
         tLoc("taxExclusive"),
         {
-          expected: f2(expected),
-          actual: f2(T.taxExclusive)
+          expected: fd(expected),
+          actual: fa(T.taxExclusive)
         }
       );
   }
-  const vatSum = sum(m.vat.map((v) => v.taxAmount));
-  if (T.taxAmount !== void 0 && m.vat.length > 0 && !sameAmount(T.taxAmount, vatSum))
+  const vatTotal = total(m.vat.map((v) => v.taxAmount));
+  if (T.taxAmount !== void 0 && m.vat.length > 0 && !is(T.taxAmount, round22(vatTotal)))
     emit(
       "BR-CO-14",
-      `VAT breakdown adds up to ${f2(vatSum)}, but the VAT total is ${f2(T.taxAmount)}.`,
+      `VAT breakdown adds up to ${fd(vatTotal)}, but the VAT total is ${fa(T.taxAmount)}.`,
       tLoc("taxAmount"),
       {
-        expected: f2(vatSum),
-        actual: f2(T.taxAmount)
+        expected: fd(round22(vatTotal)),
+        actual: fa(T.taxAmount)
       }
     );
   if (T.taxInclusive !== void 0 && T.taxExclusive !== void 0) {
-    const expected = round2(T.taxExclusive + (T.taxAmount ?? 0));
-    if (!sameAmount(T.taxInclusive, expected))
+    const expected = round22(add(dec(T.taxExclusive), dec(T.taxAmount ?? 0)));
+    if (!is(T.taxInclusive, expected))
       emit(
         "BR-CO-15",
-        `${f2(T.taxExclusive)} + VAT ${f2(T.taxAmount ?? 0)} = ${f2(expected)}, but TaxInclusiveAmount is ${f2(T.taxInclusive)}.`,
+        `${f2(T.taxExclusive)} + VAT ${f2(T.taxAmount ?? 0)} = ${fd(expected)}, but TaxInclusiveAmount is ${fa(T.taxInclusive)}.`,
         tLoc("taxInclusive"),
         {
-          expected: f2(expected),
-          actual: f2(T.taxInclusive)
+          expected: fd(expected),
+          actual: fa(T.taxInclusive)
         }
       );
   }
   if (T.payable !== void 0 && T.taxInclusive !== void 0) {
-    const expected = round2(T.taxInclusive - (T.prepaid ?? 0) + (T.rounding ?? 0));
-    if (!sameAmount(T.payable, expected))
+    const payable = dec(T.payable);
+    const inclusive = dec(T.taxInclusive);
+    const prepaid = dec(T.prepaid ?? 0);
+    const rounding = dec(T.rounding ?? 0);
+    const ok = m.syntax === "CII" ? eq(payable, add(sub(inclusive, prepaid), rounding)) : eq(
+      T.rounding === void 0 ? payable : round22(sub(payable, rounding)),
+      T.prepaid === void 0 ? inclusive : round22(sub(inclusive, prepaid))
+    );
+    const expected = round22(add(sub(inclusive, prepaid), rounding));
+    if (!ok)
       emit(
         "BR-CO-16",
-        `${f2(T.taxInclusive)} − prepaid ${f2(T.prepaid ?? 0)} + rounding ${f2(T.rounding ?? 0)} = ${f2(expected)}, but PayableAmount is ${f2(T.payable)}.`,
+        `${f2(T.taxInclusive)} − prepaid ${f2(T.prepaid ?? 0)} + rounding ${f2(T.rounding ?? 0)} = ${fd(expected)}, but PayableAmount is ${fa(T.payable)}.`,
         tLoc("payable"),
         {
-          expected: f2(expected),
-          actual: f2(T.payable)
+          expected: fd(expected),
+          actual: fa(T.payable)
         }
       );
   }
@@ -7280,30 +7357,24 @@ function runRules(m, fmt, opts) {
         });
       if (v.category && v.category !== "O" && v.rate === void 0)
         emit("BR-48", `${label} has no rate.`, V("category"));
-      if (v.taxableAmount !== void 0 && v.taxAmount !== void 0 && v.rate !== void 0 && v.category !== "O") {
-        const expected = round2(v.taxableAmount * v.rate / 100);
-        const diff = Math.abs(expected - v.taxAmount);
-        if (diff >= 1)
+      if (v.taxableAmount !== void 0 && v.taxAmount !== void 0 && v.rate !== void 0) {
+        const rate = dec(v.rate);
+        const tax = dec(v.taxAmount);
+        const zeroRate = isZero(round(rate));
+        const expected = zeroRate ? ZERO : round22(div(mul(abs(dec(v.taxableAmount)), rate), dec(100)));
+        const ok = zeroRate ? isZero(round(tax)) : m.syntax === "CII" ? withinOrEqual(abs(tax), expected, ONE_UNIT) : within(abs(tax), expected, ONE_UNIT);
+        if (!ok) {
+          const shown = v.taxableAmount < 0 ? neg(expected) : expected;
           emit(
             "BR-CO-17",
-            `${f2(v.taxableAmount)} × ${v.rate}% = ${f2(expected)}, but the VAT amount is ${f2(v.taxAmount)}.`,
+            `${f2(v.taxableAmount)} × ${v.rate}% = ${fd(shown)}, but the VAT amount is ${f2(v.taxAmount)}.`,
             V("taxAmount"),
             {
-              expected: f2(expected),
+              expected: fd(shown),
               actual: f2(v.taxAmount)
             }
           );
-        else if (diff >= 5e-3)
-          emit(
-            "BR-CO-17",
-            `${f2(v.taxableAmount)} × ${v.rate}% = ${f2(expected)}; ${f2(v.taxAmount)} is within the ±1.00 tolerance of the standard but not correctly rounded.`,
-            V("taxAmount"),
-            {
-              expected: f2(expected),
-              actual: f2(v.taxAmount),
-              severity: "warning"
-            }
-          );
+        }
       }
       const hasReason = Boolean(v.exemptionCode || v.exemptionReason);
       if ((v.category === "S" || v.category === "Z") && hasReason)
@@ -7355,15 +7426,36 @@ function runRules(m, fmt, opts) {
             expected: `TaxSubtotal ${label}`
           }
         );
-        continue;
       }
-      if (breakdown.taxableAmount !== void 0 && !sameAmount(breakdown.taxableAmount, u.taxable))
-        emit(
-          u.category === "S" ? "BR-S-08" : "BR-VAT-08",
-          `Lines, allowances and charges in ${label} add up to ${f2(u.taxable)}, but the taxable amount is ${f2(breakdown.taxableAmount)}.`,
-          at2(breakdown.locs, "taxableAmount", breakdown.loc),
-          { expected: f2(u.taxable), actual: f2(breakdown.taxableAmount) }
-        );
+    }
+    for (const v of m.vat) {
+      if (!v.category || !VAT_CATEGORIES[v.category] || v.taxableAmount === void 0) continue;
+      const perRate = PER_RATE_CATEGORIES.has(v.category);
+      if (perRate && v.rate === void 0) continue;
+      const rate = perRate ? dec(v.rate) : void 0;
+      const inRow = (category, r) => category === v.category && (!rate || r !== void 0 && eq(dec(r), rate));
+      const lines = m.lines.filter((l) => inRow(l.vatCategory, l.vatRate));
+      const charges = m.charges.filter((c) => inRow(c.vatCategory, c.vatRate));
+      const allowances = m.allowances.filter((a) => inRow(a.vatCategory, a.vatRate));
+      const cii = m.syntax === "CII";
+      const part = (xs) => cii ? round22(total(xs)) : total(xs);
+      const computed = sub(
+        add(part(lines.map((l) => l.netAmount)), part(charges.map((c) => c.amount))),
+        part(allowances.map((a) => a.amount))
+      );
+      const declared = dec(v.taxableAmount);
+      const margin = cii ? !perRate && v.category !== "O" : perRate;
+      const hasUse = lines.length + charges.length + allowances.length > 0;
+      const used2 = cii || (perRate ? hasUse : m.lines.length > 0);
+      if (used2 && (margin ? within(declared, computed, ONE_UNIT) : eq(declared, computed)))
+        continue;
+      const label = `${v.category}${v.rate !== void 0 ? ` ${v.rate}%` : ""}`;
+      emit(
+        v.category === "S" ? "BR-S-08" : "BR-VAT-08",
+        hasUse ? `Lines, allowances and charges in ${label} add up to ${fd(computed)}, but the taxable amount is ${f2(v.taxableAmount)}.` : `No line, document allowance or charge uses ${label}, but its VAT breakdown has a taxable amount of ${f2(v.taxableAmount)}.`,
+        at2(v.locs, "taxableAmount", v.loc),
+        { expected: fd(computed), actual: f2(v.taxableAmount) }
+      );
     }
     const cats = new Set([...used.values()].map((u) => u.category));
     for (const v of m.vat) if (v.category) cats.add(v.category);
@@ -7725,16 +7817,16 @@ function computeTotals(m) {
   const chargeSum = sum(m.charges.map((c) => c.amount));
   const taxExclusive = round2(lineSum - allowanceSum + chargeSum);
   const groups = /* @__PURE__ */ new Map();
-  const add = (category, rate, amount) => {
+  const add2 = (category, rate, amount) => {
     if (!category) return;
     const key = `${category}|${rate ?? ""}`;
     const g = groups.get(key) ?? { category, rate, taxable: 0 };
     g.taxable = round2(g.taxable + amount);
     groups.set(key, g);
   };
-  m.lines.forEach((l) => add(l.vatCategory, l.vatRate, l.netAmount ?? 0));
-  m.allowances.forEach((a) => add(a.vatCategory, a.vatRate, -(a.amount ?? 0)));
-  m.charges.forEach((c) => add(c.vatCategory, c.vatRate, c.amount ?? 0));
+  m.lines.forEach((l) => add2(l.vatCategory, l.vatRate, l.netAmount ?? 0));
+  m.allowances.forEach((a) => add2(a.vatCategory, a.vatRate, -(a.amount ?? 0)));
+  m.charges.forEach((c) => add2(c.vatCategory, c.vatRate, c.amount ?? 0));
   const vat = [...groups.values()].map((g) => ({
     ...g,
     tax: g.category === "O" || g.rate === void 0 ? 0 : round2(g.taxable * g.rate / 100)
@@ -7867,7 +7959,7 @@ function validateInvoiceXml(xml, profile = "auto") {
 
 // src/version.ts
 var TOOL_NAME = "peppol-ubl-check";
-var VERSION = "1.3.0";
+var VERSION = "1.3.1";
 var SITE_URL = "https://peppol-invoice-compass.lovable.app";
 var VALIDATOR_URL = `${SITE_URL}/validate`;
 var TOOL_PAGE_URL = `${SITE_URL}/tools/peppol-github-action`;
@@ -7912,8 +8004,8 @@ function rootLocalName(report) {
   return f?.xpath?.replace(/^\//, "").split(":").pop();
 }
 function checkFile(path, options) {
-  const abs = (0, import_node_path.resolve)(options.cwd, path);
-  const size = (0, import_node_fs.statSync)(abs).size;
+  const abs2 = (0, import_node_path.resolve)(options.cwd, path);
+  const size = (0, import_node_fs.statSync)(abs2).size;
   if (size > MAX_XML_BYTES) {
     const meta = RULE_INDEX["IV-SYN-01"];
     return {
@@ -7935,7 +8027,7 @@ function checkFile(path, options) {
       ]
     };
   }
-  const xml = (0, import_node_fs.readFileSync)(abs, "utf8");
+  const xml = (0, import_node_fs.readFileSync)(abs2, "utf8");
   const report = validateInvoiceXml(xml, options.profile);
   const root = report.format.id === "unknown" && !report.syntaxError ? rootLocalName(report) : void 0;
   if (root !== void 0 && options.nonInvoice === "skip" && !INVOICE_ROOTS.includes(root)) {
@@ -8159,12 +8251,12 @@ function findFiles(patterns, options) {
     for (const c of compile(pattern, cwd)) {
       const text2 = normalisePattern(pattern);
       if (!SPECIAL.test(text2) && expandBraces(text2).length === 1) {
-        const abs = (0, import_node_path2.resolve)(cwd, text2);
-        if ((0, import_node_fs2.existsSync)(abs) && (0, import_node_fs2.statSync)(abs).isDirectory()) {
-          const folder = toPosix((0, import_node_path2.relative)(cwd, abs));
+        const abs2 = (0, import_node_path2.resolve)(cwd, text2);
+        if ((0, import_node_fs2.existsSync)(abs2) && (0, import_node_fs2.statSync)(abs2).isDirectory()) {
+          const folder = toPosix((0, import_node_path2.relative)(cwd, abs2));
           include.push(...compile(folder ? `${folder}/**/*.xml` : "**/*.xml", cwd));
         } else {
-          literal.add(toPosix((0, import_node_path2.relative)(cwd, abs)));
+          literal.add(toPosix((0, import_node_path2.relative)(cwd, abs2)));
         }
         continue;
       }
@@ -8173,8 +8265,8 @@ function findFiles(patterns, options) {
   }
   const found = /* @__PURE__ */ new Set();
   for (const l of literal) {
-    const abs = (0, import_node_path2.resolve)(cwd, l);
-    if ((0, import_node_fs2.existsSync)(abs) && (0, import_node_fs2.statSync)(abs).isFile() && !excluded(l)) found.add(l);
+    const abs2 = (0, import_node_path2.resolve)(cwd, l);
+    if ((0, import_node_fs2.existsSync)(abs2) && (0, import_node_fs2.statSync)(abs2).isFile() && !excluded(l)) found.add(l);
   }
   let seen = 0;
   const walked = /* @__PURE__ */ new Set();
@@ -8197,19 +8289,19 @@ function findFiles(patterns, options) {
       }
       for (const entry of entries) {
         if (++seen > max) throw new Error(`Stopped after looking at ${max} files and folders. Narrow the pattern (for example "invoices/**/*.xml").`);
-        const abs = (0, import_node_path2.join)(dir, entry.name);
-        const rel = toPosix((0, import_node_path2.relative)(cwd, abs));
+        const abs2 = (0, import_node_path2.join)(dir, entry.name);
+        const rel = toPosix((0, import_node_path2.relative)(cwd, abs2));
         if (entry.isDirectory()) {
           if (SKIPPED_DIRS.includes(entry.name)) continue;
           if (entry.name.startsWith(".") && !c.dots) continue;
           if (excluded(rel)) continue;
-          stack.push(abs);
+          stack.push(abs2);
           continue;
         }
         let isFile = entry.isFile();
         if (entry.isSymbolicLink()) {
           try {
-            isFile = (0, import_node_fs2.statSync)(abs).isFile();
+            isFile = (0, import_node_fs2.statSync)(abs2).isFile();
           } catch {
             isFile = false;
           }
