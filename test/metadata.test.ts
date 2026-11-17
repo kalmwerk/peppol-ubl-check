@@ -27,6 +27,23 @@ describe("version", () => {
 });
 
 describe("action.yml", () => {
+  // The runner refuses the whole file over one bad value ("Mapping values are not allowed in this
+  // context"), which would break every workflow on @v1, so check what YAML allows in unquoted values.
+  it("is YAML the Actions runner can load: unquoted values hold no ': ' or ' #', quoted ones are closed", () => {
+    for (const [i, line] of actionYml.split("\n").entries()) {
+      const m = line.match(/^ *[\w-]+: (.+)$/);
+      if (!m) continue;
+      const value = m[1]!;
+      const where = `action.yml line ${i + 1}`;
+      if (value.startsWith('"')) expect(value, where).toMatch(/^"(?:[^"\\]|\\.)*"$/);
+      else if (value.startsWith("'")) expect(value, where).toMatch(/^'(?:[^']|'')*'$/);
+      else {
+        expect(value, where).not.toMatch(/: |:$| #/);
+        expect(value, where).not.toMatch(/^[-?:,[\]{}#&*!|>%@`]/);
+      }
+    }
+  });
+
   it("reads exactly the inputs the Action uses, and sets exactly its outputs", () => {
     const source = read("src/action.ts");
     const used = [...source.matchAll(/get(?:Boolean|Choice)?Input\("([\w-]+)"/g)].map((m) => m[1]);
