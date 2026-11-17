@@ -3,6 +3,11 @@
 `dist/index.js` and `dist/cli.js` include two small open-source packages that
 read XML. Nothing else from outside this repository is bundled.
 
+The test invoices in `test/fixtures/en16931-cen/` are unchanged copies of the CEN
+unit tests from https://github.com/ConnectingEurope/eInvoicing-EN16931, licensed
+under the European Union Public Licence 1.2 (`test/fixtures/en16931-cen/LICENSE.txt`).
+They are only used by the tests and are not part of `dist/`.
+
 ## saxes 6.0.0
 
 https://github.com/lddubeau/saxes, ISC License:

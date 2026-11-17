@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-11-17
+
+Calculation margins exactly as in the official Schematron.
+
+### Fixed
+- BR-S-08 in UBL accepts a difference of less than 1.00 per VAT rate, as CEN's UBL Schematron does; it flagged any difference from 0.01. In CII it stays exact, with each sum rounded to the cent first, as CEN's CII Schematron requires. The other VAT categories' taxable-amount rules (reported as BR-VAT-08) follow their own official margins: exact in UBL except categories L and M (less than 1.00), less than 1.00 in CII for Z, E, AE, K and G.
+- BR-S-08 and BR-VAT-08 check every VAT breakdown entry, as the official rules do, so a standard-rate entry whose rate no line, allowance or charge uses is reported.
+- BR-CO-17 compares the size of the VAT amount with the rounded size of taxable amount × rate, as the official rule does: in CII a difference of exactly 1.00 now passes (the official CII rule allows it), in UBL it still fails. Negative amounts round like the official check (−13.775 → −13.77), and at a 0 % rate the VAT amount must round to 0. The "within the ±1.00 tolerance but not correctly rounded" warning is gone: the official rule has no such warning.
+- PEPPOL-EN16931-R040 and R120 allow a difference of up to 0.02 inclusive, judged exactly (1.02 against 1.00 failed through floating point). R040 compares with the unrounded base × percentage; R120 counts a missing quantity as 1, a missing price or line amount as 0, and a missing or zero base quantity as 1, as the official rule does.
+- PEPPOL-EN16931-R046 (net price = gross price − price discount) is compared exactly, without a margin.
+- BR-CO-10 … BR-CO-16 are compared in exact decimals, with the rounding each official rule applies; BR-CO-16 in UBL rounds both sides when a prepaid or rounding amount is present.
+- The package description named an old rule count.
+
+### Added
+- `test/official-margins.test.ts` runs the CEN unit tests for BR-S-08, the other categories' -08 rules and BR-CO-10 … BR-CO-17 (UBL invoices, credit notes and CII; EUPL-1.2, in `test/fixtures/en16931-cen/`), plus boundary cases for each margin.
+
 ## [1.3.0] - 2026-11-16
 
 Official code lists: units, MIME types, legal-ID and endpoint schemes, business processes.

@@ -131,7 +131,7 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 ```json
 {
   "tool": "peppol-ubl-check",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "rulesAvailable": 222,
   "profile": "peppol",
   "failOn": "error",
@@ -176,11 +176,13 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 ## What it checks
 
 - **Syntax:** well-formed XML, with the line and column of the first problem; UBL 2.1 `Invoice` / `CreditNote` (and UN/CEFACT CII) in the right namespace; dates and amounts in the right format.
-- **EN 16931 (103 rules):** mandatory content (BR-01…), VAT categories and exemption reasons (BR-S, BR-AE, BR-E, BR-Z, BR-O…), calculations of lines, totals and the VAT breakdown (BR-CO), decimals, and code lists for currencies, countries, units, VAT categories, payment means and electronic address schemes.
-- **Peppol BIS Billing 3.0 (37 rules):** business process and specification IDs, buyer reference, buyer and seller endpoint IDs, GLNs and Belgian 0208 enterprise numbers, empty elements, allowance, charge and line calculations, invoice periods, currencies, the invoice and credit note type codes Peppol allows, and the Netherlands rules (NL-R-001 … NL-R-009) for Dutch suppliers.
+- **EN 16931 (108 rules):** mandatory content (BR-01…), VAT categories and exemption reasons (BR-S, BR-AE, BR-E, BR-Z, BR-O…), calculations of lines, totals and the VAT breakdown (BR-CO), decimals, and code lists for currencies, countries, units, VAT categories, payment means and electronic address schemes.
+- **Peppol BIS Billing 3.0 (40 rules):** business process and specification IDs, buyer reference, buyer and seller endpoint IDs, GLNs and Belgian 0208 enterprise numbers, empty elements, allowance, charge and line calculations, invoice periods, currencies, the invoice and credit note type codes Peppol allows, and the Netherlands rules (NL-R-001 … NL-R-009) for Dutch suppliers.
 - **XRechnung (32 rules)** with `profile: xrechnung`, or `auto` for files that declare XRechnung: every business rule of the XRechnung 3.0 CIUS (BR-DE-1 … BR-DE-31 and BR-DE-TMP-32 from the KoSIT Schematron), in UBL and CII: buyer reference / Leitweg-ID, seller contact, addresses, payment instructions and the payment-means groups, the Skonto syntax, attachments and the specification identifier. Not the rules of the XRechnung Extension (BR-DEX) or CVD, and no ZUGFeRD PDFs (XML files only).
 - **SI-UBL 2.0 / NLCIUS (30 rules)** with `profile: nlcius`, or `auto` for files that declare SI-UBL 2.0: the Dutch rules of the official SI-UBL 2.0 Schematron (validation artefacts 2.0.3.13 of the Dutch Peppol Authority, BR-NL-* and SI-UBL warnings), in UBL and CII: KvK and OIN identifiers, buyer reference or order reference, addresses of Dutch parties, payment means, credit-note references and the specification identifier. Not the UBL syntax rules (UBL-SR) of that set or its CII-only warning BR-NL-22.
 - **Extra checks (12):** well-formed XML and document type, data types, Factur-X profiles below EN 16931, VAT number format and check digits, VAT prefix versus the seller's country, Belgian enterprise number check digits, German Leitweg-ID structure and check digits (KoSIT format specification 2.0.2), IBAN check digits, due date before issue date, uncommon unit codes.
+
+Calculations are judged the way the official Schematron judges them, with exact decimals (no floating point) and the same margins: none for the totals (BR-CO-10 … BR-CO-16); for the VAT breakdown less than 1.00 per rate in UBL and none in CII (BR-S-08; the other categories as their own rules say); for the VAT amount less than 1.00 in UBL and up to 1.00 in CII (BR-CO-17); and up to 0.02 for Peppol's allowance, charge and line calculations (R040, R120). The CEN unit tests for these rules are in `test/fixtures/en16931-cen/`.
 
 Not checked: XSD schema validation, the official rule sets in full, PDF/A and Factur-X / ZUGFeRD PDFs, digital signatures, and whether the buyer can actually receive invoices on Peppol (that needs a network lookup; the website's free [Peppol ID lookup](https://peppol-invoice-compass.lovable.app/tools/peppol-lookup) does it).
 
