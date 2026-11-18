@@ -35,8 +35,11 @@ export interface Conformance {
     business: RuleSetCount & { alwaysTrue: string[]; notChecked: string[] };
     peppol: RuleSetCount & { alwaysTrue: string[]; notChecked: string[] };
     syntax: RuleSetCount;
-    /** `countries`: ID prefixes (ISO country codes) of the national rules not checked */
-    national: RuleSetCount & { countries: string[] };
+    /**
+     * `countries`: ID prefixes (ISO country codes) of the national rules not checked; `notChecked`:
+     * every national rule not checked, tested or not, including Peppol's identifier formats
+     */
+    national: RuleSetCount & { countries: string[]; notChecked: string[] };
   };
   /** fingerprint() of the engine and comparison script the result belongs to */
   fingerprint: string;
