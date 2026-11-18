@@ -6,10 +6,11 @@ import { RULES } from "../src/engine/rules-catalog";
 import { validateInvoiceXml } from "../src/engine/validate";
 
 /**
- * The rules added in Peppol UBL check 1.4.0, held to the official artefacts' verdicts on our own
- * generated invoices (src/test/fixtures/schematron-parity, recorded with CEN 1.3.17 and Peppol
- * BIS 3.0.22 under Saxon). The CEN unit tests cover these rules for UBL only; these invoices also
- * cover CII and the combinations the unit tests leave out.
+ * The rules added in Peppol UBL check 1.4.0 and 1.5.0, held to the official artefacts' verdicts on
+ * our own generated invoices (src/test/fixtures/schematron-parity, recorded with CEN 1.3.17 and
+ * Peppol BIS 3.0.22 under Saxon). The official unit tests cover many of these rules for UBL only,
+ * and Peppol's R041 (Norwegian numbers) only on orders; these invoices also cover CII and the
+ * combinations the unit tests leave out.
  */
 
 const DIR = resolve(__dirname, "fixtures/schematron-parity");

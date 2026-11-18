@@ -8,8 +8,8 @@ const opts: CheckOptions = { cwd: FIXTURES, profile: "peppol", failOn: "error", 
 const ids = (path: string, o: Partial<CheckOptions> = {}) => checkFile(path, { ...opts, ...o }).findings.map((f) => f.ruleId);
 
 describe("the rule engine", () => {
-  it("has 321 rules: 189 EN 16931, 58 Peppol, 32 XRechnung, 30 NLCIUS, 12 extra checks", () => {
-    expect(ruleCounts()).toEqual({ total: 321, EN16931: 189, Peppol: 58, XRechnung: 32, NLCIUS: 30, InvoiceVerify: 12 });
+  it("has 324 rules: 189 EN 16931, 61 Peppol, 32 XRechnung, 30 NLCIUS, 12 extra checks", () => {
+    expect(ruleCounts()).toEqual({ total: 324, EN16931: 189, Peppol: 61, XRechnung: 32, NLCIUS: 30, InvoiceVerify: 12 });
   });
 });
 
@@ -140,7 +140,7 @@ describe("checkFiles", () => {
     const r = checkFiles(all, opts);
     expect(r.totals).toEqual({ matched: 4, checked: 3, ok: 1, withWarnings: 1, withErrors: 1, skipped: 1, errors: 6, warnings: 1, info: 0 });
     expect(r.result).toBe("failed");
-    expect(r).toMatchObject({ tool: "peppol-ubl-check", rulesAvailable: 321, profile: "peppol", failOn: "error" });
+    expect(r).toMatchObject({ tool: "peppol-ubl-check", rulesAvailable: 324, profile: "peppol", failOn: "error" });
   });
 
   it("passes warnings unless fail-on is warning, and never fails with never", () => {
