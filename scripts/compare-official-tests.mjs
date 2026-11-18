@@ -59,6 +59,61 @@ export function ruleFamily(id) {
 }
 
 /**
+ * The official rule sets in full: every assertion of the CEN (preprocessed, both syntaxes) and
+ * Peppol Schematron files in the pinned archives, whether or not a unit test exercises it.
+ */
+export const RULE_FILES = [
+  { source: "cen", path: "ubl/schematron/preprocessed/EN16931-UBL-validation-preprocessed.sch" },
+  { source: "cen", path: "cii/schematron/preprocessed/EN16931-CII-validation-preprocessed.sch" },
+  { source: "peppol", path: "rules/sch/PEPPOL-EN16931-UBL.sch" },
+  { source: "peppol", path: "rules/sch/PEPPOL-EN16931-CII.sch" },
+];
+
+/**
+ * The family of any official rule ID, for the full count: EN 16931 business rules (BR-), the CEN
+ * syntax-binding and data-type rules (UBL-SR, UBL-CR, UBL-DT, CII-SR, CII-DT), the Peppol BIS core
+ * rules, and national rules (country rules and Peppol's identifier formats).
+ */
+export function ruleSetFamily(id) {
+  if (/^(UBL|CII)-/.test(id)) return "syntax";
+  if (id.startsWith("BR-")) return "business";
+  if (id.startsWith("PEPPOL-EN16931-")) return "peppol";
+  return "national";
+}
+
+/**
+ * How much of each official rule set the engine checks: per family, the official rule IDs, how
+ * many the engine checks, and (business and Peppol core, where a gap matters most) every one it
+ * doesn't, split into rules the official files define as always true (test="true()", which no
+ * invoice can fail) and real gaps.
+ */
+export function ruleSetCoverage(files, isChecked) {
+  const tests = new Map();
+  for (const xml of files)
+    for (const m of xml.replace(/<!--[\s\S]*?-->/g, "").matchAll(/<(?:\w+:)?assert\b([^>]*)>/g)) {
+      const id = /\bid="([^"]+)"/.exec(m[1])?.[1];
+      const test = /\btest="([^"]*)"/.exec(m[1])?.[1];
+      if (!id) continue;
+      const all = tests.get(id) ?? new Set();
+      if (test !== undefined) all.add(test.trim());
+      tests.set(id, all);
+    }
+  const out = {};
+  for (const family of ["business", "peppol", "syntax", "national"]) {
+    const ids = [...tests.keys()].filter((id) => ruleSetFamily(id) === family).sort();
+    const missing = ids.filter((id) => !isChecked(id));
+    const alwaysTrue = missing.filter((id) => [...tests.get(id)].every((t) => t === "true()"));
+    out[family] = { official: ids.length, checked: ids.length - missing.length };
+    if (family === "business" || family === "peppol")
+      Object.assign(out[family], { alwaysTrue, notChecked: missing.filter((id) => !alwaysTrue.includes(id)) });
+    // the countries whose rules aren't checked, by ID prefix (DE-R-001 → DE)
+    if (family === "national")
+      out[family].countries = [...new Set(missing.map((id) => /^([A-Z]{2})-/.exec(id)?.[1]).filter(Boolean))].sort();
+  }
+  return out;
+}
+
+/**
  * The engine ID that answers for an official rule ID: the per-category -01 and -08 rules of the
  * non-standard VAT categories are BR-VAT-01 and BR-VAT-08, the 28 decimal rules BR-DEC.
  */
@@ -180,6 +235,10 @@ async function main() {
       peppol: ids.filter((id) => ruleFamily(id) === "peppol"),
       national: ids.filter((id) => ruleFamily(id) === "national"),
     },
+    ruleSets: ruleSetCoverage(
+      RULE_FILES.map((f) => readFileSync(resolve(f.source === "cen" ? cen : peppol, f.path), "utf8")),
+      (id) => !!RULE_INDEX[engineRuleId(id)],
+    ),
     fingerprint: fingerprint(root),
   };
   const readmePath = resolve(root, "README.md");
