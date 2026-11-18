@@ -1,4 +1,4 @@
-import type { Loc, LocMap, InvoiceModel, SchemeIdentifier } from "./model";
+import type { CodedKind, CodedValue, Loc, LocMap, InvoiceModel, SchemeIdentifier } from "./model";
 import { at, text, xpathOf, type XNode } from "./xml";
 
 export const DECIMAL_BTS = new Set([
@@ -32,7 +32,9 @@ export class ReadCtx {
   typeErrors: InvoiceModel["typeErrors"] = [];
 
   loc(node: XNode): Loc {
-    return { line: node.line, col: node.col, xpath: xpathOf(node) };
+    const loc: Loc = { line: node.line, col: node.col, xpath: xpathOf(node) };
+    if (node.raw !== undefined) loc.raw = node.raw;
+    return loc;
   }
 
   /** Read a string and remember its location under `key` */
@@ -313,12 +315,204 @@ export function collectUblAmountCurrencies(root: XNode, ctx: ReadCtx): InvoiceMo
   return out;
 }
 
-/** Every element named `local` that carries a mimeCode (UBL EmbeddedDocumentBinaryObject, CII AttachmentBinaryObject). */
-export function collectBinaryObjects(root: XNode, local: string, ctx: ReadCtx): NonNullable<InvoiceModel["binaryObjects"]> {
+/** Every element whose name ends in BinaryObject, with its mimeCode and filename as written (BR-CL-24, PEPPOL-EN16931-CL001, UBL-DT-06/07). */
+export function collectBinaryObjects(root: XNode, ctx: ReadCtx): NonNullable<InvoiceModel["binaryObjects"]> {
   const out: NonNullable<InvoiceModel["binaryObjects"]> = [];
   walk(root, (n) => {
-    const mime = n.attrs["mimeCode"];
-    if (n.local === local && mime !== undefined) out.push({ mime, filename: n.attrs["filename"], loc: ctx.loc(n) });
+    if (n.local.endsWith("BinaryObject"))
+      out.push({ element: n.local, mime: n.attrs["mimeCode"], filename: n.attrs["filename"], loc: ctx.loc(n) });
+  });
+  return out;
+}
+
+/** An element's text exactly as written (`text()` trims). */
+export const exactText = (n: XNode | null | undefined): string | undefined => (n ? (n.raw ?? n.text) : undefined);
+
+const UBL_CAC = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
+const CII_RAM = "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100";
+const CII_UDT = "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100";
+
+/** The thirteen cbc amount elements whose currencyID BR-CL-03 and PEPPOL-EN16931-CL007 check (UBL). */
+const UBL_CURRENCY_AMOUNTS = new Set([...R051_AMOUNTS, "TaxAmount"]);
+
+/**
+ * The amounts BR-CL-03 and PEPPOL-EN16931-CL007 check, currencyID as written: UBL every listed cbc amount
+ * element (BT-111 included), CII every TaxTotalAmount that carries a currencyID.
+ */
+export function collectCurrencyIds(root: XNode, ctx: ReadCtx, syntax: "UBL" | "CII"): NonNullable<InvoiceModel["currencyIds"]> {
+  const out: NonNullable<InvoiceModel["currencyIds"]> = [];
+  walk(root, (n) => {
+    const listed =
+      syntax === "UBL"
+        ? n.ns === UBL_CBC && UBL_CURRENCY_AMOUNTS.has(n.local)
+        : n.ns === CII_RAM && n.local === "TaxTotalAmount" && n.attrs["currencyID"] !== undefined;
+    if (listed) out.push({ element: n.local, currency: n.attrs["currencyID"], loc: ctx.loc(n) });
+  });
+  return out;
+}
+
+/**
+ * Invoiced object identifier schemes for BR-CL-07: UBL the schemeID of the ID of every (Additional)DocumentReference
+ * whose DocumentTypeCode is exactly 130, CII the text of every ReferenceTypeCode.
+ */
+export function collectObjectIdSchemes(root: XNode, ctx: ReadCtx, syntax: "UBL" | "CII"): NonNullable<InvoiceModel["objectIdSchemes"]> {
+  const out: NonNullable<InvoiceModel["objectIdSchemes"]> = [];
+  walk(root, (n) => {
+    if (syntax === "CII") {
+      if (n.ns === CII_RAM && n.local === "ReferenceTypeCode") out.push({ scheme: exactText(n) ?? "", loc: ctx.loc(n) });
+      return;
+    }
+    if (n.ns !== UBL_CAC || (n.local !== "AdditionalDocumentReference" && n.local !== "DocumentReference")) return;
+    const is130 = n.children.some((c) => c.ns === UBL_CBC && c.local === "DocumentTypeCode" && exactText(c) === "130");
+    if (!is130) return;
+    for (const id of n.children)
+      if (id.ns === UBL_CBC && id.local === "ID" && id.attrs["schemeID"] !== undefined)
+        out.push({ scheme: id.attrs["schemeID"]!, loc: ctx.loc(id) });
+  });
+  return out;
+}
+
+const UBL_DATE_ELEMENTS = new Set(["IssueDate", "DueDate", "TaxPointDate", "StartDate", "EndDate", "ActualDeliveryDate"]);
+
+/** Date elements as written, for PEPPOL-EN16931-F001: UBL the six cbc date elements, CII every udt:DateTimeString. */
+export function collectDates(root: XNode, ctx: ReadCtx, syntax: "UBL" | "CII"): NonNullable<InvoiceModel["dates"]> {
+  const out: NonNullable<InvoiceModel["dates"]> = [];
+  walk(root, (n) => {
+    const listed =
+      syntax === "UBL" ? n.ns === UBL_CBC && UBL_DATE_ELEMENTS.has(n.local) : n.ns === CII_UDT && n.local === "DateTimeString";
+    if (listed) out.push({ element: n.local, raw: exactText(n) ?? "", format: n.attrs["format"], loc: ctx.loc(n) });
+  });
+  return out;
+}
+
+/**
+ * UBL-DT-01: every element whose name ends in Amount, text as written, except PriceAmount and anything inside a
+ * cac:Price that has a cac:AllowanceCharge (the price allowance amounts may carry more decimals).
+ */
+export function collectUblAmountTexts(root: XNode, ctx: ReadCtx): NonNullable<InvoiceModel["amountTexts"]> {
+  const out: NonNullable<InvoiceModel["amountTexts"]> = [];
+  const inPriceWithAllowance = (n: XNode) => {
+    for (let cur = n.parent; cur; cur = cur.parent)
+      if (cur.ns === UBL_CAC && cur.local === "Price" && cur.children.some((c) => c.ns === UBL_CAC && c.local === "AllowanceCharge"))
+        return true;
+    return false;
+  };
+  walk(root, (n) => {
+    if (!n.local.endsWith("Amount") || n.local.endsWith("PriceAmount") || inPriceWithAllowance(n)) return;
+    out.push({ element: n.local, raw: exactText(n) ?? "", loc: ctx.loc(n) });
+  });
+  return out;
+}
+
+/** Whose coded value it is, in plain words, for code-list messages. */
+const CODE_OWNERS: Record<string, string> = {
+  ...UBL_OWNERS,
+  ...CII_OWNERS,
+  Delivery: "Deliver-to",
+  ApplicableHeaderTradeDelivery: "Deliver-to",
+  TaxSubtotal: "VAT breakdown",
+  ApplicableHeaderTradeSettlement: "VAT breakdown",
+  InvoiceLine: "Line",
+  CreditNoteLine: "Line",
+  IncludedSupplyChainTradeLineItem: "Line",
+  AllowanceCharge: "Allowance or charge",
+  SpecifiedTradeAllowanceCharge: "Allowance or charge",
+  AppliedTradeAllowanceCharge: "Price allowance or charge",
+};
+
+/** A node's whole text (XPath string value), as written. */
+function stringValue(n: XNode): string {
+  if (n.children.length === 0) return exactText(n) ?? "";
+  return n.children.map(stringValue).join("");
+}
+const hasAncestor = (n: XNode, ns: string, names: readonly string[]) => {
+  for (let cur = n.parent; cur; cur = cur.parent) if (cur.ns === ns && names.includes(cur.local)) return true;
+  return false;
+};
+const childrenNamed = (n: XNode, ns: string, local: string) => n.children.filter((c) => c.ns === ns && c.local === local);
+const normalise = (v: string | undefined) => (v ?? "").replace(/\s+/g, " ").trim();
+
+/**
+ * Every coded value the official code-list rules read, wherever it sits (the official contexts are not tied
+ * to a place): BR-CL-13, -14, -15, -17 and -18 (UBL cac:Country/cbc:IdentificationCode,
+ * cac:OriginCountry/cbc:IdentificationCode, cac:CommodityClassification/cbc:ItemClassificationCode[@listID],
+ * cac:TaxCategory/cbc:ID and cac:ClassifiedTaxCategory/cbc:ID; CII ram:CountryID, ram:OriginTradeCountry/ram:ID,
+ * ram:ClassCode[@listID], ram:CategoryTradeTax/ram:CategoryCode and ram:ApplicableTradeTax/ram:CategoryCode), and
+ * the values of BR-CL-06, -08, -10, -21, -22, -26, BR-50, BR-B-01/02 and PEPPOL-EN16931-CL006 (see CodedKind).
+ */
+export function collectCodedValues(root: XNode, ctx: ReadCtx, syntax: "UBL" | "CII"): NonNullable<InvoiceModel["codedValues"]> {
+  const out: NonNullable<InvoiceModel["codedValues"]> = [];
+  const push = (kind: CodedKind, n: XNode, value: string, extra: Partial<CodedValue> = {}) =>
+    out.push({ kind, value, owner: ownerOf(n, CODE_OWNERS, "Document"), loc: ctx.loc(n), ...extra });
+  walk(root, (n) => {
+    const parent = n.parent?.local;
+    const value = exactText(n) ?? "";
+    if (syntax === "UBL") {
+      if (n.ns === UBL_CAC && n.local === "PaymentMeans") {
+        // BR-50: cac:PaymentMeans[cbc:PaymentMeansCode='30' or cbc:PaymentMeansCode='58']/cac:PayeeFinancialAccount
+        const codes = childrenNamed(n, UBL_CBC, "PaymentMeansCode").map((c) => exactText(c) ?? "");
+        if (codes.includes("30") || codes.includes("58"))
+          for (const acc of childrenNamed(n, UBL_CAC, "PayeeFinancialAccount"))
+            push("creditTransferAccount", acc, normalise(childrenNamed(acc, UBL_CBC, "ID").map(stringValue).join(" ")));
+        return;
+      }
+      if (n.ns !== UBL_CBC) return;
+      if (n.local === "IdentificationCode") {
+        push("identificationCode", n, value);
+        if (parent === "Country") push("country", n, value);
+        else if (parent === "OriginCountry") push("originCountry", n, value);
+      } else if (n.local === "ItemClassificationCode" && parent === "CommodityClassification" && n.attrs["listID"] !== undefined) {
+        push("classificationScheme", n, n.attrs["listID"]!);
+      } else if (n.local === "ID" && parent === "TaxCategory") {
+        const holder = n.parent?.parent;
+        const docLevel =
+          (holder?.local === "TaxSubtotal" && holder.parent?.local === "TaxTotal" && holder.parent.parent === root) ||
+          (holder?.local === "AllowanceCharge" && holder.parent === root);
+        push("taxCategory", n, value, { docLevel });
+      } else if (n.local === "ID" && parent === "ClassifiedTaxCategory") push("itemTaxCategory", n, value);
+      else if (n.local === "DescriptionCode" && parent === "InvoicePeriod") push("periodDescriptionCode", n, value);
+      else if (n.local === "Note" && n.parent === root) push("rootNote", n, stringValue(n));
+      else if (n.local === "TaxExemptionReasonCode") push("exemptionCode", n, value);
+      else if (n.local === "ID" && n.attrs["schemeID"] !== undefined) {
+        const scheme = n.attrs["schemeID"]!;
+        if (parent === "PartyIdentification")
+          push("partyIdScheme", n, scheme, { sellerOrPayee: hasAncestor(n, UBL_CAC, ["AccountingSupplierParty", "PayeeParty"]) });
+        else if (parent === "StandardItemIdentification") push("itemIdScheme", n, scheme);
+        else if (parent === "DeliveryLocation") push("deliveryIdScheme", n, scheme);
+      }
+    } else {
+      if (n.ns !== CII_RAM) return;
+      if (n.local === "SpecifiedTradeSettlementPaymentMeans") {
+        // BR-50: //ram:SpecifiedTradeSettlementPaymentMeans[ram:TypeCode='30' or ram:TypeCode='58']/ram:PayeePartyCreditorFinancialAccount
+        const codes = childrenNamed(n, CII_RAM, "TypeCode").map((c) => exactText(c) ?? "");
+        if (codes.includes("30") || codes.includes("58"))
+          for (const acc of childrenNamed(n, CII_RAM, "PayeePartyCreditorFinancialAccount")) {
+            const iban = normalise(childrenNamed(acc, CII_RAM, "IBANID").map(stringValue).join(" "));
+            const own = normalise(childrenNamed(acc, CII_RAM, "ProprietaryID").map(stringValue).join(" "));
+            push("creditTransferAccount", acc, iban || own);
+          }
+        return;
+      }
+      if (n.local === "CountryID") push("country", n, value);
+      // An OriginTradeCountry/ID with a schemeID is BR-CL-11's (an earlier rule in the same official pattern)
+      else if (n.local === "ID" && parent === "OriginTradeCountry" && n.attrs["schemeID"] === undefined) push("originCountry", n, value);
+      else if (n.local === "ClassCode" && n.attrs["listID"] !== undefined) push("classificationScheme", n, n.attrs["listID"]!);
+      else if (n.local === "CategoryCode") {
+        push("categoryCode", n, value);
+        if (parent === "CategoryTradeTax") push("taxCategory", n, value);
+        else if (parent === "ApplicableTradeTax") push("itemTaxCategory", n, value);
+      } else if (n.local === "DueDateTypeCode") push("dueDateTypeCode", n, value);
+      else if (n.local === "SubjectCode") push("subjectCode", n, value);
+      else if (n.local === "ExemptionReasonCode") push("exemptionCode", n, value);
+      else if (n.local === "GlobalID" && n.attrs["schemeID"] !== undefined) {
+        const scheme = n.attrs["schemeID"]!;
+        if (hasAncestor(n, CII_RAM, ["SpecifiedTradeProduct"])) {
+          if (parent === "SpecifiedTradeProduct") push("itemIdScheme", n, scheme);
+        } else if (hasAncestor(n, CII_RAM, ["ShipToTradeParty"])) {
+          if (parent === "ShipToTradeParty" && n.parent?.parent?.local === "ApplicableHeaderTradeDelivery") push("deliveryIdScheme", n, scheme);
+        } else push("partyIdScheme", n, scheme);
+      }
+    }
   });
   return out;
 }

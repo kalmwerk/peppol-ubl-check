@@ -8,6 +8,11 @@ export interface Loc {
   line: number;
   col: number;
   xpath: string;
+  /**
+   * The element's text exactly as written, only when it has leading or trailing whitespace (values in
+   * the model are trimmed). Some official rules compare the text as is, e.g. `udt:Indicator = 'false'`.
+   */
+  raw?: string;
 }
 
 export type LocMap = Record<string, Loc>;
@@ -15,6 +20,7 @@ export type LocMap = Record<string, Loc>;
 export interface Identifier {
   id: string;
   scheme?: string;
+  loc?: Loc;
 }
 
 export interface Address {
@@ -38,6 +44,12 @@ export interface Party {
   endpoint?: Identifier; // BT-34 / BT-49
   address?: Address; // BG-5 / BG-8
   contact?: { name?: string; phone?: string; email?: string }; // BG-6 / BG-9
+  /**
+   * Every tax registration the party carries, as the official VAT category rules read them: UBL each
+   * PartyTaxScheme with a CompanyID (`scheme` = its TaxScheme/ID), CII each SpecifiedTaxRegistration/ID
+   * (`scheme` = its schemeID attribute, VA or FC). vatId / taxRegistrationId above pick one of each.
+   */
+  taxRegistrations?: { scheme?: string; loc: Loc }[];
   locs: LocMap;
   loc?: Loc;
 }
@@ -51,6 +63,10 @@ export interface AllowanceCharge {
   reasonCode?: string;
   vatCategory?: string;
   vatRate?: number;
+  /** Tax scheme of the VAT category (UBL TaxCategory/TaxScheme/ID, CII CategoryTradeTax/TypeCode) */
+  vatScheme?: string;
+  /** UBL TaxCategory/TaxExemptionReasonCode (PEPPOL-EN16931-P0104 … P0111 check every TaxCategory) */
+  vatExemptionCode?: string;
   rawIndicator?: string;
   locs: LocMap;
   loc?: Loc;
@@ -79,8 +95,17 @@ export interface InvoiceLine {
   grossBaseQuantityUnit?: string;
   /** CII price-level allowances/charges (AppliedTradeAllowanceCharge): raw ChargeIndicator, for PEPPOL-EN16931-R043 */
   priceIndicators?: { raw?: string; loc: Loc }[];
+  /**
+   * UBL price-level allowances/charges (Price/AllowanceCharge), read for the rules that look at every
+   * cac:AllowanceCharge (reason code lists, VAT category of any TaxCategory). Their amounts are BT-147/148 above.
+   */
+  priceAllowanceCharges?: AllowanceCharge[];
+  /** Line object references (UBL cac:DocumentReference, CII line AdditionalReferencedDocument) with their type code as written */
+  documentRefs?: { typeCode?: string; loc: Loc }[];
   vatCategory?: string; // BT-151
   vatRate?: number; // BT-152
+  /** Tax scheme of the line VAT category (UBL ClassifiedTaxCategory/TaxScheme/ID, CII ApplicableTradeTax/TypeCode) */
+  vatScheme?: string;
   itemName?: string; // BT-153
   description?: string; // BT-154
   sellerItemId?: string; // BT-155
@@ -99,8 +124,50 @@ export interface VatBreakdown {
   rate?: number; // BT-119
   exemptionReason?: string; // BT-120
   exemptionCode?: string; // BT-121
+  /** Tax scheme (UBL TaxCategory/TaxScheme/ID, CII TypeCode); the category rules only read VAT rows */
+  scheme?: string;
   locs: LocMap;
   loc?: Loc;
+}
+
+export type CodedKind =
+  | "country"
+  | "originCountry"
+  | "classificationScheme"
+  | "taxCategory"
+  | "itemTaxCategory"
+  /** UBL: every cbc:IdentificationCode (BR-B-01) */
+  | "identificationCode"
+  /** CII: every ram:CategoryCode (BR-B-01, BR-B-02) */
+  | "categoryCode"
+  /** UBL cac:InvoicePeriod/cbc:DescriptionCode (BR-CL-06, PEPPOL-EN16931-CL006) */
+  | "periodDescriptionCode"
+  /** CII ram:DueDateTypeCode (BR-CL-06) */
+  | "dueDateTypeCode"
+  /** UBL: a cbc:Note directly under the root, its string value (BR-CL-08 reads "#CODE#" at its start) */
+  | "rootNote"
+  /** CII ram:SubjectCode (BR-CL-08) */
+  | "subjectCode"
+  /** schemeID of UBL cac:PartyIdentification/cbc:ID, or of a CII ram:GlobalID outside products and ship-to parties (BR-CL-10) */
+  | "partyIdScheme"
+  /** schemeID of UBL cac:StandardItemIdentification/cbc:ID or CII ram:SpecifiedTradeProduct/ram:GlobalID (BR-CL-21) */
+  | "itemIdScheme"
+  /** schemeID of UBL cac:DeliveryLocation/cbc:ID or the CII header ship-to party's ram:GlobalID (BR-CL-26) */
+  | "deliveryIdScheme"
+  /** UBL cbc:TaxExemptionReasonCode, CII ram:ExemptionReasonCode (BR-CL-22) */
+  | "exemptionCode"
+  /** The payee account of a credit-transfer payment means (code 30 or 58): its identifier(s), normalised (BR-50) */
+  | "creditTransferAccount";
+
+export interface CodedValue {
+  kind: CodedKind;
+  value: string;
+  owner: string;
+  loc: Loc;
+  /** UBL TaxCategory: in a TaxTotal/TaxSubtotal or an AllowanceCharge directly under the root (BR-B-02) */
+  docLevel?: boolean;
+  /** UBL PartyIdentification inside the seller or payee party, where BR-CL-10 also accepts SEPA */
+  sellerOrPayee?: boolean;
 }
 
 export interface PaymentMeans {
@@ -206,7 +273,8 @@ export interface InvoiceModel {
   taxTotals: { amount?: number; currency?: string; hasSubtotals: boolean; loc?: Loc }[];
   totals: Totals; // BG-22
   lines: InvoiceLine[]; // BG-25
-  attachments: { id?: string; description?: string; filename?: string; mime?: string; loc?: Loc }[]; // BG-24
+  /** BG-24 and the other document references read with it (UBL AdditionalDocumentReference, CII header AdditionalReferencedDocument); typeCode as written */
+  attachments: { id?: string; description?: string; filename?: string; mime?: string; typeCode?: string; loc?: Loc }[];
   /**
    * Amount nodes with their currencyID attribute, for currency consistency checks. UBL lists every
    * element PEPPOL-EN16931-R051 checks (`bt` names the term or element); CII only amounts that carry one.
@@ -214,8 +282,34 @@ export interface InvoiceModel {
   amountCurrencies: { bt: string; currency?: string; loc: Loc }[];
   /** Every identifier with a schemeID (PEPPOL-COMMON-R040/R043, PEPPOL-EN16931-CL008) */
   schemeIds: SchemeIdentifier[];
-  /** Every embedded binary object with a mimeCode, wherever it sits (BR-CL-24, PEPPOL-EN16931-CL001) */
-  binaryObjects?: { mime: string; filename?: string; loc: Loc }[];
+  /**
+   * Every element whose name ends in BinaryObject, wherever it sits, with its mimeCode and filename as written:
+   * BR-CL-24 and PEPPOL-EN16931-CL001 read the attachments (UBL EmbeddedDocumentBinaryObject, CII
+   * AttachmentBinaryObject) that have a mimeCode, UBL-DT-06/07 every one.
+   */
+  binaryObjects?: { element: string; mime?: string; filename?: string; loc: Loc }[];
+  /**
+   * Every amount whose currencyID the code-list rules check (BR-CL-03, PEPPOL-EN16931-CL007), attribute as
+   * written: UBL the thirteen cbc amount elements anywhere, CII each TaxTotalAmount that carries one.
+   */
+  currencyIds?: { element: string; currency?: string; loc: Loc }[];
+  /** Invoiced object identifier schemes (BR-CL-07): UBL the schemeID of a type-130 document reference's ID, CII every ReferenceTypeCode */
+  objectIdSchemes?: { scheme: string; loc: Loc }[];
+  /**
+   * Every date element with its text as written, for PEPPOL-EN16931-F001: UBL the six cbc date elements
+   * (IssueDate, DueDate, TaxPointDate, StartDate, EndDate, ActualDeliveryDate) anywhere, CII every
+   * udt:DateTimeString with its format attribute.
+   */
+  dates?: { element: string; raw: string; format?: string; loc: Loc }[];
+  /**
+   * Coded values the official code-list rules read wherever they sit, text as written: country codes (BR-CL-14),
+   * item countries of origin (BR-CL-15), item classification schemes (BR-CL-13), the VAT category of a
+   * TaxCategory / CategoryTradeTax (BR-CL-17) and of a ClassifiedTaxCategory / ApplicableTradeTax (BR-CL-18),
+   * and the values of BR-CL-06, -08, -10, -21, -22, -26, BR-50, BR-B-01/02 and PEPPOL-EN16931-CL006 (see CodedKind).
+   */
+  codedValues?: CodedValue[];
+  /** UBL: every element whose name ends in Amount, text as written, for UBL-DT-01 (PriceAmount and price-level allowance amounts excepted) */
+  amountTexts?: { element: string; raw: string; loc: Loc }[];
   /** Raw amount strings for decimal-precision checks */
   decimals: { bt: string; raw: string; loc: Loc }[];
   /** Fields that failed basic type parsing (bad dates, non-numeric amounts) */

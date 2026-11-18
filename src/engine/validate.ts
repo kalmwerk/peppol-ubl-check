@@ -109,8 +109,9 @@ function computeTotals(m: InvoiceModel): ComputedTotals {
   };
 }
 
-function rulesApplicable(peppol: boolean, en16931: boolean, xrechnung: boolean, nlcius: boolean) {
+function rulesApplicable(peppol: boolean, en16931: boolean, xrechnung: boolean, nlcius: boolean, syntax: "UBL" | "CII") {
   return RULES.filter((r) => {
+    if (r.syntax && r.syntax !== syntax) return false;
     if (r.source === "Peppol") return peppol;
     if (r.source === "NLCIUS") return nlcius;
     // IV-DE-* (Leitweg-ID) are our own checks but only run with the XRechnung rules
@@ -233,6 +234,6 @@ export function validateInvoiceXml(
     findings,
     counts,
     sections,
-    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius),
+    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius, model.syntax),
   });
 }
