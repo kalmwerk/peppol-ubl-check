@@ -600,3 +600,71 @@ describe("Official rules without official unit tests, checked as the Schematron 
     expect(verdict(ciiCode("EXEMPT"), "BR-CL-22", "en16931")).toBe("error");
   });
 });
+
+describe("Peppol's identifier formats for Norway, Denmark and Sweden (PEPPOL-COMMON-R041, R042, R049)", () => {
+  /** How many findings the checker gives for one rule: the official rules report each element. */
+  const count = (xml: string, rule: string, profile: ValidationProfile = "peppol") =>
+    validateInvoiceXml(xml, profile).findings.filter((f) => f.ruleId === rule && f.severity === "error").length;
+  /** The buyer with the same number as its address, party identifier and legal registration number. */
+  const buyer = (scheme: string, id: string) =>
+    ubl(`<cac:AccountingCustomerParty><cac:Party><cbc:EndpointID schemeID="${scheme}">${id}</cbc:EndpointID><cac:PartyIdentification><cbc:ID schemeID="${scheme}">${id}</cbc:ID></cac:PartyIdentification><cac:PartyLegalEntity><cbc:CompanyID schemeID="${scheme}">${id}</cbc:CompanyID></cac:PartyLegalEntity></cac:Party></cac:AccountingCustomerParty>`);
+  const endpoint = (scheme: string, id: string) =>
+    ubl(`<cac:AccountingCustomerParty><cac:Party><cbc:EndpointID schemeID="${scheme}">${id}</cbc:EndpointID></cac:Party></cac:AccountingCustomerParty>`);
+  const ciiBuyer = (el: string) => cii(ciiContext() + ciiTx({ agreement: `<ram:BuyerTradeParty>${el}</ram:BuyerTradeParty>` }));
+
+  it("R041: 9 digits with the mod-11 check digit, in every element that carries scheme 0192 (PEPPOL-COMMON-R041.xml, restated on invoices)", () => {
+    // The official cases are Order documents; the same numbers in the same three elements of an invoice
+    expect(count(buyer("0192", "991825827"), "PEPPOL-COMMON-R041")).toBe(0);
+    expect(count(ubl('<cac:AccountingCustomerParty><cac:Party><cbc:EndpointID schemeID="0192">987654325</cbc:EndpointID><cac:PartyIdentification><cbc:ID schemeID="0192">123456785</cbc:ID></cac:PartyIdentification></cac:Party></cac:AccountingCustomerParty>'), "PEPPOL-COMMON-R041")).toBe(0);
+    expect(count(buyer("0192", "991825822"), "PEPPOL-COMMON-R041")).toBe(3);
+    expect(count(buyer("0192", "9918258222"), "PEPPOL-COMMON-R041")).toBe(3);
+  });
+  it("R041: the VAT form, spaces inside, all zeros and a remainder of 1 fail; spaces around the number don't", () => {
+    for (const bad of ["NO991825827MVA", "991 825 827", "000000000", "100000130", "\u00a0991825827"])
+      expect(verdict(endpoint("0192", bad), "PEPPOL-COMMON-R041"), JSON.stringify(bad)).toBe("error");
+    expect(verdict(endpoint("0192", " 991825827\n"), "PEPPOL-COMMON-R041")).toBe("success");
+  });
+  it("R042: 8 digits or DK and 8 digits (PEPPOL-COMMON-R042.xml, UBL)", () => {
+    const parties = (customer: string, supplier: string) =>
+      ubl(`<cac:AccountingCustomerParty><cac:Party><cac:PartyLegalEntity><cbc:RegistrationName>Customer A A/S</cbc:RegistrationName><cbc:CompanyID schemeID="0184">${customer}</cbc:CompanyID></cac:PartyLegalEntity></cac:Party></cac:AccountingCustomerParty><cac:AccountingSupplierParty><cac:Party><cac:PartyLegalEntity><cbc:RegistrationName>Supplier A/S</cbc:RegistrationName><cbc:CompanyID schemeID="0184">${supplier}</cbc:CompanyID></cac:PartyLegalEntity></cac:Party></cac:AccountingSupplierParty>`);
+    expect(count(parties("12345678", "DK12345678"), "PEPPOL-COMMON-R042")).toBe(0);
+    expect(count(parties("1234567", "1234567"), "PEPPOL-COMMON-R042")).toBe(2);
+  });
+  it("R042 reads the text exactly as written: spaces or a line break around the number fail, unlike R041 and R049", () => {
+    for (const bad of [" 12345678", "12345678\n", "DK 12345678", "dk12345678", "DK1234567", "DK123456789", "1234-5678"])
+      expect(verdict(endpoint("0184", bad), "PEPPOL-COMMON-R042"), JSON.stringify(bad)).toBe("error");
+    const f = validateInvoiceXml(endpoint("0184", " 12345678 "), "peppol").findings.find((x) => x.ruleId === "PEPPOL-COMMON-R042");
+    expect(f?.message).toContain("spaces or line breaks around it");
+  });
+  it("R042 on CII: every URIID, ID and GlobalID with scheme 0184 (PEPPOL-COMMON-R042.xml, CII)", () => {
+    expect(verdict(ciiBuyer('<ram:SpecifiedLegalOrganization><ram:ID schemeID="0184">DK12345678</ram:ID></ram:SpecifiedLegalOrganization>'), "PEPPOL-COMMON-R042")).toBe("success");
+    expect(verdict(ciiBuyer('<ram:SpecifiedLegalOrganization><ram:ID schemeID="0184">345678</ram:ID></ram:SpecifiedLegalOrganization>'), "PEPPOL-COMMON-R042")).toBe("error");
+    expect(verdict(ciiBuyer('<ram:GlobalID schemeID="0184">DK1234567X</ram:GlobalID>'), "PEPPOL-COMMON-R042")).toBe("error");
+  });
+  it("R049: 10 digits with the Luhn check digit (PEPPOL-COMMON-R049.xml, UBL)", () => {
+    expect(verdict(endpoint("0007", "2021005489"), "PEPPOL-COMMON-R049")).toBe("success");
+    expect(verdict(endpoint("0007", "556622-1100"), "PEPPOL-COMMON-R049")).toBe("error");
+    expect(verdict(endpoint("0007", "SE5566221100"), "PEPPOL-COMMON-R049")).toBe("error");
+    expect(verdict(endpoint("0007", "2021005480"), "PEPPOL-COMMON-R049")).toBe("error");
+  });
+  it("R049 on CII (PEPPOL-COMMON-R049.xml, CII), with spaces around it, the VAT form and full-width digits", () => {
+    const uri = (id: string) => ciiBuyer(`<ram:URIUniversalCommunication><ram:URIID schemeID="0007">${id}</ram:URIID></ram:URIUniversalCommunication>`);
+    expect(verdict(uri("2021005489"), "PEPPOL-COMMON-R049")).toBe("success");
+    expect(verdict(uri("554433-2211"), "PEPPOL-COMMON-R049")).toBe("error");
+    expect(verdict(uri("SE5544332211"), "PEPPOL-COMMON-R049")).toBe("error");
+    expect(verdict(uri("2021005480"), "PEPPOL-COMMON-R049")).toBe("error");
+    expect(verdict(uri(" 2021005489 "), "PEPPOL-COMMON-R049")).toBe("success");
+    expect(verdict(uri("SE202100548901"), "PEPPOL-COMMON-R049")).toBe("error");
+    expect(verdict(uri("２０２１００５４８９"), "PEPPOL-COMMON-R049")).toBe("error");
+  });
+  it("only identifiers with exactly that schemeID count, the item's standard ID doesn't, and EN 16931 alone checks none of them", () => {
+    expect(verdict(endpoint(" 0192", "1"), "PEPPOL-COMMON-R041")).toBe("success");
+    const item = ubl('<cac:InvoiceLine><cac:Item><cac:StandardItemIdentification><cbc:ID schemeID="0007">1</cbc:ID></cac:StandardItemIdentification></cac:Item></cac:InvoiceLine>');
+    expect(verdict(item, "PEPPOL-COMMON-R049")).toBe("success");
+    const payee = ubl('<cac:PayeeParty><cac:PartyLegalEntity><cbc:CompanyID schemeID="0007">556622-1100</cbc:CompanyID></cac:PartyLegalEntity></cac:PayeeParty>');
+    expect(verdict(payee, "PEPPOL-COMMON-R049")).toBe("error");
+    expect(verdict(payee, "PEPPOL-COMMON-R049", "en16931")).toBe("success");
+    expect(verdict(buyer("0192", "991825822"), "PEPPOL-COMMON-R041", "en16931")).toBe("success");
+    expect(verdict(endpoint("0184", "1234567"), "PEPPOL-COMMON-R042", "en16931")).toBe("success");
+  });
+});

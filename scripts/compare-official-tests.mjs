@@ -85,7 +85,7 @@ export function ruleSetFamily(id) {
  * How much of each official rule set the engine checks: per family, the official rule IDs, how
  * many the engine checks, and (business and Peppol core, where a gap matters most) every one it
  * doesn't, split into rules the official files define as always true (test="true()", which no
- * invoice can fail) and real gaps.
+ * invoice can fail) and real gaps; for the national rules every one it doesn't check.
  */
 export function ruleSetCoverage(files, isChecked) {
   const tests = new Map();
@@ -106,9 +106,13 @@ export function ruleSetCoverage(files, isChecked) {
     out[family] = { official: ids.length, checked: ids.length - missing.length };
     if (family === "business" || family === "peppol")
       Object.assign(out[family], { alwaysTrue, notChecked: missing.filter((id) => !alwaysTrue.includes(id)) });
-    // the countries whose rules aren't checked, by ID prefix (DE-R-001 → DE)
+    // the countries whose rules aren't checked, by ID prefix (DE-R-001 → DE), and every national
+    // rule that isn't, tested or not (Peppol's identifier formats have no country prefix)
     if (family === "national")
-      out[family].countries = [...new Set(missing.map((id) => /^([A-Z]{2})-/.exec(id)?.[1]).filter(Boolean))].sort();
+      Object.assign(out[family], {
+        countries: [...new Set(missing.map((id) => /^([A-Z]{2})-/.exec(id)?.[1]).filter(Boolean))].sort(),
+        notChecked: missing,
+      });
   }
   return out;
 }

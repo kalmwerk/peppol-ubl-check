@@ -58,12 +58,17 @@ package is still to do.
    - Release title: `v1.x.y`. Leave the description empty: the Release
      workflow fills it in from `CHANGELOG.md` with Kalmwerk's own
      `kalmwerk/release-notes-action`.
-   - Attach the zip and `.sha256` file from `public/downloads/` if you like;
-     the website keeps offering them either way.
-   - **Publish release**.
-4. The Release workflow writes the notes and moves the `v1` tag, so
-   `uses: kalmwerk/peppol-ubl-check@v1` picks the release up. Check the release
-   page shows the notes and that `v1` points at the new tag.
+   - Attach the zip and `.sha256` file from `public/downloads/`.
+   - Tick **Set as a pre-release**, then **Publish release**. The Release
+     workflow writes the notes; `v1` stays where it is.
+4. Check the pre-release: the tag points at the main commit CI passed on, the
+   notes match the changelog, and the attached zip's SHA-256 is the one in
+   `src/lib/peppol-action.ts`. Then edit the release, untick **Set as a
+   pre-release**, tick **Set as the latest release** and save. That fires the
+   Release workflow's `released` event, which moves the `v1` tag, so
+   `uses: kalmwerk/peppol-ubl-check@v1` picks the release up. Check that `v1`
+   points at the new tag. (Publishing straight as a full release also works:
+   then `v1` moves right away.)
 5. Publish the website. A breaking change gets `v2.0.0`, and the docs and
    examples move to `@v2`.
 

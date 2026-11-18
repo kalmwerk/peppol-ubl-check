@@ -3405,6 +3405,39 @@ var CATALOG = [
     "Belgian enterprise number MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0208 must be exactly 10 digits and pass the mod-97 check.",
     'Write the 10-digit KBO/BCE number without BE, dots or spaces, e.g. <cbc:EndpointID schemeID="0208">0403170701</cbc:EndpointID>. The VAT number BE0403170701 belongs under scheme 9925 or in PartyTaxScheme.'
   ),
+  // Peppol BIS Billing 3.0.22's identifier formats for Norway, Denmark and Sweden (OpenPeppol
+  // PEPPOL-EN16931-UBL.sch / -CII.sch, "Validation of ICD"); like R043 they check every identifier
+  // with the scheme, wherever it sits
+  R(
+    "PEPPOL-COMMON-R041",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-29", "BT-30", "BT-34", "BT-46", "BT-47", "BT-49"],
+    "Invalid Norwegian organisation number (0192)",
+    "Norwegian organization number MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0192 must be exactly 9 digits and pass the mod-11 check digit.",
+    'Write the 9-digit number from the Brønnøysund Register Centre without NO, MVA or spaces, e.g. <cbc:EndpointID schemeID="0192">987654325</cbc:EndpointID>. The VAT form NO987654325MVA belongs in PartyTaxScheme.'
+  ),
+  R(
+    "PEPPOL-COMMON-R042",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-29", "BT-30", "BT-34", "BT-46", "BT-47", "BT-49"],
+    "Invalid Danish CVR number (0184)",
+    "Danish organization number (CVR) MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0184 must be exactly 8 digits, or DK followed by 8 digits, with nothing around it.",
+    'Write the CVR number as 8 digits (or DK and 8 digits) with no spaces, hyphens or line breaks, e.g. <cbc:EndpointID schemeID="0184">12345678</cbc:EndpointID>.'
+  ),
+  R(
+    "PEPPOL-COMMON-R049",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-29", "BT-30", "BT-34", "BT-46", "BT-47", "BT-49"],
+    "Invalid Swedish organisation number (0007)",
+    "Swedish organization number MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0007 must be exactly 10 digits whose last digit is the Luhn check digit.",
+    'Write the 10-digit organisationsnummer without SE, the hyphen or spaces, e.g. <cbc:EndpointID schemeID="0007">2021005489</cbc:EndpointID> for 202100-5489. The VAT number SE202100548901 belongs in PartyTaxScheme, not under 0007.'
+  ),
   // Peppol BIS Billing 3.0 national rules for suppliers in the Netherlands (OpenPeppol
   // PEPPOL-EN16931-UBL.sch, "NETHERLANDS" pattern; each is the Peppol form of an NLCIUS rule)
   R(
@@ -8289,6 +8322,33 @@ function isPeppol0208(id) {
   if (!/^[0-9]{10}$/.test(n)) return false;
   return 97 - Number(n.slice(0, 8)) % 97 === Number(n.slice(8));
 }
+function xpathNormalizeSpace(value) {
+  return value.replace(/[\x20\x09\x0A\x0D]+/g, " ").replace(/^ | $/g, "");
+}
+var xpathLength = (value) => Array.from(value).length;
+var ASCII_DIGITS = /^[0-9]*$/;
+function isPeppol0192(written) {
+  const n = xpathNormalizeSpace(written);
+  if (!/^[0-9]{9}$/.test(n) || Number(n) <= 0) return false;
+  let sum2 = 0;
+  for (let i = 0; i < 8; i++) sum2 += dg(n, 7 - i) * (i % 6 + 2);
+  return (11 - sum2 % 11) % 11 === dg(n, 8);
+}
+function isPeppol0184(written) {
+  const len = xpathLength(written);
+  if (len === 10) return written.startsWith("DK") && ASCII_DIGITS.test(written.slice(2));
+  return len === 8 && ASCII_DIGITS.test(written);
+}
+function isPeppol0007(written) {
+  const n = xpathNormalizeSpace(written);
+  if (!/^[0-9]{10}$/.test(n)) return false;
+  let sum2 = 0;
+  for (let pos = 1; pos <= 9; pos++) {
+    const d = dg(n, 9 - pos);
+    sum2 += pos % 2 === 1 ? d * 2 % 10 + Math.floor(d * 2 / 10) : d;
+  }
+  return (10 - sum2 % 10) % 10 === dg(n, 9);
+}
 var LEITWEG_COARSE_LENGTHS = /* @__PURE__ */ new Set([2, 3, 5, 8, 9, 12]);
 function checkLeitwegId(input) {
   const id = input.trim();
@@ -8781,6 +8841,27 @@ function runRules(m, fmt, opts) {
           `${what} "${sid.id}" uses scheme 0208 but is not a 10-digit Belgian enterprise number with valid check digits (no BE, dots or spaces).`,
           sid.loc,
           { actual: sid.id, expected: "0123456749" }
+        );
+      if (sid.scheme === "0192" && !isPeppol0192(exactText2(sid.id, sid.loc)))
+        emit(
+          "PEPPOL-COMMON-R041",
+          `${what} "${sid.id}" uses scheme 0192 but is not a 9-digit Norwegian organisation number with a valid check digit (no NO, MVA or spaces).`,
+          sid.loc,
+          { actual: sid.id, expected: "987654325" }
+        );
+      if (sid.scheme === "0184" && !isPeppol0184(exactText2(sid.id, sid.loc)))
+        emit(
+          "PEPPOL-COMMON-R042",
+          isPeppol0184(sid.id) ? `${what} "${sid.id}" uses scheme 0184 and has spaces or line breaks around it; Peppol reads the Danish CVR number exactly as written.` : `${what} "${sid.id}" uses scheme 0184 but is not a Danish CVR number: 8 digits, or DK and 8 digits, with no spaces.`,
+          sid.loc,
+          { actual: sid.id, expected: "12345678" }
+        );
+      if (sid.scheme === "0007" && !isPeppol0007(exactText2(sid.id, sid.loc)))
+        emit(
+          "PEPPOL-COMMON-R049",
+          `${what} "${sid.id}" uses scheme 0007 but is not a 10-digit Swedish organisation number with a valid check digit (no SE, hyphen or spaces).`,
+          sid.loc,
+          { actual: sid.id, expected: "2021005489" }
         );
       if (m.syntax === "UBL" && sid.element === "EndpointID" && !PEPPOL_EAS_CODES.has(sid.scheme))
         emit(
@@ -9940,7 +10021,7 @@ function validateInvoiceXml(xml, profile = "auto") {
 
 // src/version.ts
 var TOOL_NAME = "peppol-ubl-check";
-var VERSION = "1.4.0";
+var VERSION = "1.5.0";
 var SITE_URL = "https://peppol-invoice-compass.lovable.app";
 var VALIDATOR_URL = `${SITE_URL}/validate`;
 var TOOL_PAGE_URL = `${SITE_URL}/tools/peppol-github-action`;

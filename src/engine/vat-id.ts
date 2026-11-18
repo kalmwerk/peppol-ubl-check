@@ -454,6 +454,61 @@ export function isPeppol0208(id: string): boolean {
   return 97 - (Number(n.slice(0, 8)) % 97) === Number(n.slice(8));
 }
 
+/**
+ * XPath normalize-space() exactly: only the four XML whitespace characters (space, tab, line feed,
+ * carriage return) count, runs of them become one space, none at either end. JavaScript's \s and
+ * trim() also strip non-breaking and other Unicode spaces, which the official rules keep.
+ */
+export function xpathNormalizeSpace(value: string): string {
+  return value.replace(/[\x20\x09\x0A\x0D]+/g, " ").replace(/^ | $/g, "");
+}
+
+/** XPath string-length(): counts characters (code points), not UTF-16 units. */
+const xpathLength = (value: string) => Array.from(value).length;
+const ASCII_DIGITS = /^[0-9]*$/;
+
+/**
+ * PEPPOL-COMMON-R041 (Peppol BIS Billing 3.0.22) for an identifier with scheme 0192, given its text
+ * as written: `matches(normalize-space(), '^[0-9]{9}$') and u:mod11(normalize-space())`. u:mod11
+ * weighs the first eight digits from the right with 2, 3, 4, 5, 6, 7, 2, 3; the ninth digit must be
+ * (11 − sum mod 11) mod 11 (a remainder of 1 leaves no valid digit), and the number must be above 0.
+ */
+export function isPeppol0192(written: string): boolean {
+  const n = xpathNormalizeSpace(written);
+  if (!/^[0-9]{9}$/.test(n) || Number(n) <= 0) return false;
+  let sum = 0;
+  for (let i = 0; i < 8; i++) sum += dg(n, 7 - i) * ((i % 6) + 2);
+  return (11 - (sum % 11)) % 11 === dg(n, 8);
+}
+
+/**
+ * PEPPOL-COMMON-R042 (Peppol BIS Billing 3.0.22) for an identifier with scheme 0184, given its text
+ * as written. The official test reads string(), not normalize-space(), so surrounding spaces or
+ * line breaks fail: exactly "DK" and 8 digits, or exactly 8 digits. No check digit.
+ */
+export function isPeppol0184(written: string): boolean {
+  const len = xpathLength(written);
+  if (len === 10) return written.startsWith("DK") && ASCII_DIGITS.test(written.slice(2));
+  return len === 8 && ASCII_DIGITS.test(written);
+}
+
+/**
+ * PEPPOL-COMMON-R049 (Peppol BIS Billing 3.0.22) for an identifier with scheme 0007, given its text
+ * as written: `string-length(normalize-space()) = 10 and string(number(normalize-space())) != 'NaN'
+ * and u:checkSEOrgnr(normalize-space())`, which together mean ten digits whose last one is the Luhn
+ * check digit of the first nine (no SE prefix, hyphen or spaces).
+ */
+export function isPeppol0007(written: string): boolean {
+  const n = xpathNormalizeSpace(written);
+  if (!/^[0-9]{10}$/.test(n)) return false;
+  let sum = 0;
+  for (let pos = 1; pos <= 9; pos++) {
+    const d = dg(n, 9 - pos);
+    sum += pos % 2 === 1 ? ((d * 2) % 10) + Math.floor((d * 2) / 10) : d;
+  }
+  return (10 - (sum % 10)) % 10 === dg(n, 9);
+}
+
 /** Why a Leitweg-ID failed its check (Leitweg-ID Format-Spezifikation 2.0.2, KoSIT). */
 export type LeitwegProblem = "format" | "coarse" | "fine" | "check-digit";
 

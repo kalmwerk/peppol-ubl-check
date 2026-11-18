@@ -1491,6 +1491,39 @@ const CATALOG: RuleMeta[] = [
     "Belgian enterprise number MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0208 must be exactly 10 digits and pass the mod-97 check.",
     "Write the 10-digit KBO/BCE number without BE, dots or spaces, e.g. <cbc:EndpointID schemeID=\"0208\">0403170701</cbc:EndpointID>. The VAT number BE0403170701 belongs under scheme 9925 or in PartyTaxScheme.",
   ),
+  // Peppol BIS Billing 3.0.22's identifier formats for Norway, Denmark and Sweden (OpenPeppol
+  // PEPPOL-EN16931-UBL.sch / -CII.sch, "Validation of ICD"); like R043 they check every identifier
+  // with the scheme, wherever it sits
+  R(
+    "PEPPOL-COMMON-R041",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-29", "BT-30", "BT-34", "BT-46", "BT-47", "BT-49"],
+    "Invalid Norwegian organisation number (0192)",
+    "Norwegian organization number MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0192 must be exactly 9 digits and pass the mod-11 check digit.",
+    "Write the 9-digit number from the Brønnøysund Register Centre without NO, MVA or spaces, e.g. <cbc:EndpointID schemeID=\"0192\">987654325</cbc:EndpointID>. The VAT form NO987654325MVA belongs in PartyTaxScheme.",
+  ),
+  R(
+    "PEPPOL-COMMON-R042",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-29", "BT-30", "BT-34", "BT-46", "BT-47", "BT-49"],
+    "Invalid Danish CVR number (0184)",
+    "Danish organization number (CVR) MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0184 must be exactly 8 digits, or DK followed by 8 digits, with nothing around it.",
+    "Write the CVR number as 8 digits (or DK and 8 digits) with no spaces, hyphens or line breaks, e.g. <cbc:EndpointID schemeID=\"0184\">12345678</cbc:EndpointID>.",
+  ),
+  R(
+    "PEPPOL-COMMON-R049",
+    "Peppol",
+    "error",
+    "parties",
+    ["BT-29", "BT-30", "BT-34", "BT-46", "BT-47", "BT-49"],
+    "Invalid Swedish organisation number (0007)",
+    "Swedish organization number MUST be stated in the correct format: every EndpointID, party identifier or CompanyID with schemeID 0007 must be exactly 10 digits whose last digit is the Luhn check digit.",
+    "Write the 10-digit organisationsnummer without SE, the hyphen or spaces, e.g. <cbc:EndpointID schemeID=\"0007\">2021005489</cbc:EndpointID> for 202100-5489. The VAT number SE202100548901 belongs in PartyTaxScheme, not under 0007.",
+  ),
 
   // Peppol BIS Billing 3.0 national rules for suppliers in the Netherlands (OpenPeppol
   // PEPPOL-EN16931-UBL.sch, "NETHERLANDS" pattern; each is the Peppol form of an NLCIUS rule)

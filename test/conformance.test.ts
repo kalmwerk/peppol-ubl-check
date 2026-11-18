@@ -38,7 +38,7 @@ describe("the statement", () => {
     expect(text).toContain("1 differ");
   });
   it("always names what isn't covered", () => {
-    const national = ["DK-R-002", "PEPPOL-COMMON-R041"];
+    const national = ["DK-R-002", "PEPPOL-COMMON-R044"];
     const complete: Conformance = { ...committed, uncovered: { en16931: [], peppol: [], national } };
     expect(summaryMarkdown(complete)).toContain("The 2 rules those tests exercise that aren't checked are all national (Denmark and Peppol's identifier formats)");
     const partial: Conformance = { ...committed, uncovered: { en16931: ["BR-CO-21"], peppol: [], national } };

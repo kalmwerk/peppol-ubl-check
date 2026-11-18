@@ -1,16 +1,19 @@
-# When a v1.x.y release is published: write its notes from CHANGELOG.md, then
-# move the major tag (v1) so `uses: kalmwerk/peppol-ubl-check@v1` picks it up.
+# When a v1.x.y release is published: write its notes from CHANGELOG.md. When it becomes a full
+# release (published as one, or a checked pre-release promoted to one), move the major tag (v1) so
+# `uses: kalmwerk/peppol-ubl-check@v1` picks it up. Publishing as a pre-release first lets the tag,
+# notes and attached files be checked before anyone on @v1 gets the new version.
 name: Release
 
 on:
   release:
-    types: [published]
+    types: [published, released]
 
 permissions:
   contents: write
 
 jobs:
   notes:
+    if: ${{ github.event.action == 'published' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -20,8 +23,8 @@ jobs:
           source: changelog
 
   major-tag:
-    needs: notes
-    if: ${{ !github.event.release.prerelease }}
+    # `released` fires for a full release only: published directly, or a pre-release promoted later
+    if: ${{ github.event.action == 'released' && !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
