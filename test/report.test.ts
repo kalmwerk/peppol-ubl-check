@@ -11,7 +11,7 @@ describe("job summary", () => {
 
   it("leads with the verdict and one row per invoice", () => {
     expect(md.startsWith("## ❌ Peppol UBL check: 1 of 2 invoices has errors\n")).toBe(true);
-    expect(md).toContain("| `invalid/invalid-vat-calculation.xml` | Peppol BIS Billing 3.0 (UBL 2.1) | 5 | 0 | ❌ Errors |");
+    expect(md).toContain("| `invalid/invalid-vat-calculation.xml` | Peppol BIS Billing 3.0 (UBL 2.1) | 6 | 0 | ❌ Errors |");
     expect(md).toContain("| `valid/peppol-bis3-valid-be.xml` | Peppol BIS Billing 3.0 (UBL 2.1) | 0 | 0 | ✅ OK |");
   });
 
@@ -19,13 +19,13 @@ describe("job summary", () => {
     expect(md).toContain(
       "| ❌ | [BR-CO-17](https://peppol-invoice-compass.lovable.app/rules/br-co-17) | 91 | **VAT amount does not match rate.** 1960.00 × 21% = 411.60, but the VAT amount is 392.00. | Calculate VAT per category on the taxable total (not per line) and round once to 2 decimals. |",
     );
-    expect(md).toContain("Invoice **2026/0918** · Peppol BIS Billing 3.0 (UBL 2.1) · 159 rules checked");
+    expect(md).toContain("Invoice **2026/0918** · Peppol BIS Billing 3.0 (UBL 2.1) · 257 rules checked");
   });
 
   it("lists skipped files and says honestly what wasn't checked", () => {
     expect(md).toContain("1 file skipped: not an invoice");
     expect(md).toContain("`other/pom.xml`: Not an invoice: the root element is &lt;project&gt;");
-    expect(md).toContain("222 rules (108 EN 16931, 40 Peppol BIS Billing 3.0, 32 XRechnung, 30 SI-UBL 2.0, 12 extra checks");
+    expect(md).toContain("321 rules (189 EN 16931, 58 Peppol BIS Billing 3.0, 32 XRechnung, 30 SI-UBL 2.0, 12 extra checks");
     expect(md).toMatch(/partial version of the official\s+Schematron/);
     expect(md).toContain("without XSD schema validation or PDF/A checks. Nothing was sent anywhere.");
     expect(md).toContain("[InvoiceVerify validator](https://peppol-invoice-compass.lovable.app/validate)");
@@ -44,7 +44,7 @@ describe("job summary", () => {
 
   it("caps findings per file and the overall size", () => {
     const capped = summaryMarkdown(mixed, { maxFindingsPerFile: 2 });
-    expect(capped).toContain("…and 3 more in the JSON report");
+    expect(capped).toContain("…and 4 more in the JSON report");
     const tiny = summaryMarkdown(mixed, { maxChars: 600 });
     expect(tiny).toContain("Findings for 1 more file left out");
   });
@@ -69,7 +69,7 @@ describe("console report", () => {
     expect(text).toContain("SKIP other/pom.xml");
     expect(text).toContain("PASS valid/peppol-bis3-valid-be.xml");
     expect(text).toContain("error   BR-CO-17 VAT amount does not match rate  invalid/invalid-vat-calculation.xml:91:21");
-    expect(text.trim().split("\n").pop()).toBe("1 of 2 invoices has errors (5 errors, 0 warnings, 1 skipped).");
+    expect(text.trim().split("\n").pop()).toBe("1 of 2 invoices has errors (6 errors, 0 warnings, 1 skipped).");
   });
 
   it("leaves the findings out with quiet, and colours with color", () => {
