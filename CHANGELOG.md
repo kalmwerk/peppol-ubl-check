@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-11-18
+
+Peppol's own format checks for Norwegian, Danish and Swedish company numbers: 3 new rules, 324 in total. The verdicts of the rules 1.4.0 already checked are unchanged, apart from invoices the new rules now flag.
+
+### Added
+- Peppol BIS Billing 3.0.22 identifier rules, in UBL and CII, for every element that carries the scheme (EndpointID, PartyIdentification/ID and CompanyID in UBL; URIID, ID and GlobalID in CII), as OpenPeppol's PEPPOL-EN16931-UBL.sch and -CII.sch state them:
+  - PEPPOL-COMMON-R041, Norwegian organisation numbers (0192): 9 digits with the mod-11 check digit.
+  - PEPPOL-COMMON-R042, Danish CVR numbers (0184): 8 digits, or DK and 8 digits. The official rule reads the text exactly as written, so spaces or a line break around the number fail too.
+  - PEPPOL-COMMON-R049, Swedish organisation numbers (0007): 10 digits with the Luhn check digit (no SE, hyphen or spaces).
+- `test/official-peppol.test.ts`: the official Peppol unit tests of the three rules restated on our own invoices (the R041 tests are orders, which the comparison can't run), plus our own pass and fail cases.
+- `test/schematron-parity.test.ts`: 14 more invoices (UBL and CII) with valid and broken Nordic numbers in every place the rules look, each with the verdicts the official Schematron gave for them.
+
+### Changed
+- The Release workflow moves `v1` only when a release becomes a full release (`released`), so a new version can be published as a pre-release and checked first; the notes are still written on publishing.
+- `conformance.json` lists every national rule that isn't checked (`ruleSets.national.notChecked`), tested or not. The official tests of R042 and R049 now count as compared verdicts; the remaining identifier formats (Danish P and SE numbers, Italian, Australian and Dutch numbers) are still listed as not covered.
+
 ## [1.4.0] - 2026-11-18
 
 Every EN 16931 business rule and every Peppol BIS Billing 3.0 core rule that can fail is now checked: 99 new rules, 321 in total. The verdicts of the rules 1.3.4 already checked are unchanged, apart from invoices the new rules now flag.
