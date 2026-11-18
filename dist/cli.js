@@ -1967,7 +1967,7 @@ var import_node_path = require("node:path");
 
 // src/engine/rules-catalog.ts
 var R = (id, source, severity, section, bt, title, description, fix) => ({ id, source, severity, section, bt, title, description, fix });
-var RULES = [
+var CATALOG = [
   // ---------- Syntax & structure ----------
   R(
     "IV-SYN-01",
@@ -3008,9 +3008,9 @@ var RULES = [
     "EN16931",
     "error",
     "header",
-    ["BT-5", "BT-6"],
+    ["BT-5"],
     "Unknown currency code",
-    "Invoice currency code (BT-5) and VAT accounting currency code (BT-6) MUST be coded using ISO 4217 alpha-3.",
+    "Invoice currency code (BT-5) MUST be coded using ISO 4217 alpha-3 (the VAT accounting currency, BT-6, is BR-CL-05).",
     "Use an uppercase three-letter ISO 4217 code such as EUR, USD, GBP or PLN."
   ),
   R(
@@ -3038,9 +3038,9 @@ var RULES = [
     "EN16931",
     "error",
     "vat",
-    ["BT-118", "BT-151"],
+    ["BT-95", "BT-102", "BT-118"],
     "Unknown VAT category code",
-    "Invoice tax categories MUST be coded using UNCL5305 code list (S, Z, E, AE, K, G, O, L, M).",
+    "Invoice tax categories MUST be coded using UNCL5305 code list (S, Z, E, AE, K, G, O, L, M, and B for Italian split payment). UBL checks every cac:TaxCategory (VAT breakdown, allowances and charges); CII the allowance and charge categories (CategoryTradeTax). Line categories are BR-CL-18.",
     "Replace the value with one of S, Z, E, AE, K, G, O, L or M."
   ),
   R(
@@ -4203,8 +4203,1022 @@ var RULES = [
     "Leitweg-ID not valid",
     "A Leitweg-ID has a coarse address (2–12 digits, starting 01–16 or 99), an optional fine address (up to 30 letters or digits) and two check digits (ISO/IEC 7064 MOD 97-10), separated by hyphens. This check follows the KoSIT Leitweg-ID format specification 2.0.2; it does not tell whether the authority uses the ID.",
     "Copy the Leitweg-ID exactly from the order or the authority's letter; a single wrong digit makes the check digits fail."
+  ),
+  // ---------- Added 17 Nov 2026: the remaining EN 16931 and Peppol BIS rules with official test cases ----------
+  // (CEN validation artefacts 1.3.17, Peppol BIS Billing 3.0.22; written per syntax as the official Schematron tests them)
+  R(
+    "BR-S-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-32", "BT-63"],
+    "Standard-rated allowance without seller VAT ID",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "Standard rated" (S) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63).',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-S-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-32", "BT-63"],
+    "Standard-rated charge without seller VAT ID",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "Standard rated" (S) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63).',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-Z-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-32", "BT-63"],
+    "Zero-rated allowance without seller VAT ID",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "Zero rated" (Z) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63).',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-Z-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-32", "BT-63"],
+    "Zero-rated charge without seller VAT ID",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "Zero rated" (Z) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63).',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-IP-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-32", "BT-63"],
+    "IPSI allowance without seller VAT ID",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "IPSI" (M) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63). The CEN CII artefacts check category L (IGIC) under this ID.',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-IP-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-32", "BT-63"],
+    "IPSI charge without seller VAT ID",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "IPSI" (M) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63). The CEN CII artefacts check category L (IGIC) under this ID.',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-G-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-63"],
+    "Export allowance without seller VAT ID",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "Export outside the EU" (G) shall contain the Seller VAT identifier (BT-31) or the Seller tax representative VAT identifier (BT-63).',
+    "Add the seller's VAT number (BT-31) or the tax representative's VAT number (BT-63); a tax registration number (BT-32) alone isn't enough for exports."
+  ),
+  R(
+    "BR-IC-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-63", "BT-48"],
+    "Intra-EU allowance without both VAT IDs",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "Intra-community supply" (K) shall contain the Seller VAT identifier (BT-31) or the Seller tax representative VAT identifier (BT-63) and the Buyer VAT identifier (BT-48).',
+    "Add the seller's VAT number (BT-31, or the tax representative's BT-63) and the buyer's VAT number (BT-48). An intra-community supply is only VAT-free between two VAT-registered businesses."
+  ),
+  R(
+    "BR-O-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-63", "BT-48"],
+    "Out-of-scope allowance with a VAT ID",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "Not subject to VAT" (O) shall not contain the Seller VAT identifier (BT-31), the Seller tax representative VAT identifier (BT-63) or the Buyer VAT identifier (BT-48).',
+    "If the supply really is outside the scope of VAT, remove the VAT numbers (BT-31, BT-63, BT-48) from the invoice; keep a legal registration number (BT-30) if you need one. If VAT does apply, use the right category instead of O."
+  ),
+  R(
+    "BR-G-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-63"],
+    "Export charge without seller VAT ID",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "Export outside the EU" (G) shall contain the Seller VAT identifier (BT-31) or the Seller tax representative VAT identifier (BT-63).',
+    "Add the seller's VAT number (BT-31) or the tax representative's VAT number (BT-63); a tax registration number (BT-32) alone isn't enough for exports."
+  ),
+  R(
+    "BR-IC-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-63", "BT-48"],
+    "Intra-EU charge without both VAT IDs",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "Intra-community supply" (K) shall contain the Seller VAT identifier (BT-31) or the Seller tax representative VAT identifier (BT-63) and the Buyer VAT identifier (BT-48).',
+    "Add the seller's VAT number (BT-31, or the tax representative's BT-63) and the buyer's VAT number (BT-48). An intra-community supply is only VAT-free between two VAT-registered businesses."
+  ),
+  R(
+    "BR-O-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-63", "BT-48"],
+    "Out-of-scope charge with a VAT ID",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "Not subject to VAT" (O) shall not contain the Seller VAT identifier (BT-31), the Seller tax representative VAT identifier (BT-63) or the Buyer VAT identifier (BT-48).',
+    "If the supply really is outside the scope of VAT, remove the VAT numbers (BT-31, BT-63, BT-48) from the invoice; keep a legal registration number (BT-30) if you need one. If VAT does apply, use the right category instead of O."
+  ),
+  R(
+    "BR-S-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "Standard-rated allowance rate not above 0",
+    'In a Document level allowance (BG-20) where the VAT category code (BT-95) is "Standard rated" (S) the Document level allowance VAT rate (BT-96) shall be greater than zero.',
+    "Give the allowance its VAT rate (BT-96) as a positive percentage, e.g. 21; a 0% allowance belongs in another category (Z, E, AE, K, G or O)."
+  ),
+  R(
+    "BR-S-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "Standard-rated charge rate not above 0",
+    'In a Document level charge (BG-21) where the VAT category code (BT-102) is "Standard rated" (S) the Document level charge VAT rate (BT-103) shall be greater than zero.',
+    "Give the charge its VAT rate (BT-103) as a positive percentage, e.g. 21; a 0% charge belongs in another category (Z, E, AE, K, G or O)."
+  ),
+  R(
+    "BR-Z-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "Zero-rated allowance rate not 0",
+    'In a Document level allowance (BG-20) where the VAT category code (BT-95) is "Zero rated" (Z) the Document level allowance VAT rate (BT-96) shall be 0 (zero).',
+    "Set the allowance's VAT rate (BT-96) to 0 for category Z; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-Z-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "Zero-rated charge rate not 0",
+    'In a Document level charge (BG-21) where the VAT category code (BT-102) is "Zero rated" (Z) the Document level charge VAT rate (BT-103) shall be 0 (zero).',
+    "Set the charge's VAT rate (BT-103) to 0 for category Z; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-E-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "Exempt allowance rate not 0",
+    'In a Document level allowance (BG-20) where the VAT category code (BT-95) is "Exempt from VAT" (E) the Document level allowance VAT rate (BT-96) shall be 0 (zero).',
+    "Set the allowance's VAT rate (BT-96) to 0 for category E; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-E-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "Exempt charge rate not 0",
+    'In a Document level charge (BG-21) where the VAT category code (BT-102) is "Exempt from VAT" (E) the Document level charge VAT rate (BT-103) shall be 0 (zero).',
+    "Set the charge's VAT rate (BT-103) to 0 for category E; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-AE-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "Reverse-charge allowance rate not 0",
+    'In a Document level allowance (BG-20) where the VAT category code (BT-95) is "Reverse charge" (AE) the Document level allowance VAT rate (BT-96) shall be 0 (zero).',
+    "Set the allowance's VAT rate (BT-96) to 0 for category AE; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-AE-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "Reverse-charge charge rate not 0",
+    'In a Document level charge (BG-21) where the VAT category code (BT-102) is "Reverse charge" (AE) the Document level charge VAT rate (BT-103) shall be 0 (zero).',
+    "Set the charge's VAT rate (BT-103) to 0 for category AE; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-IC-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "Intra-EU allowance rate not 0",
+    'In a Document level allowance (BG-20) where the VAT category code (BT-95) is "Intra-community supply" (K) the Document level allowance VAT rate (BT-96) shall be 0 (zero).',
+    "Set the allowance's VAT rate (BT-96) to 0 for category K; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-IC-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "Intra-EU charge rate not 0",
+    'In a Document level charge (BG-21) where the VAT category code (BT-102) is "Intra-community supply" (K) the Document level charge VAT rate (BT-103) shall be 0 (zero).',
+    "Set the charge's VAT rate (BT-103) to 0 for category K; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-G-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "Export allowance rate not 0",
+    'In a Document level allowance (BG-20) where the VAT category code (BT-95) is "Export outside the EU" (G) the Document level allowance VAT rate (BT-96) shall be 0 (zero).',
+    "Set the allowance's VAT rate (BT-96) to 0 for category G; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-G-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "Export charge rate not 0",
+    'In a Document level charge (BG-21) where the VAT category code (BT-102) is "Export outside the EU" (G) the Document level charge VAT rate (BT-103) shall be 0 (zero).',
+    "Set the charge's VAT rate (BT-103) to 0 for category G; if VAT is charged, use category S instead."
+  ),
+  R(
+    "BR-O-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "Out-of-scope allowance carries a VAT rate",
+    'A Document level allowance (BG-20) where the VAT category code (BT-95) is "Not subject to VAT" (O) shall not contain a Document level allowance VAT rate (BT-96).',
+    "Remove the VAT rate (Percent / RateApplicablePercent, BT-96) from the allowance's VAT category O; out-of-scope amounts have no rate."
+  ),
+  R(
+    "BR-O-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "Out-of-scope charge carries a VAT rate",
+    'A Document level charge (BG-21) where the VAT category code (BT-102) is "Not subject to VAT" (O) shall not contain a Document level charge VAT rate (BT-103).',
+    "Remove the VAT rate (Percent / RateApplicablePercent, BT-103) from the charge's VAT category O; out-of-scope amounts have no rate."
+  ),
+  R(
+    "BR-IG-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "IGIC allowance rate missing or negative",
+    'In a Document level allowance (BG-20) where the VAT category code (BT-95) is "IGIC" (L) the Document level allowance VAT rate (BT-96) shall be 0 (zero) or greater than zero. The CEN CII artefacts check category M (IPSI) under this ID.',
+    "Give the allowance its IGIC rate (BT-96), 0 or more."
+  ),
+  R(
+    "BR-IG-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "IGIC charge rate missing or negative",
+    'In a Document level charge (BG-21) where the VAT category code (BT-102) is "IGIC" (L) the Document level charge VAT rate (BT-103) shall be 0 (zero) or greater than zero. The CEN CII artefacts check category M (IPSI) under this ID.',
+    "Give the charge its IGIC rate (BT-103), 0 or more."
+  ),
+  R(
+    "BR-IP-06",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-96"],
+    "IPSI allowance rate missing or negative",
+    'In a Document level allowance (BG-20) where the VAT category code (BT-95) is "IPSI" (M) the Document level allowance VAT rate (BT-96) shall be 0 (zero) or greater than zero. The CEN CII artefacts check category L (IGIC) under this ID and require a rate greater than zero there.',
+    "Give the allowance its IPSI rate (BT-96), 0 or more."
+  ),
+  R(
+    "BR-IP-07",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-103"],
+    "IPSI charge rate missing or negative",
+    'In a Document level charge (BG-21) where the VAT category code (BT-102) is "IPSI" (M) the Document level charge VAT rate (BT-103) shall be 0 (zero) or greater than zero. The CEN CII artefacts check category L (IGIC) under this ID and require a rate greater than zero there.',
+    "Give the charge its IPSI rate (BT-103), 0 or more."
+  ),
+  R(
+    "BR-S-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-116", "BT-117", "BT-119"],
+    "Standard-rated VAT amount ≠ taxable × rate",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where VAT category code (BT-118) is "Standard rated" (S) shall equal the VAT category taxable amount (BT-116) multiplied by the VAT category rate (BT-119).',
+    "Recalculate the VAT amount of the breakdown row: taxable amount × rate ÷ 100, rounded to 2 decimals. Validators accept a difference below 1.00 for rounding, so a larger gap means a wrong rate or a wrong taxable amount."
+  ),
+  R(
+    "BR-Z-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-117", "BT-118"],
+    "Zero-rated VAT amount not 0",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where the VAT category code (BT-118) is "Zero rated" (Z) shall be 0 (zero).',
+    "Set the VAT amount of the category Z breakdown row to 0.00. If VAT was actually charged, the category is wrong: use S with the correct rate."
+  ),
+  R(
+    "BR-E-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-117", "BT-118"],
+    "Exempt VAT amount not 0",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where the VAT category code (BT-118) is "Exempt from VAT" (E) shall be 0 (zero).',
+    "Set the VAT amount of the category E breakdown row to 0.00. If VAT was actually charged, the category is wrong: use S with the correct rate."
+  ),
+  R(
+    "BR-AE-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-117", "BT-118"],
+    "Reverse-charge VAT amount not 0",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where the VAT category code (BT-118) is "Reverse charge" (AE) shall be 0 (zero).',
+    "Set the VAT amount of the category AE breakdown row to 0.00. If VAT was actually charged, the category is wrong: use S with the correct rate."
+  ),
+  R(
+    "BR-IC-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-117", "BT-118"],
+    "Intra-EU VAT amount not 0",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where the VAT category code (BT-118) is "Intra-community supply" (K) shall be 0 (zero).',
+    "Set the VAT amount of the category K breakdown row to 0.00. If VAT was actually charged, the category is wrong: use S with the correct rate."
+  ),
+  R(
+    "BR-G-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-117", "BT-118"],
+    "Export VAT amount not 0",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where the VAT category code (BT-118) is "Export outside the EU" (G) shall be 0 (zero).',
+    "Set the VAT amount of the category G breakdown row to 0.00. If VAT was actually charged, the category is wrong: use S with the correct rate."
+  ),
+  R(
+    "BR-O-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-117", "BT-118"],
+    "Out-of-scope VAT amount not 0",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where the VAT category code (BT-118) is "Not subject to VAT" (O) shall be 0 (zero).',
+    "Set the VAT amount of the category O breakdown row to 0.00. If VAT was actually charged, the category is wrong: use S with the correct rate."
+  ),
+  R(
+    "BR-IG-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-116", "BT-117", "BT-119"],
+    "IGIC VAT amount ≠ taxable × rate",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where VAT category code (BT-118) is "IGIC" (L) shall equal the VAT category taxable amount (BT-116) multiplied by the VAT category rate (BT-119). Only the UBL artefacts test it; the CEN CII rule always passes.',
+    "Recalculate the VAT amount of the breakdown row: taxable amount × rate ÷ 100, rounded to 2 decimals. Validators accept a difference below 1.00 for rounding, so a larger gap means a wrong rate or a wrong taxable amount."
+  ),
+  R(
+    "BR-IP-09",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-116", "BT-117", "BT-119"],
+    "IPSI VAT amount ≠ taxable × rate",
+    'The VAT category tax amount (BT-117) in a VAT breakdown (BG-23) where VAT category code (BT-118) is "IPSI" (M) shall equal the VAT category taxable amount (BT-116) multiplied by the VAT category rate (BT-119). Only the UBL artefacts test it; the CEN CII rule always passes.',
+    "Recalculate the VAT amount of the breakdown row: taxable amount × rate ÷ 100, rounded to 2 decimals. Validators accept a difference below 1.00 for rounding, so a larger gap means a wrong rate or a wrong taxable amount."
+  ),
+  R(
+    "BR-G-10",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118", "BT-120", "BT-121"],
+    "Export breakdown without exemption reason",
+    'A VAT breakdown (BG-23) with the VAT category code (BT-118) "Export outside the EU" (G) shall have a VAT exemption reason code (BT-121), meaning "Export outside the EU", or the VAT exemption reason text (BT-120) "Export outside the EU" (or the equivalent in another language).',
+    'Add the exemption reason code VATEX-EU-G (BT-121) to the category G breakdown row, or the text "Export outside the EU" (BT-120).'
+  ),
+  R(
+    "BR-IG-10",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118", "BT-120", "BT-121"],
+    "IGIC breakdown has exemption reason",
+    'A VAT breakdown (BG-23) with VAT category code (BT-118) "IGIC" (L) shall not have a VAT exemption reason code (BT-121) or VAT exemption reason text (BT-120). The CEN CII artefacts check category M (IPSI) under this ID.',
+    "Remove TaxExemptionReason / TaxExemptionReasonCode (BT-120, BT-121) from the IGIC breakdown row: IGIC is charged, not exempt."
+  ),
+  R(
+    "BR-IP-10",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118", "BT-120", "BT-121"],
+    "IPSI breakdown has exemption reason",
+    'A VAT breakdown (BG-23) with VAT category code (BT-118) "IPSI" (M) shall not have a VAT exemption reason code (BT-121) or VAT exemption reason text (BT-120). The CEN CII artefacts check category L (IGIC) under this ID.',
+    "Remove TaxExemptionReason / TaxExemptionReasonCode (BT-120, BT-121) from the IPSI breakdown row: IPSI is charged, not exempt."
+  ),
+  R(
+    "BR-IG-05",
+    "EN16931",
+    "error",
+    "lines",
+    ["BT-151", "BT-152"],
+    "IGIC line rate missing or negative",
+    'In an Invoice line (BG-25) where the Invoiced item VAT category code (BT-151) is "IGIC" (L) the invoiced item VAT rate (BT-152) shall be 0 (zero) or greater than zero. The CEN CII artefacts check category M (IPSI) under this ID.',
+    "Give the line its IGIC rate (BT-152), e.g. 7 for the general IGIC rate."
+  ),
+  R(
+    "BR-IP-05",
+    "EN16931",
+    "error",
+    "lines",
+    ["BT-151", "BT-152"],
+    "IPSI line rate missing or negative",
+    'In an Invoice line (BG-25) where the Invoiced item VAT category code (BT-151) is "IPSI" (M) the invoiced item VAT rate (BT-152) shall be 0 (zero) or greater than zero. The CEN CII artefacts check category L (IGIC) under this ID and require a rate greater than zero there.',
+    "Give the line its IPSI rate (BT-152), e.g. 4."
+  ),
+  R(
+    "BR-O-11",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118"],
+    "Out-of-scope invoice with other VAT rows",
+    'An Invoice that contains a VAT breakdown group (BG-23) with a VAT category code (BT-118) "Not subject to VAT" (O) shall not contain other VAT breakdown groups (BG-23).',
+    "An invoice is either out of scope of VAT as a whole or not. Remove the other VAT breakdown rows, or split the out-of-scope part into its own invoice."
+  ),
+  R(
+    "BR-O-12",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118", "BT-151"],
+    "Out-of-scope invoice with other line categories",
+    'An Invoice that contains a VAT breakdown group (BG-23) with a VAT category code (BT-118) "Not subject to VAT" (O) shall not contain an Invoice line (BG-25) where the Invoiced item VAT category code (BT-151) is not "Not subject to VAT".',
+    "Give every line VAT category O, or invoice the lines that do carry VAT separately."
+  ),
+  R(
+    "BR-O-13",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118", "BT-95"],
+    "Out-of-scope invoice with other allowance category",
+    'An Invoice that contains a VAT breakdown group (BG-23) with a VAT category code (BT-118) "Not subject to VAT" (O) shall not contain Document level allowances (BG-20) where Document level allowance VAT category code (BT-95) is not "Not subject to VAT".',
+    "Put document-level allowances in VAT category O as well, without a rate."
+  ),
+  R(
+    "BR-O-14",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118", "BT-102"],
+    "Out-of-scope invoice with other charge category",
+    'An Invoice that contains a VAT breakdown group (BG-23) with a VAT category code (BT-118) "Not subject to VAT" (O) shall not contain Document level charges (BG-21) where Document level charge VAT category code (BT-102) is not "Not subject to VAT".',
+    "Put document-level charges in VAT category O as well, without a rate."
+  ),
+  R(
+    "BR-CL-03",
+    "EN16931",
+    "error",
+    "header",
+    void 0,
+    "Amount currencyID not ISO 4217",
+    "currencyID MUST be coded using ISO code list 4217 alpha-3 (UBL: every amount element; CII: TaxTotalAmount).",
+    "Write currencyID on each amount as an uppercase three-letter ISO 4217 code such as EUR, normally the invoice currency (BT-5)."
+  ),
+  R(
+    "BR-CL-05",
+    "EN16931",
+    "error",
+    "header",
+    ["BT-6"],
+    "Tax currency code not ISO 4217",
+    "Tax currency code (BT-6) MUST be coded using ISO code list 4217 alpha-3.",
+    "Use an uppercase three-letter ISO 4217 code such as EUR or SEK in TaxCurrencyCode, or leave it out when VAT is accounted in the invoice currency."
+  ),
+  R(
+    "BR-CL-07",
+    "EN16931",
+    "error",
+    "header",
+    ["BT-18"],
+    "Object identifier scheme not UNTDID 1153",
+    "Object identifier identification scheme identifier (BT-18-1) MUST be coded using a restriction of UNTDID 1153.",
+    "Set the schemeID of the invoiced object identifier (UBL DocumentReference with DocumentTypeCode 130; CII ReferenceTypeCode) to a UNTDID 1153 code such as AAA (order number) or AJS (consignment), or leave the scheme out."
+  ),
+  R(
+    "BR-CL-13",
+    "EN16931",
+    "error",
+    "lines",
+    ["BT-158"],
+    "Item classification scheme not UNTDID 7143",
+    "Item classification identifier identification scheme identifier (BT-158-1) MUST be coded using one of the UNTDID 7143 list.",
+    "Set listID of the item classification to a UNTDID 7143 code, e.g. STI (CPV), TST (UNSPSC) or HS (customs tariff)."
+  ),
+  R(
+    "BR-CL-15",
+    "EN16931",
+    "error",
+    "lines",
+    ["BT-159"],
+    "Item origin country not ISO 3166",
+    "Country codes in an invoice MUST be coded using ISO code list 3166-1 (Item country of origin, BT-159).",
+    "Use the two-letter ISO 3166-1 code of the country of origin, e.g. CN or DE (GB, not UK)."
+  ),
+  R(
+    "BR-CL-18",
+    "EN16931",
+    "error",
+    "lines",
+    ["BT-151", "BT-118"],
+    "Line VAT category not UNCL 5305",
+    "Invoice tax categories MUST be coded using UNCL5305 code list (UBL: the line VAT category, BT-151; CII: the line and VAT breakdown categories, BT-151 and BT-118).",
+    "Replace the value with one of S, Z, E, AE, K, G, O, L or M."
+  ),
+  R(
+    "BR-CL-19",
+    "EN16931",
+    "error",
+    "totals",
+    ["BT-98", "BT-140"],
+    "Allowance reason code not UNCL 5189",
+    "Coded allowance reasons (BT-98, BT-140) MUST belong to the UNCL 5189 code list.",
+    "Use a UNCL 5189 allowance reason code, e.g. 95 (discount), 100 (special agreement) or 41 (bonus for works ahead of schedule), or leave the code out and keep the reason text."
+  ),
+  R(
+    "BR-CL-20",
+    "EN16931",
+    "error",
+    "totals",
+    ["BT-105", "BT-145"],
+    "Charge reason code not UNCL 7161",
+    "Coded charge reasons (BT-105, BT-145) MUST belong to the UNCL 7161 code list.",
+    "Use a UNCL 7161 charge reason code, e.g. FC (freight service), ABL (packaging) or ADR (other services), or leave the code out and keep the reason text."
+  ),
+  R(
+    "BR-CO-21",
+    "EN16931",
+    "error",
+    "totals",
+    ["BT-97", "BT-98"],
+    "Document allowance has no reason",
+    "Each Document level allowance (BG-20) shall contain a Document level allowance reason (BT-97) or a Document level allowance reason code (BT-98), or both.",
+    'Add AllowanceChargeReason (CII Reason) with a short text such as "Volume discount", or a UNCL 5189 reason code.'
+  ),
+  R(
+    "BR-CO-22",
+    "EN16931",
+    "error",
+    "totals",
+    ["BT-104", "BT-105"],
+    "Document charge has no reason",
+    "Each Document level charge (BG-21) shall contain a Document level charge reason (BT-104) or a Document level charge reason code (BT-105), or both.",
+    'Add AllowanceChargeReason (CII Reason) with a short text such as "Freight", or a UNCL 7161 reason code.'
+  ),
+  R(
+    "BR-CO-23",
+    "EN16931",
+    "error",
+    "lines",
+    ["BT-139", "BT-140"],
+    "Line allowance has no reason",
+    "Each Invoice line allowance (BG-27) shall contain an Invoice line allowance reason (BT-139) or an Invoice line allowance reason code (BT-140), or both.",
+    "Add a reason text or a UNCL 5189 reason code to the line allowance."
+  ),
+  R(
+    "BR-CO-24",
+    "EN16931",
+    "error",
+    "lines",
+    ["BT-144", "BT-145"],
+    "Line charge has no reason",
+    "Each Invoice line charge (BG-28) shall contain an Invoice line charge reason (BT-144) or an Invoice line charge reason code (BT-145), or both.",
+    "Add a reason text or a UNCL 7161 reason code to the line charge."
+  ),
+  R(
+    "BR-51",
+    "EN16931",
+    "warning",
+    "payment",
+    ["BT-87"],
+    "Full card number on the invoice",
+    "In accordance with card payments security standards an invoice should never include a full card primary account number (BT-87). At the moment the PCI Security Standards Council allows at most the first 6 and last 4 digits. The UBL artefacts report it as a warning, the CII artefacts as an error.",
+    'Mask the card number: keep at most the last 4 digits (or the first 6 and last 4), e.g. "1234", not the full number.'
+  ),
+  R(
+    "UBL-DT-01",
+    "EN16931",
+    "error",
+    "document",
+    void 0,
+    "Amount with more than two decimals",
+    "Amounts shall be decimal up to two fraction digits (UBL syntax binding: every element whose name ends in Amount, except PriceAmount and amounts inside a price-level allowance).",
+    "Round the amount to two decimals. Unit prices (cbc:PriceAmount) and the price-level allowance (gross price and price discount) may carry more decimals."
+  ),
+  R(
+    "UBL-DT-06",
+    "EN16931",
+    "error",
+    "document",
+    ["BT-125"],
+    "Attachment without mimeCode",
+    "Binary object elements shall contain the mime code attribute (UBL syntax binding).",
+    'Add mimeCode to the EmbeddedDocumentBinaryObject, e.g. mimeCode="application/pdf".'
+  ),
+  R(
+    "UBL-DT-07",
+    "EN16931",
+    "error",
+    "document",
+    ["BT-125"],
+    "Attachment without filename",
+    "Binary object elements shall contain the file name attribute (UBL syntax binding).",
+    'Add filename to the EmbeddedDocumentBinaryObject, e.g. filename="timesheet.pdf".'
+  ),
+  R(
+    "PEPPOL-EN16931-CL002",
+    "Peppol",
+    "error",
+    "totals",
+    ["BT-98", "BT-140"],
+    "Allowance reason code not UNCL 5189",
+    'Reason code MUST be according to subset of UNCL 5189 D.16B (allowances; UBL reads ChargeIndicator exactly as "false").',
+    "Use a UNCL 5189 allowance reason code such as 95 (discount) or 100 (special agreement), or leave the code out and keep the reason text."
+  ),
+  R(
+    "PEPPOL-EN16931-CL003",
+    "Peppol",
+    "error",
+    "totals",
+    ["BT-105", "BT-145"],
+    "Charge reason code not UNCL 7161",
+    'Reason code MUST be according to UNCL 7161 D.16B (charges; UBL reads ChargeIndicator exactly as "true").',
+    "Use a UNCL 7161 charge reason code such as FC (freight service) or ABL (packaging), or leave the code out and keep the reason text."
+  ),
+  R(
+    "PEPPOL-EN16931-CL007",
+    "Peppol",
+    "error",
+    "header",
+    void 0,
+    "Currency code not ISO 4217",
+    "Currency code must be according to ISO 4217:2005 (every amount currencyID in UBL, TaxTotalAmount in CII, written exactly).",
+    "Write currencyID as an uppercase three-letter ISO 4217 code such as EUR, without spaces."
+  ),
+  R(
+    "PEPPOL-EN16931-F001",
+    "Peppol",
+    "error",
+    "document",
+    void 0,
+    "Date in the wrong format",
+    "A date MUST be formatted YYYY-MM-DD (UBL) or YYYYMMDD with format 102 (CII).",
+    'Write dates as 2025-01-31 in UBL, with no time or time zone; in CII as <udt:DateTimeString format="102">20250131</udt:DateTimeString>.'
+  ),
+  R(
+    "PEPPOL-EN16931-P0104",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-118", "BT-121"],
+    "VATEX-EU-G needs VAT category G",
+    "Tax Category G MUST be used when exemption reason code is VATEX-EU-G.",
+    "Set the VAT category (TaxCategory/ID) to G (Export outside the EU) where the exemption reason code is VATEX-EU-G, or use the exemption code that belongs to the category you meant."
+  ),
+  R(
+    "PEPPOL-EN16931-P0105",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-118", "BT-121"],
+    "VATEX-EU-O needs VAT category O",
+    "Tax Category O MUST be used when exemption reason code is VATEX-EU-O.",
+    "Set the VAT category (TaxCategory/ID) to O (Not subject to VAT) where the exemption reason code is VATEX-EU-O, or use the exemption code that belongs to the category you meant."
+  ),
+  R(
+    "PEPPOL-EN16931-P0106",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-118", "BT-121"],
+    "VATEX-EU-IC needs VAT category K",
+    "Tax Category K MUST be used when exemption reason code is VATEX-EU-IC.",
+    "Set the VAT category (TaxCategory/ID) to K (Intra-community supply) where the exemption reason code is VATEX-EU-IC, or use the exemption code that belongs to the category you meant."
+  ),
+  R(
+    "PEPPOL-EN16931-P0107",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-118", "BT-121"],
+    "VATEX-EU-AE needs VAT category AE",
+    "Tax Category AE MUST be used when exemption reason code is VATEX-EU-AE.",
+    "Set the VAT category (TaxCategory/ID) to AE (Reverse charge) where the exemption reason code is VATEX-EU-AE, or use the exemption code that belongs to the category you meant."
+  ),
+  R(
+    "PEPPOL-EN16931-P0108",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-118", "BT-121"],
+    "VATEX-EU-D needs VAT category E",
+    "Tax Category E MUST be used when exemption reason code is VATEX-EU-D.",
+    "Set the VAT category (TaxCategory/ID) to E (Exempt (travel agents margin scheme)) where the exemption reason code is VATEX-EU-D, or use the exemption code that belongs to the category you meant."
+  ),
+  R(
+    "PEPPOL-EN16931-P0109",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-118", "BT-121"],
+    "VATEX-EU-F needs VAT category E",
+    "Tax Category E MUST be used when exemption reason code is VATEX-EU-F.",
+    "Set the VAT category (TaxCategory/ID) to E (Exempt (second-hand goods margin scheme)) where the exemption reason code is VATEX-EU-F, or use the exemption code that belongs to the category you meant."
+  ),
+  R(
+    "PEPPOL-EN16931-P0110",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-118", "BT-121"],
+    "VATEX-EU-I needs VAT category E",
+    "Tax Category E MUST be used when exemption reason code is VATEX-EU-I.",
+    "Set the VAT category (TaxCategory/ID) to E (Exempt (works of art margin scheme)) where the exemption reason code is VATEX-EU-I, or use the exemption code that belongs to the category you meant."
+  ),
+  R(
+    "PEPPOL-EN16931-P0111",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-118", "BT-121"],
+    "VATEX-EU-J needs VAT category E",
+    "Tax Category E MUST be used when exemption reason code is VATEX-EU-J.",
+    "Set the VAT category (TaxCategory/ID) to E (Exempt (antiques and collectors' items margin scheme)) where the exemption reason code is VATEX-EU-J, or use the exemption code that belongs to the category you meant."
+  ),
+  R(
+    "PEPPOL-EN16931-R006",
+    "Peppol",
+    "error",
+    "header",
+    ["BT-18"],
+    "More than one invoiced object",
+    "Only one invoiced object is allowed on document level (CII: AdditionalReferencedDocument with TypeCode 130).",
+    "Keep one header AdditionalReferencedDocument with TypeCode 130 (BT-18); move other references to the lines or to supporting documents (TypeCode 916)."
+  ),
+  R(
+    "PEPPOL-EN16931-R054",
+    "Peppol",
+    "error",
+    "vat",
+    ["BT-6", "BT-111"],
+    "VAT total in accounting currency missing or extra",
+    "Only one tax total without tax subtotals MUST be provided when tax currency code is provided (CII: one TaxTotalAmount in another currency than the invoice currency), and none when it is not.",
+    "With TaxCurrencyCode (BT-6): add exactly one VAT total in that currency (UBL: a second cac:TaxTotal with only cbc:TaxAmount). Without BT-6: remove the extra VAT total."
+  ),
+  R(
+    "PEPPOL-EN16931-R080",
+    "Peppol",
+    "error",
+    "header",
+    ["BT-17"],
+    "More than one tender or lot reference",
+    "Only one project reference is allowed on document level (document reference type 50, the tender or lot reference BT-17; UBL credit notes and every CII document).",
+    "Keep one document reference with type code 50 (BT-17)."
+  ),
+  R(
+    "PEPPOL-EN16931-R100",
+    "Peppol",
+    "error",
+    "lines",
+    ["BT-128"],
+    "More than one object reference on a line",
+    "Only one invoiced object is allowed per line (UBL: one cac:DocumentReference per line; CII: one line AdditionalReferencedDocument with TypeCode 130).",
+    "Keep one invoiced object identifier (BT-128) per line; put other references in the line note or at document level."
+  ),
+  R(
+    "PEPPOL-EN16931-R101",
+    "Peppol",
+    "error",
+    "lines",
+    ["BT-128"],
+    "Line document reference is not an invoiced object",
+    "Element Document reference can only be used for Invoice line object (DocumentTypeCode / TypeCode 130).",
+    "Set the line document reference type code to 130 (invoiced object, BT-128), or remove the reference."
+  ),
+  R(
+    "BR-E-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-32", "BT-63"],
+    "Exempt allowance without seller VAT ID",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "Exempt from VAT" (E) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63).',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-E-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-32", "BT-63"],
+    "Exempt charge without seller VAT ID",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "Exempt from VAT" (E) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63).',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-AE-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-32", "BT-63", "BT-48", "BT-47"],
+    "Reverse-charge allowance without both VAT IDs",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "Reverse charge" (AE) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63), and the Buyer VAT identifier (BT-48) and/or the Buyer legal registration identifier (BT-47).',
+    "Add the seller's VAT number (BT-31, or BT-32 / BT-63) and the buyer's VAT number (BT-48: UBL AccountingCustomerParty PartyTaxScheme/CompanyID with TaxScheme VAT, CII BuyerTradeParty SpecifiedTaxRegistration/ID with schemeID VA) or the buyer's legal registration number (BT-47)."
+  ),
+  R(
+    "BR-AE-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-32", "BT-63", "BT-48", "BT-47"],
+    "Reverse-charge charge without both VAT IDs",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "Reverse charge" (AE) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63), and the Buyer VAT identifier (BT-48) and/or the Buyer legal registration identifier (BT-47).',
+    "Add the seller's VAT number (BT-31, or BT-32 / BT-63) and the buyer's VAT number (BT-48) or legal registration number (BT-47)."
+  ),
+  R(
+    "BR-IG-02",
+    "EN16931",
+    "error",
+    "parties",
+    ["BT-151", "BT-31", "BT-32", "BT-63"],
+    "IGIC line without seller VAT ID",
+    'An Invoice that contains an Invoice line (BG-25) where the Invoiced item VAT category code (BT-151) is "IGIC" (L) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63). The CEN CII artefacts check category M (IPSI) under this ID.',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-IP-02",
+    "EN16931",
+    "error",
+    "parties",
+    ["BT-151", "BT-31", "BT-32", "BT-63"],
+    "IPSI line without seller VAT ID",
+    'An Invoice that contains an Invoice line (BG-25) where the Invoiced item VAT category code (BT-151) is "IPSI" (M) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63). The CEN CII artefacts check category L (IGIC) under this ID.',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-IG-03",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-95", "BT-31", "BT-32", "BT-63"],
+    "IGIC allowance without seller VAT ID",
+    'An Invoice that contains a Document level allowance (BG-20) where the VAT category code (BT-95) is "IGIC" (L) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63). The CEN CII artefacts check category M (IPSI) under this ID.',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-IG-04",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-102", "BT-31", "BT-32", "BT-63"],
+    "IGIC charge without seller VAT ID",
+    'An Invoice that contains a Document level charge (BG-21) where the VAT category code (BT-102) is "IGIC" (L) shall contain the Seller VAT identifier (BT-31), the Seller tax registration identifier (BT-32) and/or the Seller tax representative VAT identifier (BT-63). The CEN CII artefacts check category M (IPSI) under this ID.',
+    "Add the seller's VAT number (BT-31) — UBL cac:PartyTaxScheme/cbc:CompanyID with TaxScheme ID VAT, CII SpecifiedTaxRegistration/ID with schemeID VA — or the seller's tax registration number (BT-32, schemeID FC in CII), or the VAT number of the seller's tax representative (BT-63)."
+  ),
+  R(
+    "BR-50",
+    "EN16931",
+    "error",
+    "payment",
+    ["BT-84"],
+    "Credit transfer account has no identifier",
+    "A Payment account identifier (BT-84) shall be present if Credit transfer (BG-17) information is provided in the Invoice (payment means 30 or 58).",
+    "Fill in the payee account: UBL cac:PayeeFinancialAccount/cbc:ID, CII PayeePartyCreditorFinancialAccount/IBANID (or ProprietaryID for a non-IBAN account), e.g. the seller's IBAN."
+  ),
+  R(
+    "BR-B-01",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118", "BT-151", "BT-40", "BT-55"],
+    "Split payment outside Italy",
+    'An Invoice where the VAT category code (BT-151, BT-95 or BT-102) is "Split payment" (B) shall be a domestic Italian invoice: every country code in it is IT.',
+    "Use category B only for Italian split-payment invoices (seller, buyer and all addresses in IT); otherwise use the right VAT category, normally S."
+  ),
+  R(
+    "BR-B-02",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-118", "BT-151", "BT-95", "BT-102"],
+    "Split payment next to standard rate",
+    'An Invoice that contains an item, an allowance or a charge where the VAT category code is "Split payment" (B) shall not contain an item, allowance or charge where the VAT category code is "Standard rated" (S).',
+    "Put split-payment (B) and standard-rated (S) supplies on separate invoices, or use one category for the whole invoice."
+  ),
+  R(
+    "BR-CL-06",
+    "EN16931",
+    "error",
+    "header",
+    ["BT-8"],
+    "VAT point date code not allowed",
+    "Value added tax point date code (BT-8) MUST be coded using a restriction of UNTDID 2005: 3, 35 or 432 in UBL (InvoicePeriod/DescriptionCode), and the matching UNTDID 2475 codes 5, 29 or 72 in CII (DueDateTypeCode).",
+    "Use 3 (invoice date), 35 (delivery date) or 432 (payment date) in UBL, or 5, 29 or 72 in CII; or leave the code out and give the VAT point date (BT-7)."
+  ),
+  R(
+    "BR-CL-08",
+    "EN16931",
+    "error",
+    "header",
+    ["BT-21"],
+    "Note subject code not UNTDID 4451",
+    "Invoiced note subject code (BT-21) MUST be coded using UNTDID 4451 (UBL: the three letters between # signs at the start of the note, e.g. #AAI#; CII: SubjectCode).",
+    "Use a UNTDID 4451 subject code such as AAI (general information), SUR (supplier remarks), REG (regulatory information) or ABL (legal information), or remove the #…# prefix."
+  ),
+  R(
+    "BR-CL-10",
+    "EN16931",
+    "error",
+    "parties",
+    ["BT-29", "BT-46", "BT-60", "BT-71"],
+    "Party identifier scheme not ISO 6523",
+    "Any identifier identification scheme identifier (BT-29-1, BT-46-1, BT-60-1) MUST be coded using one of the ISO 6523 ICD list (UBL PartyIdentification/ID; CII GlobalID). UBL also accepts SEPA for the seller and payee (a SEPA creditor identifier).",
+    "Set schemeID to an ISO 6523 ICD code, e.g. 0088 (GLN), 0208 (Belgian enterprise number) or 0106 (Dutch KvK), or leave schemeID out."
+  ),
+  R(
+    "BR-CL-21",
+    "EN16931",
+    "error",
+    "lines",
+    ["BT-157"],
+    "Item identifier scheme not ISO 6523",
+    "Item standard identifier scheme identifier (BT-157-1) MUST belong to the ISO 6523 ICD code list.",
+    "Set the item's standard identifier schemeID to an ICD code, e.g. 0160 for a GTIN (EAN barcode)."
+  ),
+  R(
+    "BR-CL-22",
+    "EN16931",
+    "error",
+    "vat",
+    ["BT-121"],
+    "Exemption reason code not VATEX",
+    "Tax exemption reason code identifier scheme identifier MUST belong to the CEF VATEX code list (BT-121, compared in upper case).",
+    "Use a VATEX code such as VATEX-EU-AE (reverse charge), VATEX-EU-IC (intra-community supply), VATEX-EU-G (export) or VATEX-EU-O (not subject to VAT), or give the reason as text (BT-120) instead."
+  ),
+  R(
+    "BR-CL-26",
+    "EN16931",
+    "error",
+    "parties",
+    ["BT-71"],
+    "Delivery location scheme not ISO 6523",
+    "Delivery location identifier scheme identifier (BT-71-1) MUST belong to the ISO 6523 ICD code list.",
+    "Set the deliver-to location identifier's schemeID to an ICD code, e.g. 0088 for a GLN, or leave schemeID out."
+  ),
+  R(
+    "PEPPOL-EN16931-CL006",
+    "Peppol",
+    "error",
+    "header",
+    ["BT-8"],
+    "VAT point date code not UNCL 2005",
+    "Invoice period description code (BT-8) must be according to UNCL 2005 D.16B (Peppol accepts 3, 35 and 432; UBL only).",
+    "Use 3 (invoice date), 35 (delivery date) or 432 (payment date) in cac:InvoicePeriod/cbc:DescriptionCode, or leave it out."
   )
 ];
+var ONE_SYNTAX = {
+  "UBL-DT-01": "UBL",
+  "UBL-DT-06": "UBL",
+  "UBL-DT-07": "UBL",
+  "PEPPOL-EN16931-P0104": "UBL",
+  "PEPPOL-EN16931-P0105": "UBL",
+  "PEPPOL-EN16931-P0106": "UBL",
+  "PEPPOL-EN16931-P0107": "UBL",
+  "PEPPOL-EN16931-P0108": "UBL",
+  "PEPPOL-EN16931-P0109": "UBL",
+  "PEPPOL-EN16931-P0110": "UBL",
+  "PEPPOL-EN16931-P0111": "UBL",
+  "PEPPOL-EN16931-R006": "CII",
+  "PEPPOL-EN16931-CL006": "UBL",
+  "PEPPOL-EN16931-R008": "UBL",
+  "PEPPOL-EN16931-R044": "UBL",
+  "PEPPOL-EN16931-R046": "UBL",
+  "PEPPOL-EN16931-R051": "UBL",
+  "PEPPOL-EN16931-P0101": "UBL",
+  "PEPPOL-EN16931-P0112": "UBL"
+};
+var RULES = CATALOG.map((r) => ONE_SYNTAX[r.id] ? { ...r, syntax: ONE_SYNTAX[r.id] } : r);
 var RULE_INDEX = Object.fromEntries(RULES.map((r) => [r.id, r]));
 function ruleSlug(id) {
   return id.toLowerCase();
@@ -4212,7 +5226,7 @@ function ruleSlug(id) {
 
 // src/engine/codes.ts
 var ISO_4217 = new Set(
-  "AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BOV BRL BSD BTN BWP BYN BZD CAD CDF CHE CHF CHW CLF CLP CNY COP COU CRC CUC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HRK HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MXV MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SLL SOS SRD SSP STN SVC SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS UAH UGX USD USN UYI UYU UYW UZS VED VES VND VUV WST XAF XAG XAU XBA XBB XBC XBD XCD XCG XDR XOF XPD XPF XPT XSU XTS XUA XXX YER ZAR ZMW ZWG ZWL".split(" ")
+  "AED AFN ALL AMD AOA ARS AUD AWG AZN BAM BBD BDT BHD BIF BMD BND BOB BOV BRL BSD BTN BWP BYN BZD CAD CDF CHE CHF CHW CLF CLP CNH CNY COP COU CRC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MXV MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SOS SRD SSP STN SVC SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS UAH UGX USD USN UYI UYU UYW UZS VED VES VND VUV WST XAF XAG XAU XBA XBB XBC XBD XCD XCG XDR XOF XPD XPF XPT XSU XTS XUA XXX YER ZAR ZMW ZWG".split(" ")
 );
 var ISO_3166 = {
   AD: "Andorra",
@@ -4955,6 +5969,28 @@ var PEPPOL_CII_PROFILE_IDS = /* @__PURE__ */ new Set([
   PEPPOL_PROFILE_ID,
   "urn:peppol:bis:billing_with_response"
 ]);
+var UNTDID_1153_CODES = new Set(
+  "AAA AAB AAC AAD AAE AAF AAG AAH AAI AAJ AAK AAL AAM AAN AAO AAP AAQ AAR AAS AAT AAU AAV AAW AAX AAY AAZ ABA ABB ABC ABD ABE ABF ABG ABH ABI ABJ ABK ABL ABM ABN ABO ABP ABQ ABR ABS ABT ABU ABV ABW ABX ABY ABZ AC ACA ACB ACC ACD ACE ACF ACG ACH ACI ACJ ACK ACL ACN ACO ACP ACQ ACR ACT ACU ACV ACW ACX ACY ACZ ADA ADB ADC ADD ADE ADF ADG ADI ADJ ADK ADL ADM ADN ADO ADP ADQ ADT ADU ADV ADW ADX ADY ADZ AE AEA AEB AEC AED AEE AEF AEG AEH AEI AEJ AEK AEL AEM AEN AEO AEP AEQ AER AES AET AEU AEV AEW AEX AEY AEZ AF AFA AFB AFC AFD AFE AFF AFG AFH AFI AFJ AFK AFL AFM AFN AFO AFP AFQ AFR AFS AFT AFU AFV AFW AFX AFY AFZ AGA AGB AGC AGD AGE AGF AGG AGH AGI AGJ AGK AGL AGM AGN AGO AGP AGQ AGR AGS AGT AGU AGV AGW AGX AGY AGZ AHA AHB AHC AHD AHE AHF AHG AHH AHI AHJ AHK AHL AHM AHN AHO AHP AHQ AHR AHS AHT AHU AHV AHX AHY AHZ AIA AIB AIC AID AIE AIF AIG AIH AII AIJ AIK AIL AIM AIN AIO AIP AIQ AIR AIS AIT AIU AIV AIW AIX AIY AIZ AJA AJB AJC AJD AJE AJF AJG AJH AJI AJJ AJK AJL AJM AJN AJO AJP AJQ AJR AJS AJT AJU AJV AJW AJX AJY AJZ AKA AKB AKC AKD AKE AKF AKG AKH AKI AKJ AKK AKL AKM AKN AKO AKP AKQ AKR AKS AKT AKU AKV AKW AKX AKY AKZ ALA ALB ALC ALD ALE ALF ALG ALH ALI ALJ ALK ALL ALM ALN ALO ALP ALQ ALR ALS ALT ALU ALV ALW ALX ALY ALZ AMA AMB AMC AMD AME AMF AMG AMH AMI AMJ AMK AML AMM AMN AMO AMP AMQ AMR AMS AMT AMU AMV AMW AMX AMY AMZ ANA ANB ANC AND ANE ANF ANG ANH ANI ANJ ANK ANL ANM ANN ANO ANP ANQ ANR ANS ANT ANU ANV ANW ANX ANY AOA AOD AOE AOF AOG AOH AOI AOJ AOK AOL AOM AON AOO AOP AOQ AOR AOS AOT AOU AOV AOW AOX AOY AOZ AP APA APB APC APD APE APF APG APH API APJ APK APL APM APN APO APP APQ APR APS APT APU APV APW APX APY APZ AQA AQB AQC AQD AQE AQF AQG AQH AQI AQJ AQK AQL AQM AQN AQO AQP AQQ AQR AQS AQT AQU AQV AQW AQX AQY AQZ ARA ARB ARC ARD ARE ARF ARG ARH ARI ARJ ARK ARL ARM ARN ARO ARP ARQ ARR ARS ART ARU ARV ARW ARX ARY ARZ ASA ASB ASC ASD ASE ASF ASG ASH ASI ASJ ASK ASL ASM ASN ASO ASP ASQ ASR ASS AST ASU ASV ASW ASX ASY ASZ ATA ATB ATC ATD ATE ATF ATG ATH ATI ATJ ATK ATL ATM ATN ATO ATP ATQ ATR ATS ATT ATU ATV ATW ATX ATY ATZ AU AUA AUB AUC AUD AUE AUF AUG AUH AUI AUJ AUK AUL AUM AUN AUO AUP AUQ AUR AUS AUT AUU AUV AUW AUX AUY AUZ AV AVA AVB AVC AVD AVE AVF AVG AVH AVI AVJ AVK AVL AVM AVN AVO AVP AVQ AVR AVS AVT AVU AVV AVW AVX AVY AVZ AWA AWB AWC AWD AWE AWF AWG AWH AWI AWJ AWK AWL AWM AWN AWO AWP AWQ AWR AWS AWT AWU AWV AWW AWX AWY AWZ AXA AXB AXC AXD AXE AXF AXG AXH AXI AXJ AXK AXL AXM AXN AXO AXP AXQ AXR AXS AXU BA BC BD BE BH BM BN BO BR BT BTP BW CAS CAT CAU CAV CAW CAX CAY CAZ CBA CBB CD CEC CED CFE CFF CFO CG CH CK CKN CM CMR CN CNO COF CP CR CRN CS CST CT CU CV CW CZ DA DAN DB DI DL DM DQ DR EA EB ED EE EEP EI EN EQ ER ERN ET EX FC FF FI FLW FN FO FS FT FV FX GA GC GD GDN GN HS HWB IA IB ICA ICE ICO II IL INB INN INO IP IS IT IV JB JE LA LAN LAR LB LC LI LO LRC LS MA MB MF MG MH MR MRN MS MSS MWB NA NF OH OI ON OP OR PB PC PD PE PF PI PK PL POR PP PQ PR PS PW PY RA RC RCN RE REN RF RR RT SA SB SD SE SEA SF SH SI SM SN SP SQ SRN SS STA SW SZ TB TCR TE TF TI TIN TL TN TP UAR UC UCN UN UO URI VA VC VGR VM VN VON VOR VP VR VS VT VV WE WM WN WR WS WY XA XC XP ZZZ".split(" ")
+);
+var UNTDID_7143_CODES = new Set(
+  "AA AB AC AD AE AF AG AH AI AJ AK AL AM AN AO AP AQ AR AS AT AU AV AW AX AY AZ BA BB BC BD BE BF BG BH BI BJ BK BL BM BN BO BP BQ BR BS BT BU BV BW BX BY BZ CC CG CL CR CV DR DW EC EF EMD EN FS GB GN GMN GS HS IB IN IS IT IZ MA MF MN MP NB ON PD PL PO PPI PV QS RC RN RU RY SA SG SK SN SRS SRT SRU SRV SRW SRX SRY SRZ SS SSA SSB SSC SSD SSE SSF SSG SSH SSI SSJ SSK SSL SSM SSN SSO SSP SSQ SSR SSS SST SSU SSV SSW SSX SSY SSZ ST STA STB STC STD STE STF STG STH STI STJ STK STL STM STN STO STP STQ STR STS STT STU STV STW STX STY STZ SUA SUB SUC SUD SUE SUF SUG SUH SUI SUJ SUK SUL SUM TG TSN TSO TSP TSQ TSR TSS TST TSU UA UP VN VP VS VX ZZZ".split(" ")
+);
+var UNCL_5189_CODES = new Set(
+  "41 42 60 62 63 64 65 66 67 68 70 71 88 95 100 102 103 104 105".split(" ")
+);
+var UNCL_7161_CODES = new Set(
+  "AA AAA AAC AAD AAE AAF AAH AAI AAS AAT AAV AAY AAZ ABA ABB ABC ABD ABF ABK ABL ABN ABR ABS ABT ABU ACF ACG ACH ACI ACJ ACK ACL ACM ACS ADC ADE ADJ ADK ADL ADM ADN ADO ADP ADQ ADR ADT ADW ADY ADZ AEA AEB AEC AED AEF AEH AEI AEJ AEK AEL AEM AEN AEO AEP AES AET AEU AEV AEW AEX AEY AEZ AJ AU CA CAB CAD CAE CAF CAI CAJ CAK CAL CAM CAN CAO CAP CAQ CAR CAS CAT CAU CAV CAW CAX CAY CAZ CD CG CS CT DAB DAD DAC DAF DAG DAH DAI DAJ DAK DAL DAM DAN DAO DAP DAQ DL EG EP ER FAA FAB FAC FC FH FI GAA HAA HD HH IAA IAB ID IF IR IS KO L1 LA LAA LAB LF MAE MI ML NAA OA PA PAA PC PL PRV RAB RAC RAD RAF RE RF RH RV SA SAA SAD SAE SAI SG SH SM SU TAB TAC TT TV V1 V2 WH XAA YY ZZZ".split(" ")
+);
+var CEN_COUNTRY_CODES = /* @__PURE__ */ new Set([...Object.keys(ISO_3166), "1A"]);
+var UNCL_5305_CODES = /* @__PURE__ */ new Set(["AE", "L", "M", "E", "S", "Z", "G", "O", "K", "B"]);
+var UNTDID_4451_LIST = "AAA AAB AAC AAD AAE AAF AAG AAI AAJ AAK AAL AAM AAN AAO AAP AAQ AAR AAS AAT AAU AAV AAW AAX AAY AAZ ABA ABB ABC ABD ABE ABF ABG ABH ABI ABJ ABK ABL ABM ABN ABO ABP ABQ ABR ABS ABT ABU ABV ABW ABX ABZ ACA ACB ACC ACD ACE ACF ACG ACH ACI ACJ ACK ACL ACM ACN ACO ACP ACQ ACR ACS ACT ACU ACV ACW ACX ACY ACZ ADA ADB ADC ADD ADE ADF ADG ADH ADI ADJ ADK ADL ADM ADN ADO ADP ADQ ADR ADS ADT ADU ADV ADW ADX ADY ADZ AEA AEB AEC AED AEE AEF AEG AEH AEI AEJ AEK AEL AEM AEN AEO AEP AEQ AER AES AET AEU AEV AEW AEX AEY AEZ AFA AFB AFC AFD AFE AFF AFG AFH AFI AFJ AFK AFL AFM AFN AFO AFP AFQ AFR AFS AFT AFU AFV AFW AFX AFY AFZ AGA AGB AGC AGD AGE AGF AGG AGH AGI AGJ AGK AGL AGM AGN AGO AGP AGQ AGR AGS AGT AGU AGV AGW AGX AGY AGZ AHA AHB AHC AHD AHE AHF AHG AHH AHI AHJ AHK AHL AHM AHN AHO AHP AHQ AHR AHS AHT AHU AHV AHW AHX AHY AHZ AIA AIB AIC AID AIE AIF AIG AIH AII AIJ AIK AIL AIM AIN AIO AIP AIQ AIR AIS AIT AIU AIV AIW AIX AIY AIZ AJA AJB ALC ALD ALE ALF ALG ALH ALI ALJ ALK ALL ALM ALN ALO ALP ALQ ARR ARS AUT AUU AUV AUW AUX AUY AUZ AVA AVB AVC AVD AVE AVF BAG BAH BAI BAJ BAK BAL BAM BAN BAO BAP BAQ BAR BAS BAT BAU BAV BAW BAX BAY BAZ BBA BBB BLC BLD BLE BLF BLG BLH BLI BLJ BLK BLL BLM BLN BLO BLP BLQ BLR BLS BLT BLU BLV BLW BLX BLY BLZ BMA BMB BMC BMD BME BMF BMG BMH CCJ CCK CCL CCM CCN CCO CCI CEX CHG CIP CLP CLR COI CUR CUS DAR DCL DEL DIN DOC DUT EUR FBC GBL GEN GS7 HAN HAZ ICN IIN IMI IND INS INV IRP ITR ITS LAN LIN LOI MCO MDH MKS ORI OSI PAC PAI PAY PKG PKT PMD PMT PRD PRF PRI PUR QIN QQD QUT RAH REG RET REV RQR SAF SIC SIN SLR SPA SPG SPH SPP SPT SRN SSR SUR TCA TDT TRA TRR TXD WHI ZZZ".split(" ");
+var UNTDID_4451_CODES = new Set(UNTDID_4451_LIST);
+var UNTDID_4451_TEXT = ` ${UNTDID_4451_LIST.join(" ")} `;
+var CEN_VATEX_CODES = new Set(
+  "VATEX-EU-79-C VATEX-EU-132 VATEX-EU-132-1A VATEX-EU-132-1B VATEX-EU-132-1C VATEX-EU-132-1D VATEX-EU-132-1E VATEX-EU-132-1F VATEX-EU-132-1G VATEX-EU-132-1H VATEX-EU-132-1I VATEX-EU-132-1J VATEX-EU-132-1K VATEX-EU-132-1L VATEX-EU-132-1M VATEX-EU-132-1N VATEX-EU-132-1O VATEX-EU-132-1P VATEX-EU-132-1Q VATEX-EU-135-1 VATEX-EU-143 VATEX-EU-143-1A VATEX-EU-143-1B VATEX-EU-143-1C VATEX-EU-143-1D VATEX-EU-143-1E VATEX-EU-143-1F VATEX-EU-143-1FA VATEX-EU-143-1G VATEX-EU-143-1H VATEX-EU-143-1I VATEX-EU-143-1J VATEX-EU-143-1K VATEX-EU-143-1L VATEX-EU-144 VATEX-EU-146-1E VATEX-EU-159 VATEX-EU-309 VATEX-EU-148 VATEX-EU-148-A VATEX-EU-148-B VATEX-EU-148-C VATEX-EU-148-D VATEX-EU-148-E VATEX-EU-148-F VATEX-EU-148-G VATEX-EU-151 VATEX-EU-151-1A VATEX-EU-151-1AA VATEX-EU-151-1B VATEX-EU-151-1C VATEX-EU-151-1D VATEX-EU-151-1E VATEX-EU-G VATEX-EU-O VATEX-EU-IC VATEX-EU-AE VATEX-EU-D VATEX-EU-F VATEX-EU-I VATEX-EU-J VATEX-FR-FRANCHISE VATEX-FR-CNWVAT VATEX-EU-153 VATEX-FR-CGI261-1 VATEX-FR-CGI261-2 VATEX-FR-CGI261-3 VATEX-FR-CGI261-4 VATEX-FR-CGI261-5 VATEX-FR-CGI261-7 VATEX-FR-CGI261-8 VATEX-FR-CGI261A VATEX-FR-CGI261B VATEX-FR-CGI261C-1 VATEX-FR-CGI261C-2 VATEX-FR-CGI261C-3 VATEX-FR-CGI261D-1 VATEX-FR-CGI261D-1BIS VATEX-FR-CGI261D-2 VATEX-FR-CGI261D-3 VATEX-FR-CGI261D-4 VATEX-FR-CGI261E-1 VATEX-FR-CGI261E-2 VATEX-FR-CGI277A VATEX-FR-CGI275 VATEX-FR-298SEXDECIESA VATEX-FR-CGI295 VATEX-FR-AE VATEX-ES-N1 VATEX-ES-N2 VATEX-ES-IVA20 VATEX-ES-IVA21 VATEX-ES-IVA22 VATEX-ES-IVA23/24 VATEX-ES-IVA25 VATEX-ES-IVA140BIS VATEX-ES-OTROS VATEX-ES-IGIC1TR VATEX-ES-IGIC11 VATEX-ES-IGIC12 VATEX-ES-IGIC13 VATEX-ES-IGIC25 VATEX-ES-IGIC47 VATEX-ES-IGIC90 VATEX-ES-IPSI7 VATEX-ES-IPSI8".split(" ")
+);
+var UBL_VAT_DATE_CODES = /* @__PURE__ */ new Set(["3", "35", "432"]);
+var CII_DUE_DATE_TYPE_CODES = /* @__PURE__ */ new Set(["5", "29", "72"]);
 
 // src/engine/model.ts
 function emptyParty() {
@@ -5128,7 +6164,9 @@ var ReadCtx = class {
   decimals = [];
   typeErrors = [];
   loc(node) {
-    return { line: node.line, col: node.col, xpath: xpathOf(node) };
+    const loc = { line: node.line, col: node.col, xpath: xpathOf(node) };
+    if (node.raw !== void 0) loc.raw = node.raw;
+    return loc;
   }
   /** Read a string and remember its location under `key` */
   str(node, path, locs, key) {
@@ -5334,18 +6372,164 @@ function collectUblAmountCurrencies(root, ctx) {
   walk(root, (n) => {
     if (n.ns !== UBL_CBC) return;
     const p = n.parent;
-    const listed = R051_AMOUNTS.has(n.local) || n.local === "TaxAmount" && (p?.local === "TaxSubtotal" || p?.local === "TaxTotal" && p.children.some((c) => c.local === "TaxSubtotal"));
-    if (!listed) return;
+    const listed2 = R051_AMOUNTS.has(n.local) || n.local === "TaxAmount" && (p?.local === "TaxSubtotal" || p?.local === "TaxTotal" && p.children.some((c) => c.local === "TaxSubtotal"));
+    if (!listed2) return;
     const term = ublAmountTerm(n);
     out.push({ bt: term ? `${term} (${n.local})` : `cbc:${n.local}`, currency: n.attrs["currencyID"], loc: ctx.loc(n) });
   });
   return out;
 }
-function collectBinaryObjects(root, local, ctx) {
+function collectBinaryObjects(root, ctx) {
   const out = [];
   walk(root, (n) => {
-    const mime = n.attrs["mimeCode"];
-    if (n.local === local && mime !== void 0) out.push({ mime, filename: n.attrs["filename"], loc: ctx.loc(n) });
+    if (n.local.endsWith("BinaryObject"))
+      out.push({ element: n.local, mime: n.attrs["mimeCode"], filename: n.attrs["filename"], loc: ctx.loc(n) });
+  });
+  return out;
+}
+var exactText = (n) => n ? n.raw ?? n.text : void 0;
+var UBL_CAC = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
+var CII_RAM = "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100";
+var CII_UDT = "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100";
+var UBL_CURRENCY_AMOUNTS = /* @__PURE__ */ new Set([...R051_AMOUNTS, "TaxAmount"]);
+function collectCurrencyIds(root, ctx, syntax) {
+  const out = [];
+  walk(root, (n) => {
+    const listed2 = syntax === "UBL" ? n.ns === UBL_CBC && UBL_CURRENCY_AMOUNTS.has(n.local) : n.ns === CII_RAM && n.local === "TaxTotalAmount" && n.attrs["currencyID"] !== void 0;
+    if (listed2) out.push({ element: n.local, currency: n.attrs["currencyID"], loc: ctx.loc(n) });
+  });
+  return out;
+}
+function collectObjectIdSchemes(root, ctx, syntax) {
+  const out = [];
+  walk(root, (n) => {
+    if (syntax === "CII") {
+      if (n.ns === CII_RAM && n.local === "ReferenceTypeCode") out.push({ scheme: exactText(n) ?? "", loc: ctx.loc(n) });
+      return;
+    }
+    if (n.ns !== UBL_CAC || n.local !== "AdditionalDocumentReference" && n.local !== "DocumentReference") return;
+    const is130 = n.children.some((c) => c.ns === UBL_CBC && c.local === "DocumentTypeCode" && exactText(c) === "130");
+    if (!is130) return;
+    for (const id of n.children)
+      if (id.ns === UBL_CBC && id.local === "ID" && id.attrs["schemeID"] !== void 0)
+        out.push({ scheme: id.attrs["schemeID"], loc: ctx.loc(id) });
+  });
+  return out;
+}
+var UBL_DATE_ELEMENTS = /* @__PURE__ */ new Set(["IssueDate", "DueDate", "TaxPointDate", "StartDate", "EndDate", "ActualDeliveryDate"]);
+function collectDates(root, ctx, syntax) {
+  const out = [];
+  walk(root, (n) => {
+    const listed2 = syntax === "UBL" ? n.ns === UBL_CBC && UBL_DATE_ELEMENTS.has(n.local) : n.ns === CII_UDT && n.local === "DateTimeString";
+    if (listed2) out.push({ element: n.local, raw: exactText(n) ?? "", format: n.attrs["format"], loc: ctx.loc(n) });
+  });
+  return out;
+}
+function collectUblAmountTexts(root, ctx) {
+  const out = [];
+  const inPriceWithAllowance = (n) => {
+    for (let cur = n.parent; cur; cur = cur.parent)
+      if (cur.ns === UBL_CAC && cur.local === "Price" && cur.children.some((c) => c.ns === UBL_CAC && c.local === "AllowanceCharge"))
+        return true;
+    return false;
+  };
+  walk(root, (n) => {
+    if (!n.local.endsWith("Amount") || n.local.endsWith("PriceAmount") || inPriceWithAllowance(n)) return;
+    out.push({ element: n.local, raw: exactText(n) ?? "", loc: ctx.loc(n) });
+  });
+  return out;
+}
+var CODE_OWNERS = {
+  ...UBL_OWNERS,
+  ...CII_OWNERS,
+  Delivery: "Deliver-to",
+  ApplicableHeaderTradeDelivery: "Deliver-to",
+  TaxSubtotal: "VAT breakdown",
+  ApplicableHeaderTradeSettlement: "VAT breakdown",
+  InvoiceLine: "Line",
+  CreditNoteLine: "Line",
+  IncludedSupplyChainTradeLineItem: "Line",
+  AllowanceCharge: "Allowance or charge",
+  SpecifiedTradeAllowanceCharge: "Allowance or charge",
+  AppliedTradeAllowanceCharge: "Price allowance or charge"
+};
+function stringValue(n) {
+  if (n.children.length === 0) return exactText(n) ?? "";
+  return n.children.map(stringValue).join("");
+}
+var hasAncestor = (n, ns, names) => {
+  for (let cur = n.parent; cur; cur = cur.parent) if (cur.ns === ns && names.includes(cur.local)) return true;
+  return false;
+};
+var childrenNamed = (n, ns, local) => n.children.filter((c) => c.ns === ns && c.local === local);
+var normalise = (v) => (v ?? "").replace(/\s+/g, " ").trim();
+function collectCodedValues(root, ctx, syntax) {
+  const out = [];
+  const push = (kind, n, value, extra = {}) => out.push({ kind, value, owner: ownerOf(n, CODE_OWNERS, "Document"), loc: ctx.loc(n), ...extra });
+  walk(root, (n) => {
+    const parent = n.parent?.local;
+    const value = exactText(n) ?? "";
+    if (syntax === "UBL") {
+      if (n.ns === UBL_CAC && n.local === "PaymentMeans") {
+        const codes = childrenNamed(n, UBL_CBC, "PaymentMeansCode").map((c) => exactText(c) ?? "");
+        if (codes.includes("30") || codes.includes("58"))
+          for (const acc of childrenNamed(n, UBL_CAC, "PayeeFinancialAccount"))
+            push("creditTransferAccount", acc, normalise(childrenNamed(acc, UBL_CBC, "ID").map(stringValue).join(" ")));
+        return;
+      }
+      if (n.ns !== UBL_CBC) return;
+      if (n.local === "IdentificationCode") {
+        push("identificationCode", n, value);
+        if (parent === "Country") push("country", n, value);
+        else if (parent === "OriginCountry") push("originCountry", n, value);
+      } else if (n.local === "ItemClassificationCode" && parent === "CommodityClassification" && n.attrs["listID"] !== void 0) {
+        push("classificationScheme", n, n.attrs["listID"]);
+      } else if (n.local === "ID" && parent === "TaxCategory") {
+        const holder = n.parent?.parent;
+        const docLevel = holder?.local === "TaxSubtotal" && holder.parent?.local === "TaxTotal" && holder.parent.parent === root || holder?.local === "AllowanceCharge" && holder.parent === root;
+        push("taxCategory", n, value, { docLevel });
+      } else if (n.local === "ID" && parent === "ClassifiedTaxCategory") push("itemTaxCategory", n, value);
+      else if (n.local === "DescriptionCode" && parent === "InvoicePeriod") push("periodDescriptionCode", n, value);
+      else if (n.local === "Note" && n.parent === root) push("rootNote", n, stringValue(n));
+      else if (n.local === "TaxExemptionReasonCode") push("exemptionCode", n, value);
+      else if (n.local === "ID" && n.attrs["schemeID"] !== void 0) {
+        const scheme = n.attrs["schemeID"];
+        if (parent === "PartyIdentification")
+          push("partyIdScheme", n, scheme, { sellerOrPayee: hasAncestor(n, UBL_CAC, ["AccountingSupplierParty", "PayeeParty"]) });
+        else if (parent === "StandardItemIdentification") push("itemIdScheme", n, scheme);
+        else if (parent === "DeliveryLocation") push("deliveryIdScheme", n, scheme);
+      }
+    } else {
+      if (n.ns !== CII_RAM) return;
+      if (n.local === "SpecifiedTradeSettlementPaymentMeans") {
+        const codes = childrenNamed(n, CII_RAM, "TypeCode").map((c) => exactText(c) ?? "");
+        if (codes.includes("30") || codes.includes("58"))
+          for (const acc of childrenNamed(n, CII_RAM, "PayeePartyCreditorFinancialAccount")) {
+            const iban = normalise(childrenNamed(acc, CII_RAM, "IBANID").map(stringValue).join(" "));
+            const own = normalise(childrenNamed(acc, CII_RAM, "ProprietaryID").map(stringValue).join(" "));
+            push("creditTransferAccount", acc, iban || own);
+          }
+        return;
+      }
+      if (n.local === "CountryID") push("country", n, value);
+      else if (n.local === "ID" && parent === "OriginTradeCountry" && n.attrs["schemeID"] === void 0) push("originCountry", n, value);
+      else if (n.local === "ClassCode" && n.attrs["listID"] !== void 0) push("classificationScheme", n, n.attrs["listID"]);
+      else if (n.local === "CategoryCode") {
+        push("categoryCode", n, value);
+        if (parent === "CategoryTradeTax") push("taxCategory", n, value);
+        else if (parent === "ApplicableTradeTax") push("itemTaxCategory", n, value);
+      } else if (n.local === "DueDateTypeCode") push("dueDateTypeCode", n, value);
+      else if (n.local === "SubjectCode") push("subjectCode", n, value);
+      else if (n.local === "ExemptionReasonCode") push("exemptionCode", n, value);
+      else if (n.local === "GlobalID" && n.attrs["schemeID"] !== void 0) {
+        const scheme = n.attrs["schemeID"];
+        if (hasAncestor(n, CII_RAM, ["SpecifiedTradeProduct"])) {
+          if (parent === "SpecifiedTradeProduct") push("itemIdScheme", n, scheme);
+        } else if (hasAncestor(n, CII_RAM, ["ShipToTradeParty"])) {
+          if (parent === "ShipToTradeParty" && n.parent?.parent?.local === "ApplicableHeaderTradeDelivery") push("deliveryIdScheme", n, scheme);
+        } else push("partyIdScheme", n, scheme);
+      }
+    }
   });
   return out;
 }
@@ -5417,9 +6601,11 @@ function readParty(ctx, node) {
     p.endpoint = { id: text(uri) ?? "", scheme: uri.attrs["schemeID"] };
     L["endpoint"] = ctx.loc(uri);
   }
+  p.taxRegistrations = [];
   for (const reg of kids(node, "SpecifiedTaxRegistration")) {
     const id = at(reg, "ID");
     if (!id) continue;
+    p.taxRegistrations.push({ scheme: id.attrs["schemeID"], loc: ctx.loc(id) });
     const scheme = id.attrs["schemeID"]?.toUpperCase();
     if (scheme === "FC") {
       p.taxRegistrationId = text(id);
@@ -5447,6 +6633,7 @@ function readAllowanceCharge(ctx, node, level) {
     reasonCode: ctx.str(node, "ReasonCode", locs, "reasonCode"),
     vatCategory: ctx.str(node, "CategoryTradeTax/CategoryCode", locs, "vatCategory"),
     vatRate: ctx.num(node, "CategoryTradeTax/RateApplicablePercent", locs, "vatRate", "BT-96"),
+    vatScheme: ctx.str(node, "CategoryTradeTax/TypeCode", locs, "vatScheme"),
     locs,
     loc: ctx.loc(node)
   };
@@ -5550,6 +6737,7 @@ function readCii(root) {
       description: text(d, "Name"),
       filename: at(d, "AttachmentBinaryObject")?.attrs["filename"],
       mime: at(d, "AttachmentBinaryObject")?.attrs["mimeCode"],
+      typeCode: exactText(at(d, "TypeCode")),
       loc: ctx.loc(d)
     })),
     amountCurrencies: [],
@@ -5640,6 +6828,7 @@ function readCii(root) {
       rate: ctx.num(tax, "RateApplicablePercent", sl, "rate", "BT-119"),
       exemptionReason: ctx.str(tax, "ExemptionReason", sl, "exemptionReason"),
       exemptionCode: ctx.str(tax, "ExemptionReasonCode", sl, "exemptionCode"),
+      scheme: ctx.str(tax, "TypeCode", sl, "scheme"),
       locs: sl,
       loc: ctx.loc(tax)
     };
@@ -5750,7 +6939,7 @@ function readCii(root) {
       }
       line.classification = all(product, "DesignatedProductClassification").map((c) => {
         const code = at(c, "ClassCode");
-        return { id: text(code) ?? "", scheme: code?.attrs["listID"] };
+        return { id: text(code) ?? "", scheme: code?.attrs["listID"], loc: code ? ctx.loc(code) : void 0 };
       });
       line.originCountry = ctx.str(product, "OriginTradeCountry/ID", L, "originCountry");
       line.attributes = kids(product, "ApplicableProductCharacteristic").map((c) => ({
@@ -5795,6 +6984,8 @@ function readCii(root) {
     if (lineTax) {
       line.vatCategory = ctx.str(lineTax, "CategoryCode", L, "vatCategory");
       line.vatRate = ctx.num(lineTax, "RateApplicablePercent", L, "vatRate", "BT-152");
+      line.vatScheme = ctx.str(lineTax, "TypeCode", L, "vatScheme");
+      if (L["vatCategory"]) L["vatCategoryCode"] = L["vatCategory"];
       if (!L["vatCategory"]) L["vatCategory"] = ctx.loc(lineTax);
     }
     const lp = at(ls, "BillingSpecifiedPeriod");
@@ -5803,6 +6994,10 @@ function readCii(root) {
       line.periodStart = ctx.ciiDate(lp, "StartDateTime", L, "periodStart", "BT-134");
       line.periodEnd = ctx.ciiDate(lp, "EndDateTime", L, "periodEnd", "BT-135");
     }
+    line.documentRefs = kids(ls, "AdditionalReferencedDocument").map((d) => ({
+      typeCode: exactText(at(d, "TypeCode")),
+      loc: ctx.loc(d)
+    }));
     for (const ac of kids(ls, "SpecifiedTradeAllowanceCharge")) {
       const item = readAllowanceCharge(ctx, ac, "line");
       (item.isCharge ? line.charges : line.allowances).push(item);
@@ -5810,7 +7005,11 @@ function readCii(root) {
     model.lines.push(line);
   }
   model.schemeIds = collectCiiSchemeIds(root, ctx);
-  model.binaryObjects = collectBinaryObjects(root, "AttachmentBinaryObject", ctx);
+  model.binaryObjects = collectBinaryObjects(root, ctx);
+  model.currencyIds = collectCurrencyIds(root, ctx, "CII");
+  model.objectIdSchemes = collectObjectIdSchemes(root, ctx, "CII");
+  model.dates = collectDates(root, ctx, "CII");
+  model.codedValues = collectCodedValues(root, ctx, "CII");
   model.decimals = ctx.decimals;
   model.typeErrors = ctx.typeErrors;
   model.emptyElements = collectEmptyElements(root, ctx);
@@ -5849,10 +7048,12 @@ function readParty2(ctx, partyNode) {
   }
   p.tradingName = ctx.str(partyNode, "PartyName/Name", L, "tradingName");
   p.address = readAddress2(ctx, at(partyNode, "PostalAddress"), L, "address");
+  p.taxRegistrations = [];
   for (const pts of kids(partyNode, "PartyTaxScheme")) {
     const scheme = text(pts, "TaxScheme/ID");
     const company = at(pts, "CompanyID");
     if (!company) continue;
+    p.taxRegistrations.push({ scheme, loc: ctx.loc(company) });
     if (scheme?.toUpperCase() === "VAT") {
       p.vatId = text(company);
       L["vatId"] = ctx.loc(company);
@@ -5882,12 +7083,13 @@ function readParty2(ctx, partyNode) {
   }
   return p;
 }
-function readAllowanceCharge2(ctx, node, level) {
+function readAllowanceCharge2(readCtx, node, level) {
+  const ctx = level === "price" ? new ReadCtx() : readCtx;
   const locs = {};
   const rawIndicator = ctx.str(node, "ChargeIndicator", locs, "indicator");
   const isCharge = rawIndicator?.toLowerCase() === "true";
-  const amountBt = level === "doc" ? isCharge ? "BT-99" : "BT-92" : isCharge ? "BT-141" : "BT-136";
-  const baseBt = level === "doc" ? isCharge ? "BT-100" : "BT-93" : isCharge ? "BT-142" : "BT-137";
+  const amountBt = level === "price" ? "BT-147" : level === "doc" ? isCharge ? "BT-99" : "BT-92" : isCharge ? "BT-141" : "BT-136";
+  const baseBt = level === "price" ? "BT-148" : level === "doc" ? isCharge ? "BT-100" : "BT-93" : isCharge ? "BT-142" : "BT-137";
   return {
     isCharge,
     rawIndicator,
@@ -5898,6 +7100,8 @@ function readAllowanceCharge2(ctx, node, level) {
     reasonCode: ctx.str(node, "AllowanceChargeReasonCode", locs, "reasonCode"),
     vatCategory: ctx.str(node, "TaxCategory/ID", locs, "vatCategory"),
     vatRate: ctx.num(node, "TaxCategory/Percent", locs, "vatRate", "BT-96"),
+    vatScheme: ctx.str(node, "TaxCategory/TaxScheme/ID", locs, "vatScheme"),
+    vatExemptionCode: ctx.str(node, "TaxCategory/TaxExemptionReasonCode", locs, "vatExemptionCode"),
     locs,
     loc: ctx.loc(node)
   };
@@ -5906,8 +7110,6 @@ function readUbl(root) {
   const ctx = new ReadCtx();
   const isCredit = root.local === "CreditNote";
   const locs = {};
-  const linesTag = isCredit ? "CreditNoteLine" : "InvoiceLine";
-  const qtyTag = isCredit ? "CreditedQuantity" : "InvoicedQuantity";
   const model = {
     syntax: "UBL",
     kind: isCredit ? "creditnote" : "invoice",
@@ -5950,6 +7152,7 @@ function readUbl(root) {
       description: text(d, "DocumentDescription"),
       filename: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["filename"],
       mime: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["mimeCode"],
+      typeCode: exactText(at(d, "DocumentTypeCode")),
       loc: ctx.loc(d)
     })),
     amountCurrencies: [],
@@ -6046,6 +7249,7 @@ function readUbl(root) {
         rate: ctx.num(st, "TaxCategory/Percent", sl, "rate", "BT-119"),
         exemptionReason: ctx.str(st, "TaxCategory/TaxExemptionReason", sl, "exemptionReason"),
         exemptionCode: ctx.str(st, "TaxCategory/TaxExemptionReasonCode", sl, "exemptionCode"),
+        scheme: ctx.str(st, "TaxCategory/TaxScheme/ID", sl, "scheme"),
         locs: sl,
         loc: ctx.loc(st)
       };
@@ -6093,7 +7297,9 @@ function readUbl(root) {
       { amount: true }
     );
   }
-  for (const ln of kids(root, linesTag)) {
+  const lineNodes = root.children.filter((c) => c.local === "InvoiceLine" || c.local === "CreditNoteLine");
+  for (const ln of lineNodes) {
+    const qtyTag = ln.local === "CreditNoteLine" ? "CreditedQuantity" : "InvoicedQuantity";
     const L = {};
     const qtyNode = at(ln, qtyTag);
     const line = {
@@ -6133,11 +7339,13 @@ function readUbl(root) {
       }
       line.classification = all(item, "CommodityClassification").map((cc) => {
         const code = at(cc, "ItemClassificationCode");
-        return { id: text(code) ?? "", scheme: code?.attrs["listID"] };
+        return { id: text(code) ?? "", scheme: code?.attrs["listID"], loc: code ? ctx.loc(code) : void 0 };
       });
       line.originCountry = ctx.str(item, "OriginCountry/IdentificationCode", L, "originCountry");
       line.vatCategory = ctx.str(item, "ClassifiedTaxCategory/ID", L, "vatCategory");
       line.vatRate = ctx.num(item, "ClassifiedTaxCategory/Percent", L, "vatRate", "BT-152");
+      line.vatScheme = ctx.str(item, "ClassifiedTaxCategory/TaxScheme/ID", L, "vatScheme");
+      if (L["vatCategory"]) L["vatCategoryCode"] = L["vatCategory"];
       if (!L["vatCategory"] && at(item, "ClassifiedTaxCategory"))
         L["vatCategory"] = ctx.loc(at(item, "ClassifiedTaxCategory"));
       line.attributes = kids(item, "AdditionalItemProperty").map((ap) => ({
@@ -6145,8 +7353,13 @@ function readUbl(root) {
         value: text(ap, "Value")
       }));
     }
+    line.documentRefs = kids(ln, "DocumentReference").map((d) => ({
+      typeCode: exactText(at(d, "DocumentTypeCode")),
+      loc: ctx.loc(d)
+    }));
     const price = at(ln, "Price");
     if (price) {
+      line.priceAllowanceCharges = kids(price, "AllowanceCharge").map((pac) => readAllowanceCharge2(ctx, pac, "price"));
       L["price"] = ctx.loc(price);
       line.priceAmount = ctx.num(price, "PriceAmount", L, "priceAmount", "BT-146");
       const bq = at(price, "BaseQuantity");
@@ -6170,7 +7383,12 @@ function readUbl(root) {
   }
   model.amountCurrencies = collectUblAmountCurrencies(root, ctx);
   model.schemeIds = collectUblSchemeIds(root, ctx);
-  model.binaryObjects = collectBinaryObjects(root, "EmbeddedDocumentBinaryObject", ctx);
+  model.binaryObjects = collectBinaryObjects(root, ctx);
+  model.currencyIds = collectCurrencyIds(root, ctx, "UBL");
+  model.objectIdSchemes = collectObjectIdSchemes(root, ctx, "UBL");
+  model.dates = collectDates(root, ctx, "UBL");
+  model.codedValues = collectCodedValues(root, ctx, "UBL");
+  model.amountTexts = collectUblAmountTexts(root, ctx);
   model.decimals = ctx.decimals;
   model.typeErrors = ctx.typeErrors;
   model.emptyElements = collectEmptyElements(root, ctx);
@@ -6363,6 +7581,352 @@ var within = (a, b, limit) => cmp(abs(sub(a, b)), limit) < 0;
 var withinOrEqual = (a, b, limit) => cmp(abs(sub(a, b)), limit) <= 0;
 var ONE_UNIT = { n: 1n, d: 1n };
 var TWO_CENTS = { n: 2n, d: 100n };
+
+// src/engine/rules-vat-categories.ts
+var normSpace = (v) => (v ?? "").replace(/\s+/g, " ").trim();
+var exactText2 = (value, loc) => loc?.raw ?? value ?? "";
+function xsBoolean(raw) {
+  const v = normSpace(raw);
+  if (v === "true" || v === "1") return true;
+  if (v === "false" || v === "0") return false;
+  return void 0;
+}
+function everyAllowanceCharge(m) {
+  const out = [];
+  const docLevel = [...m.allowances, ...m.charges].sort((a, b) => (a.loc?.line ?? 0) - (b.loc?.line ?? 0));
+  for (const ac of docLevel) out.push({ ac, level: "document" });
+  for (const ln of m.lines) {
+    for (const ac of [...ln.allowances, ...ln.charges]) out.push({ ac, level: "line" });
+    for (const ac of ln.priceAllowanceCharges ?? []) out.push({ ac, level: "price" });
+  }
+  return out;
+}
+var CATEGORY_NAME = {
+  S: "S (standard rated)",
+  Z: "Z (zero rated)",
+  E: "E (exempt from VAT)",
+  AE: "AE (reverse charge)",
+  K: "K (intra-community supply)",
+  G: "G (export outside the EU)",
+  O: "O (not subject to VAT)",
+  L: "L (IGIC, Canary Islands)",
+  M: "M (IPSI, Ceuta and Melilla)"
+};
+var catName = (c) => CATEGORY_NAME[c] ?? c;
+var PREFIXES = ["S", "Z", "E", "AE", "IC", "G", "O", "IG", "IP"];
+function categoryOf(prefix, cii) {
+  switch (prefix) {
+    case "IC":
+      return "K";
+    case "IG":
+      return cii ? "M" : "L";
+    case "IP":
+      return cii ? "L" : "M";
+    default:
+      return prefix;
+  }
+}
+function allowanceRateTest(prefix, cii) {
+  if (prefix === "S") return "positive";
+  if (prefix === "O") return "absent";
+  if (prefix === "IG") return "non-negative";
+  if (prefix === "IP") return cii ? "positive" : "non-negative";
+  return "zero";
+}
+function rateOk(test, present, rate) {
+  if (test === "absent") return !present;
+  if (rate === void 0 || Number.isNaN(rate)) return false;
+  if (test === "zero") return rate === 0;
+  if (test === "positive") return rate > 0;
+  return rate >= 0;
+}
+var RATE_EXPECTED = {
+  positive: "a rate above 0",
+  zero: "0",
+  "non-negative": "0 or more",
+  absent: "no rate"
+};
+function vatCategoryRules(m, emit) {
+  const cii = m.syntax === "CII";
+  const isVat = (scheme, loc) => cii ? exactText2(scheme, loc).toUpperCase() === "VAT" : normSpace(scheme).toUpperCase() === "VAT";
+  const acs = everyAllowanceCharge(m).filter((x) => !cii || x.level !== "price").map(({ ac, level }) => {
+    const catLoc = ac.locs["vatCategory"];
+    const category = catLoc ? cii ? exactText2(ac.vatCategory, catLoc) : normSpace(ac.vatCategory) : void 0;
+    return {
+      ac,
+      level,
+      charge: xsBoolean(ac.rawIndicator),
+      category,
+      vat: category !== void 0 && isVat(ac.vatScheme, ac.locs["vatScheme"])
+    };
+  });
+  const kindOf = (charge) => charge ? "charge" : "allowance";
+  const where = (level, charge) => level === "document" ? `A document-level ${kindOf(charge)}` : level === "line" ? `A line ${kindOf(charge)}` : `A price-level ${kindOf(charge)}`;
+  for (const prefix of PREFIXES) {
+    const category = categoryOf(prefix, cii);
+    const test = allowanceRateTest(prefix, cii);
+    for (const x of acs) {
+      if (x.charge === void 0 || !x.vat || x.category !== category) continue;
+      const present = !!x.ac.locs["vatRate"];
+      if (rateOk(test, present, x.ac.vatRate)) continue;
+      const shown2 = present ? x.ac.vatRate !== void 0 ? `${x.ac.vatRate}%` : "not a number" : "missing";
+      emit(
+        `BR-${prefix}-${x.charge ? "07" : "06"}`,
+        test === "absent" ? `${where(x.level, x.charge)} with VAT category ${catName(category)} carries a VAT rate (${shown2}); it must not have one.` : `${where(x.level, x.charge)} with VAT category ${catName(category)} has VAT rate ${shown2}; it must be ${RATE_EXPECTED[test]}.`,
+        x.ac.locs["vatRate"] ?? x.ac.locs["vatCategory"] ?? x.ac.loc,
+        { expected: RATE_EXPECTED[test], actual: shown2 }
+      );
+    }
+  }
+  const ublParty = (p, vatOnly) => (p?.taxRegistrations ?? []).some((r) => !vatOnly || normSpace(r.scheme).toUpperCase() === "VAT");
+  const ciiParty = (p, schemes) => (p?.taxRegistrations ?? []).some((r) => schemes.includes(r.scheme ?? ""));
+  const seller = m.seller;
+  const buyer = m.buyer;
+  const rep = m.taxRepresentative;
+  const identifiersOk = (prefix) => {
+    if (cii) {
+      const sellerVat2 = ciiParty(seller, ["VA"]) || ciiParty(rep, ["VA"]);
+      const sellerAny2 = ciiParty(seller, ["VA", "FC"]) || ciiParty(rep, ["VA"]);
+      if (prefix === "S" || prefix === "Z" || prefix === "E" || prefix === "IG" || prefix === "IP") return sellerAny2;
+      if (prefix === "AE") return sellerAny2 && (ciiParty(buyer, ["VA"]) || !!buyer.locs["legalId"]);
+      if (prefix === "G") return sellerVat2;
+      if (prefix === "IC") return sellerVat2 && ciiParty(buyer, ["VA"]);
+      return !sellerVat2 && !ciiParty(buyer, ["VA"]);
+    }
+    const sellerVat = ublParty(seller, true) || ublParty(rep, true);
+    const sellerAny = ublParty(seller, false) || ublParty(rep, true);
+    if (prefix === "S" || prefix === "Z" || prefix === "E" || prefix === "IG" || prefix === "IP") return sellerAny;
+    if (prefix === "AE") return sellerAny && (ublParty(buyer, true) || !!buyer.locs["legalId"]);
+    if (prefix === "G") return sellerVat;
+    if (prefix === "IC") return sellerVat && ublParty(buyer, true);
+    return !sellerVat && !ublParty(buyer, true);
+  };
+  const SELLER_IDS = "the seller's VAT identifier (BT-31), tax registration number (BT-32) or a tax representative's VAT identifier (BT-63)";
+  const NEEDS = {
+    S: SELLER_IDS,
+    Z: SELLER_IDS,
+    E: SELLER_IDS,
+    IG: SELLER_IDS,
+    IP: SELLER_IDS,
+    AE: `${SELLER_IDS}, and the buyer's VAT identifier (BT-48) or legal registration identifier (BT-47)`,
+    G: "the seller's VAT identifier (BT-31) or a tax representative's VAT identifier (BT-63)",
+    IC: "the seller's (BT-31) or tax representative's (BT-63) VAT identifier and the buyer's VAT identifier (BT-48)"
+  };
+  for (const prefix of PREFIXES) {
+    const category = categoryOf(prefix, cii);
+    for (const charge of [false, true]) {
+      const rawOnly = !cii && prefix === "IG" && charge;
+      const hits = acs.filter(
+        (x) => x.charge === charge && x.vat && x.category === category && (cii || prefix !== "O" || x.level === "document") && (!rawOnly || exactText2(x.ac.vatCategory, x.ac.locs["vatCategory"]) === category)
+      );
+      if (hits.length === 0 || identifiersOk(prefix)) continue;
+      emit(
+        `BR-${prefix}-${charge ? "04" : "03"}`,
+        prefix === "O" ? `The invoice has a ${kindOf(charge)} with VAT category ${catName(category)}, so it must not carry the seller's, tax representative's or buyer's VAT identifier.` : `The invoice has a ${kindOf(charge)} with VAT category ${catName(category)}, so it needs ${NEEDS[prefix]}.`,
+        prefix === "O" ? seller.locs["vatId"] ?? buyer.locs["vatId"] ?? hits[0].ac.loc : hits[0].ac.loc
+      );
+    }
+  }
+  const rows = m.vat.map((v) => {
+    const catLoc = v.locs["category"];
+    return {
+      v,
+      category: catLoc ? cii ? exactText2(v.category, catLoc) : normSpace(v.category) : void 0,
+      vat: isVat(v.scheme, v.locs["scheme"])
+    };
+  });
+  const label = (v, category) => `The VAT breakdown for ${catName(category)}${v.rate !== void 0 ? ` at ${v.rate}%` : ""}`;
+  const at2 = (v, key) => v.locs[key] ?? v.loc;
+  for (const prefix of PREFIXES) {
+    const category = categoryOf(prefix, cii);
+    if (cii && (prefix === "IG" || prefix === "IP")) continue;
+    const needsVat = !(cii && (prefix === "S" || prefix === "Z"));
+    const calculated = prefix === "S" || !cii && (prefix === "IG" || prefix === "IP");
+    for (const { v, category: c, vat } of rows) {
+      if (c !== category || needsVat && !vat) continue;
+      if (!calculated) {
+        if (v.taxAmount !== void 0 && v.taxAmount === 0) continue;
+        emit(
+          `BR-${prefix}-09`,
+          v.taxAmount === void 0 ? `${label(v, category)} has no VAT amount (BT-117); it must be 0.` : `${label(v, category)} has VAT amount ${v.taxAmount}; it must be 0.`,
+          at2(v, "taxAmount"),
+          { expected: "0", actual: v.taxAmount === void 0 ? void 0 : String(v.taxAmount) }
+        );
+        continue;
+      }
+      if (v.taxAmount === void 0 || v.taxableAmount === void 0 || v.rate === void 0) {
+        const missing = [v.taxableAmount === void 0 && "taxable amount (BT-116)", v.taxAmount === void 0 && "VAT amount (BT-117)", v.rate === void 0 && "rate (BT-119)"].filter(Boolean);
+        emit(`BR-${prefix}-09`, `${label(v, category)} has no ${missing.join(" or ")}, so its VAT amount can't be checked.`, at2(v, v.taxAmount === void 0 ? "taxAmount" : "taxableAmount"));
+        continue;
+      }
+      const expected = round22(div(mul(abs(dec(v.taxableAmount)), dec(v.rate)), dec(100)));
+      if (within(abs(dec(v.taxAmount)), expected, ONE_UNIT)) continue;
+      const shown2 = v.taxableAmount < 0 ? neg(expected) : expected;
+      emit(
+        `BR-${prefix}-09`,
+        `${v.taxableAmount} × ${v.rate}% = ${toNumber(shown2).toFixed(2)}, but ${label(v, category).replace(/^The /, "the ")} has VAT amount ${v.taxAmount}.`,
+        at2(v, "taxAmount"),
+        { expected: toNumber(shown2).toFixed(2), actual: String(v.taxAmount) }
+      );
+    }
+  }
+  for (const prefix of ["G", "IG", "IP"]) {
+    const category = categoryOf(prefix, cii);
+    for (const { v, category: c, vat } of rows) {
+      if (c !== category || !vat) continue;
+      const hasReason = !!(v.locs["exemptionReason"] || v.locs["exemptionCode"]);
+      if (prefix === "G" ? hasReason : !hasReason) continue;
+      emit(
+        `BR-${prefix}-10`,
+        prefix === "G" ? `${label(v, category)} has no VAT exemption reason (BT-120) or reason code (BT-121).` : `${label(v, category)} has a VAT exemption reason; IGIC and IPSI are taxed, so it must not have one.`,
+        prefix === "G" ? at2(v, "category") : at2(v, v.locs["exemptionCode"] ? "exemptionCode" : "exemptionReason"),
+        prefix === "G" ? { expected: "VATEX-EU-G or the text 'Export outside the EU'" } : {}
+      );
+    }
+  }
+  const oRows = rows.filter((r) => r.category === "O" && r.vat);
+  if (oRows.length > 0) {
+    const first = oRows[0].v;
+    const oLoc = at2(first, "category");
+    if (cii) {
+      const lineCat = (ln) => ln.locs["vatCategoryCode"] ? exactText2(ln.vatCategory, ln.locs["vatCategoryCode"]) : void 0;
+      const otherTax = rows.some((r) => r.category !== void 0 && r.category !== "O") || m.lines.some((ln) => {
+        const c = lineCat(ln);
+        return c !== void 0 && c !== "O";
+      });
+      const otherAc = acs.some((x) => x.category !== void 0 && x.category !== "O");
+      for (const id of ["BR-O-11", "BR-O-12"]) if (otherTax) emit(id, `The invoice has a VAT breakdown in category ${catName("O")}, but also a VAT breakdown or invoice line in another category.`, oLoc);
+      for (const id of ["BR-O-13", "BR-O-14"]) if (otherAc) emit(id, `The invoice has a VAT breakdown in category ${catName("O")}, but an allowance or charge in another VAT category.`, oLoc);
+    } else {
+      const other = rows.find((r) => r.vat && r.category !== "O");
+      if (other)
+        emit("BR-O-11", `The invoice has a VAT breakdown in category ${catName("O")}, so it can't have other VAT breakdowns (found ${other.category ? catName(other.category) : "one without a category"}).`, at2(other.v, "category"));
+      const otherLine = m.lines.find((ln) => ln.locs["vatCategory"] && isVat(ln.vatScheme, ln.locs["vatScheme"]) && normSpace(ln.vatCategory) !== "O");
+      if (otherLine)
+        emit("BR-O-12", `The invoice has a VAT breakdown in category ${catName("O")}, so every line must be in category O too (line ${otherLine.id ?? "?"} is ${otherLine.vatCategory ?? "without a category"}).`, otherLine.locs["vatCategory"] ?? otherLine.loc);
+      for (const charge of [false, true]) {
+        const hit = acs.find((x) => x.charge === charge && isVat(x.ac.vatScheme, x.ac.locs["vatScheme"]) && normSpace(x.ac.vatCategory) !== "O");
+        if (hit)
+          emit(
+            charge ? "BR-O-14" : "BR-O-13",
+            `The invoice has a VAT breakdown in category ${catName("O")}, so a ${kindOf(charge)} can't be in VAT category ${hit.category ? catName(hit.category) : "(empty)"}.`,
+            hit.ac.locs["vatCategory"] ?? hit.ac.loc
+          );
+      }
+    }
+  }
+  for (const prefix of ["IG", "IP"]) {
+    const category = categoryOf(prefix, cii);
+    const inCategory = m.lines.filter((ln) => {
+      const codeLoc = ln.locs["vatCategoryCode"];
+      if (!codeLoc) return false;
+      const c = cii ? exactText2(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
+      return c === category && isVat(ln.vatScheme, ln.locs["vatScheme"]);
+    });
+    if (inCategory.length === 0 || identifiersOk(prefix)) continue;
+    for (const ln of cii ? inCategory : inCategory.slice(0, 1))
+      emit(
+        `BR-${prefix}-02`,
+        `${cii ? `Line ${ln.id ?? "?"} is` : "The invoice has lines"} in VAT category ${catName(category)}, so it needs ${SELLER_IDS}.`,
+        ln.locs["vatCategoryCode"] ?? ln.loc
+      );
+  }
+  for (const prefix of ["IG", "IP"]) {
+    const category = categoryOf(prefix, cii);
+    const test = cii && prefix === "IP" ? "positive" : "non-negative";
+    for (const ln of m.lines) {
+      const codeLoc = ln.locs["vatCategoryCode"];
+      if (!codeLoc) continue;
+      const c = cii ? exactText2(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
+      if (c !== category || !isVat(ln.vatScheme, ln.locs["vatScheme"])) continue;
+      if (rateOk(test, !!ln.locs["vatRate"], ln.vatRate)) continue;
+      emit(
+        `BR-${prefix}-05`,
+        `Line ${ln.id ?? "?"} in VAT category ${catName(category)} has VAT rate ${ln.vatRate ?? "missing"}; it must be ${RATE_EXPECTED[test]}.`,
+        ln.locs["vatRate"] ?? codeLoc,
+        { expected: RATE_EXPECTED[test], actual: ln.vatRate === void 0 ? void 0 : String(ln.vatRate) }
+      );
+    }
+  }
+}
+
+// src/engine/rules-code-lists.ts
+var listed = (set, raw) => {
+  const v = normSpace(raw);
+  return !v.includes(" ") && set.has(v);
+};
+var shown = (raw) => normSpace(raw) === "" ? "(empty)" : `"${normSpace(raw)}"`;
+function codeListRules(m, emit, peppol) {
+  const cii = m.syntax === "CII";
+  const values = m.codedValues ?? [];
+  const of = (kind) => values.filter((v) => v.kind === kind);
+  for (const c of of(cii ? "dueDateTypeCode" : "periodDescriptionCode")) {
+    if (listed(cii ? CII_DUE_DATE_TYPE_CODES : UBL_VAT_DATE_CODES, c.value)) continue;
+    const expected = cii ? "5, 29 or 72" : "3, 35 or 432";
+    emit("BR-CL-06", `${c.owner} VAT point date code (BT-8) ${shown(c.value)} is not ${expected}.`, c.loc, { actual: normSpace(c.value), expected });
+  }
+  if (peppol && !cii)
+    for (const c of of("periodDescriptionCode")) {
+      if (UBL_VAT_DATE_CODES.has(normSpace(c.value))) continue;
+      emit("PEPPOL-EN16931-CL006", `${c.owner} VAT point date code (BT-8) ${shown(c.value)} is not 3, 35 or 432 (UNCL 2005).`, c.loc, {
+        actual: normSpace(c.value),
+        expected: "3, 35 or 432"
+      });
+    }
+  if (cii) {
+    for (const c of of("subjectCode")) {
+      if (listed(UNTDID_4451_CODES, c.value)) continue;
+      emit("BR-CL-08", `Invoice note subject code (BT-21) ${shown(c.value)} is not a UNTDID 4451 code.`, c.loc, { actual: normSpace(c.value), expected: "AAI, SUR, REG, ABL, TXD …" });
+    }
+  } else {
+    for (const c of of("rootNote")) {
+      const first = c.value.indexOf("#");
+      if (first < 0) continue;
+      const rest = c.value.slice(first + 1);
+      const second = rest.indexOf("#");
+      const code = second < 0 ? "" : rest.slice(0, second);
+      if ([...code].length !== 3 || UNTDID_4451_TEXT.includes(code)) continue;
+      emit("BR-CL-08", `Invoice note subject code (BT-21) "#${code}#" is not a UNTDID 4451 code.`, c.loc, { actual: code, expected: "AAI, SUR, REG, ABL, TXD …" });
+    }
+  }
+  const ICD = [
+    { kind: "partyIdScheme", id: "BR-CL-10", what: cii ? "global identifier" : "party identifier" },
+    { kind: "itemIdScheme", id: "BR-CL-21", what: "item standard identifier (BT-157)" },
+    { kind: "deliveryIdScheme", id: "BR-CL-26", what: "deliver-to location identifier (BT-71)" }
+  ];
+  for (const { kind, id, what } of ICD)
+    for (const c of of(kind)) {
+      if (listed(ICD_CODES, c.value)) continue;
+      if (kind === "partyIdScheme" && !cii && c.sellerOrPayee && normSpace(c.value) === "SEPA") continue;
+      emit(id, `${c.owner} ${what} scheme ${shown(c.value)} is not an ISO/IEC 6523 ICD code.`, c.loc, {
+        actual: normSpace(c.value),
+        expected: kind === "partyIdScheme" && !cii ? "an ICD code such as 0088 (GLN), or SEPA for the seller or payee" : "an ICD code such as 0088 (GLN) or 0160 (GTIN)"
+      });
+    }
+  for (const c of of("exemptionCode")) {
+    const v = normSpace(c.value);
+    if (!v.includes(" ") && CEN_VATEX_CODES.has(normSpace(c.value.toUpperCase()))) continue;
+    emit("BR-CL-22", `${c.owner} VAT exemption reason code ${shown(c.value)} is not a VATEX code.`, c.loc, { actual: v, expected: "VATEX-EU-AE, VATEX-EU-IC, VATEX-EU-G …" });
+  }
+  for (const c of of("creditTransferAccount")) {
+    if (c.value !== "") continue;
+    emit("BR-50", "A credit transfer (payment means 30 or 58) has a payee account without an account identifier (BT-84).", c.loc);
+  }
+  const hasCode = (kinds, code, docLevelOnly = false) => values.some((v) => kinds.includes(v.kind) && v.value === code && (!docLevelOnly || v.kind !== "taxCategory" || v.docLevel));
+  const splitPayment = cii ? hasCode(["categoryCode"], "B") : hasCode(["taxCategory", "itemTaxCategory"], "B");
+  if (splitPayment) {
+    const foreign = values.find((v) => v.kind === (cii ? "country" : "identificationCode") && v.value !== "IT");
+    if (foreign)
+      emit("BR-B-01", `The invoice uses VAT category B (split payment), which is for Italian invoices only, but it has country code ${shown(foreign.value)}.`, foreign.loc, {
+        actual: normSpace(foreign.value),
+        expected: "IT"
+      });
+  }
+  const splitAtDoc = cii ? splitPayment : hasCode(["taxCategory", "itemTaxCategory"], "B", true);
+  const standard = cii ? hasCode(["categoryCode"], "S") : hasCode(["taxCategory", "itemTaxCategory"], "S", true);
+  if (splitAtDoc && standard)
+    emit("BR-B-02", "The invoice uses both VAT category B (split payment) and S (standard rated); a split-payment invoice can't contain standard-rated items.", values.find((v) => (v.kind === "taxCategory" || v.kind === "itemTaxCategory" || v.kind === "categoryCode") && v.value === "S")?.loc);
+}
 
 // src/engine/vat-id.ts
 var dg = (s, i) => Number(s[i]);
@@ -6748,7 +8312,7 @@ var NL_PAYMENT_MEANS = /* @__PURE__ */ new Set(["30", "48", "49", "57", "58", "5
 var NLCIUS_TYPE_CODES = /* @__PURE__ */ new Set(["380", "381", "384", "389"]);
 var isKvkOrOin = (id) => !!id && (id.scheme?.trim() === "0106" || id.scheme?.trim() === "0190") && id.id.trim() !== "";
 var isNL = (country) => country?.trim().toUpperCase() === "NL";
-var normSpace = (v) => (v ?? "").replace(/\s+/g, " ").trim();
+var normSpace2 = (v) => (v ?? "").replace(/\s+/g, " ").trim();
 var countryIs = (p, code) => p?.address?.country?.trim().toUpperCase() === code;
 function missingAddressElements(locs) {
   return [
@@ -6787,6 +8351,25 @@ var VAT_PREFIX_EXTRAS = /* @__PURE__ */ new Set(["EL", "XI", "1A"]);
 var PER_RATE_CATEGORIES = /* @__PURE__ */ new Set(["S", "L", "M"]);
 var ONE_BREAKDOWN_ROW = /* @__PURE__ */ new Set(["Z", "E", "AE", "K", "G", "O"]);
 var rateKey = (rate) => rate === void 0 ? "" : String(round2(rate));
+var VATEX_CATEGORY_RULES = {
+  "VATEX-EU-G": { id: "PEPPOL-EN16931-P0104", category: "G" },
+  "VATEX-EU-O": { id: "PEPPOL-EN16931-P0105", category: "O" },
+  "VATEX-EU-IC": { id: "PEPPOL-EN16931-P0106", category: "K" },
+  "VATEX-EU-AE": { id: "PEPPOL-EN16931-P0107", category: "AE" },
+  "VATEX-EU-D": { id: "PEPPOL-EN16931-P0108", category: "E" },
+  "VATEX-EU-F": { id: "PEPPOL-EN16931-P0109", category: "E" },
+  "VATEX-EU-I": { id: "PEPPOL-EN16931-P0110", category: "E" },
+  "VATEX-EU-J": { id: "PEPPOL-EN16931-P0111", category: "E" }
+};
+function peppolDateOk(d, cii) {
+  if (cii) return normSpace2(d.format) === "102" && d.raw.length === 8 && /20[0-9]{6}/.test(normSpace2(d.raw));
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d.raw);
+  if (!m) return false;
+  const [y, mo, da] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(2e3, mo - 1, da));
+  date.setUTCFullYear(y);
+  return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === da;
+}
 function runRules(m, fmt, opts) {
   const out = [];
   const emit = (ruleId, message, loc, extra = {}) => {
@@ -6846,12 +8429,64 @@ function runRules(m, fmt, opts) {
       actual: m.currency,
       expected: "EUR, USD, GBP …"
     });
-  if (m.taxCurrency && !ISO_4217.has(m.taxCurrency))
+  if (m.locs["taxCurrency"] && !ISO_4217.has(normSpace2(m.taxCurrency)))
     emit(
-      "BR-CL-04",
-      `VAT accounting currency "${m.taxCurrency}" is not an ISO 4217 code.`,
-      at2(m.locs, "taxCurrency")
+      "BR-CL-05",
+      `VAT accounting currency "${m.taxCurrency ?? ""}" (BT-6) is not an ISO 4217 code.`,
+      at2(m.locs, "taxCurrency"),
+      { actual: m.taxCurrency, expected: "EUR, USD, GBP …" }
     );
+  {
+    const bad = (m.currencyIds ?? []).filter((c) => !ISO_4217.has(normSpace2(c.currency)));
+    for (const c of bad.slice(0, 25))
+      emit(
+        "BR-CL-03",
+        c.currency === void 0 ? `${c.element} has no currencyID; it must be an ISO 4217 code.` : `${c.element} has currencyID "${c.currency}", which is not an ISO 4217 code.`,
+        c.loc,
+        { actual: c.currency, expected: "EUR, USD, GBP …" }
+      );
+    if (opts.peppol)
+      for (const c of (m.currencyIds ?? []).filter((x) => !ISO_4217.has(x.currency ?? "")).slice(0, 25))
+        emit(
+          "PEPPOL-EN16931-CL007",
+          c.currency === void 0 ? `${c.element} has no currencyID; Peppol needs an ISO 4217 code.` : `${c.element} has currencyID "${c.currency}"; Peppol needs an ISO 4217 code written exactly, without spaces.`,
+          c.loc,
+          { actual: c.currency, expected: "EUR, USD, GBP …" }
+        );
+  }
+  codeListRules(m, emit, !!opts.peppol);
+  for (const o of m.objectIdSchemes ?? [])
+    if (!UNTDID_1153_CODES.has(normSpace2(o.scheme)))
+      emit("BR-CL-07", `The invoiced object identifier (BT-18) uses scheme "${o.scheme}", which is not a UNTDID 1153 reference code.`, o.loc, {
+        actual: o.scheme,
+        expected: "AAA, AJS, ATS …"
+      });
+  const CODE_LISTS = {
+    country: { id: "BR-CL-14", ok: (v) => CEN_COUNTRY_CODES.has(v), what: "country code", list: "an ISO 3166-1 alpha-2 code", example: "DE, FR, NL …" },
+    originCountry: { id: "BR-CL-15", ok: (v) => CEN_COUNTRY_CODES.has(v), what: "item country of origin (BT-159)", list: "an ISO 3166-1 alpha-2 code", example: "DE, FR, CN …" },
+    classificationScheme: { id: "BR-CL-13", ok: (v) => UNTDID_7143_CODES.has(v), what: "item classification scheme (listID, BT-158-1)", list: "a UNTDID 7143 scheme", example: "STI, TST, HS …" },
+    taxCategory: { id: "BR-CL-17", ok: (v) => UNCL_5305_CODES.has(v), what: "VAT category", list: "a UNCL 5305 code", example: "S, Z, E, AE, K, G, O, L, M" },
+    itemTaxCategory: { id: "BR-CL-18", ok: (v) => UNCL_5305_CODES.has(v), what: "VAT category", list: "a UNCL 5305 code", example: "S, Z, E, AE, K, G, O, L, M" }
+  };
+  for (const c of m.codedValues ?? []) {
+    if (!(c.kind in CODE_LISTS)) continue;
+    const spec = CODE_LISTS[c.kind];
+    const v = normSpace2(c.value);
+    if (spec.ok(v)) continue;
+    emit(spec.id, `${c.owner} ${spec.what} "${c.value.trim()}" is not ${spec.list}${c.kind === "country" && v === "UK" ? " (use GB)" : ""}.`, c.loc, {
+      actual: c.value.trim(),
+      expected: c.kind === "country" && v === "UK" ? "GB" : spec.example
+    });
+  }
+  if (m.syntax === "UBL") {
+    const long = (m.amountTexts ?? []).filter((a) => (a.raw.includes(".") ? a.raw.slice(a.raw.indexOf(".") + 1) : "").length > 2);
+    for (const a of long.slice(0, 25))
+      emit("UBL-DT-01", `${a.element} is "${a.raw.trim()}"; amounts may have at most two decimals.`, a.loc, { actual: a.raw.trim() });
+    for (const b of m.binaryObjects ?? []) {
+      if (b.mime === void 0) emit("UBL-DT-06", `${b.element}${b.filename ? ` "${b.filename}"` : ""} has no mimeCode attribute.`, b.loc);
+      if (b.filename === void 0) emit("UBL-DT-07", `${b.element} has no filename attribute.`, b.loc);
+    }
+  }
   if (m.taxCurrency && T.taxAmountAccounting === void 0 && !m.taxTotals.some((t) => t.amount !== void 0 && t.currency?.trim() === m.taxCurrency?.trim()))
     emit(
       "BR-53",
@@ -6861,8 +8496,9 @@ function runRules(m, fmt, opts) {
   for (const a of m.attachments) {
     if (!a.id) emit("BR-52", "A supporting document (BG-24) has no document reference (BT-122).", a.loc);
   }
+  const attachmentElement = m.syntax === "UBL" ? "EmbeddedDocumentBinaryObject" : "AttachmentBinaryObject";
   for (const b of m.binaryObjects ?? []) {
-    if (ATTACHMENT_MIME_CODES.has(b.mime.trim())) continue;
+    if (b.element !== attachmentElement || b.mime === void 0 || ATTACHMENT_MIME_CODES.has(b.mime.trim())) continue;
     const what = `Attachment ${b.filename ? `"${b.filename}" ` : ""}has mimeCode "${b.mime}", which is not an allowed MIME code.`;
     emit("BR-CL-24", what, b.loc, { actual: b.mime, expected: "application/pdf" });
     if (opts.peppol) emit("PEPPOL-EN16931-CL001", what, b.loc, { actual: b.mime, expected: "application/pdf" });
@@ -6898,7 +8534,7 @@ function runRules(m, fmt, opts) {
     );
   if (opts.peppol) {
     const cii = m.syntax === "CII";
-    const profileApproved = (cii ? PEPPOL_CII_PROFILE_IDS : PEPPOL_PROFILE_IDS).has(normSpace(m.profileId));
+    const profileApproved = (cii ? PEPPOL_CII_PROFILE_IDS : PEPPOL_PROFILE_IDS).has(normSpace2(m.profileId));
     if (!m.locs["profileId"])
       emit(
         "PEPPOL-EN16931-R001",
@@ -6914,7 +8550,7 @@ function runRules(m, fmt, opts) {
           expected: PEPPOL_PROFILE_ID
         }
       );
-    const cid = normSpace(m.customizationId);
+    const cid = normSpace2(m.customizationId);
     if (!cid.startsWith(PEPPOL_CUSTOMIZATION_ID) || cid.includes("::"))
       emit(
         "PEPPOL-EN16931-R004",
@@ -6945,7 +8581,7 @@ function runRules(m, fmt, opts) {
         "PEPPOL-EN16931-R003",
         "Neither a buyer reference nor a purchase order reference is present."
       );
-    const tc = normSpace(m.typeCode);
+    const tc = normSpace2(m.typeCode);
     if (m.locs["typeCode"] && profileApproved) {
       if (cii) {
         if (!PEPPOL_INVOICE_TYPE_CODES.has(tc) && !PEPPOL_CREDIT_NOTE_TYPE_CODES.has(tc))
@@ -6997,6 +8633,30 @@ function runRules(m, fmt, opts) {
           withSub[1]?.loc
         );
     }
+    {
+      const docCurrency = m.locs["currency"] ? exactText2(m.currency, m.locs["currency"]) : void 0;
+      const extra = cii ? m.taxTotals.filter((t) => t.currency !== void 0 && docCurrency !== void 0 && t.currency !== docCurrency) : m.taxTotals.filter((t) => !t.hasSubtotals);
+      const want = m.locs["taxCurrency"] ? 1 : 0;
+      if (extra.length !== want)
+        emit(
+          "PEPPOL-EN16931-R054",
+          want === 1 ? `TaxCurrencyCode is given, so there must be exactly one VAT total in the accounting currency${cii ? "" : " (a TaxTotal without TaxSubtotal)"}; found ${extra.length}.` : `There is ${extra.length === 1 ? "a VAT total" : `${extra.length} VAT totals`} ${cii ? "in another currency than the invoice currency" : "without a VAT breakdown (TaxSubtotal)"}, but no TaxCurrencyCode (BT-6).`,
+          extra[want]?.loc ?? extra[0]?.loc ?? at2(m.locs, "taxCurrency", tLoc("taxAmount")),
+          { expected: String(want), actual: String(extra.length) }
+        );
+    }
+    const docRefs = (code) => m.attachments.filter((a) => a.typeCode === code);
+    if (cii && docRefs("130").length > 1)
+      emit("PEPPOL-EN16931-R006", `The invoice has ${docRefs("130").length} invoiced object references (type code 130); Peppol allows one.`, docRefs("130")[1].loc);
+    if ((cii || m.kind === "creditnote") && docRefs("50").length > 1)
+      emit("PEPPOL-EN16931-R080", `The ${cii ? "invoice" : "credit note"} has ${docRefs("50").length} tender or lot references (type code 50); Peppol allows one.`, docRefs("50")[1].loc);
+    for (const d of (m.dates ?? []).filter((x) => !peppolDateOk(x, cii)).slice(0, 25))
+      emit(
+        "PEPPOL-EN16931-F001",
+        cii ? `Date "${d.raw}"${normSpace2(d.format) !== "102" ? ` has format ${d.format === void 0 ? "missing" : `"${d.format}"`}, not 102,` : ""} must be 8 digits YYYYMMDD starting with 20.` : `${d.element} "${d.raw}" is not a date written as YYYY-MM-DD.`,
+        d.loc,
+        { actual: d.raw, expected: cii ? "20250131 (format 102)" : "2025-01-31" }
+      );
     if (m.locs["taxCurrency"]) {
       const amounts = (c) => m.taxTotals.filter((t) => c !== void 0 && t.currency === c && t.amount !== void 0).map((t) => t.amount);
       const inTax = amounts(m.taxCurrency);
@@ -7060,28 +8720,6 @@ function runRules(m, fmt, opts) {
       "The deliver-to address has no country code.",
       at2(m.delivery.locs, "address", m.delivery.loc)
     );
-  const countryChecks = [
-    [seller.address?.country, seller.locs["address.country"], "Seller"],
-    [buyer.address?.country, buyer.locs["address.country"], "Buyer"],
-    [m.delivery?.address?.country, m.delivery?.locs["address.country"], "Deliver-to"],
-    [
-      m.taxRepresentative?.address?.country,
-      m.taxRepresentative?.locs["address.country"],
-      "Tax representative"
-    ]
-  ];
-  for (const [code, loc, who] of countryChecks) {
-    if (code && !ISO_3166[code])
-      emit(
-        "BR-CL-14",
-        `${who} country "${code}" is not an ISO 3166-1 alpha-2 code${code === "UK" ? " (use GB)" : ""}.`,
-        loc,
-        {
-          actual: code,
-          expected: code === "UK" ? "GB" : "DE, FR, NL …"
-        }
-      );
-  }
   const endpointChecks = [
     [seller, "Seller", "BR-62", "PEPPOL-EN16931-R020"],
     [buyer, "Buyer", "BR-63", "PEPPOL-EN16931-R010"]
@@ -7205,6 +8843,12 @@ function runRules(m, fmt, opts) {
       seller.loc
     );
   for (const pm of m.paymentMeans) {
+    if (pm.locs["cardPan"] && normSpace2(pm.cardPan).length > 10)
+      emit("BR-51", `The payment card number (BT-87) has ${normSpace2(pm.cardPan).length} characters; show at most the first 6 and last 4 digits.`, pm.locs["cardPan"], {
+        severity: m.syntax === "CII" ? "error" : "warning",
+        actual: `${normSpace2(pm.cardPan).length} characters`,
+        expected: "at most 10"
+      });
     if (!pm.code) {
       emit("BR-49", "A payment instruction has no payment means code.", pm.loc);
       continue;
@@ -7269,16 +8913,19 @@ function runRules(m, fmt, opts) {
       emit(ac.isCharge ? "BR-36" : "BR-31", `A document ${kind} has no amount.`, ac.loc);
     if (!ac.vatCategory)
       emit(ac.isCharge ? "BR-37" : "BR-32", `A document ${kind} has no VAT category.`, ac.loc);
-    else if (!VAT_CATEGORIES[ac.vatCategory])
-      emit(
-        "BR-CL-17",
-        `VAT category "${ac.vatCategory}" on a document ${kind} is not in UNCL5305.`,
-        at2(ac.locs, "vatCategory")
-      );
     if (!ac.reason && !ac.reasonCode)
       emit(
         ac.isCharge ? "BR-38" : "BR-33",
         `A document ${kind} has neither a reason nor a reason code.`,
+        ac.loc
+      );
+    const indicator = m.syntax === "CII" ? exactText2(ac.rawIndicator, ac.locs["indicator"]) : xsBoolean(ac.rawIndicator);
+    const isAllowance = m.syntax === "CII" ? indicator === "false" : indicator === false;
+    const isChargeExact = m.syntax === "CII" ? indicator === "true" : indicator === true;
+    if ((isAllowance || isChargeExact) && !ac.locs["reason"] && !ac.locs["reasonCode"])
+      emit(
+        isAllowance ? "BR-CO-21" : "BR-CO-22",
+        `A document-level ${isAllowance ? "allowance" : "charge"} has neither a reason (${isAllowance ? "BT-97" : "BT-104"}) nor a reason code (${isAllowance ? "BT-98" : "BT-105"}).`,
         ac.loc
       );
     peppolPercent(ac);
@@ -7322,6 +8969,24 @@ function runRules(m, fmt, opts) {
   };
   m.allowances.forEach(docAc);
   m.charges.forEach(docAc);
+  for (const { ac, level } of everyAllowanceCharge(m)) {
+    if (level === "price" && m.syntax === "CII") continue;
+    const where = level === "document" ? "A document-level" : level === "line" ? "A line" : "A price-level";
+    if (!ac.locs["reasonCode"]) continue;
+    const code = normSpace2(ac.reasonCode);
+    const flag = xsBoolean(ac.rawIndicator);
+    if (flag === false && !UNCL_5189_CODES.has(code))
+      emit("BR-CL-19", `${where} allowance has reason code "${code}", which is not a UNCL 5189 allowance reason code.`, ac.locs["reasonCode"], { actual: code, expected: "95, 100, 41 …" });
+    if (flag === true && !UNCL_7161_CODES.has(code))
+      emit("BR-CL-20", `${where} charge has reason code "${code}", which is not a UNCL 7161 charge reason code.`, ac.locs["reasonCode"], { actual: code, expected: "FC, ABL, ADR …" });
+    if (opts.peppol) {
+      const raw = m.syntax === "CII" ? normSpace2(ac.rawIndicator) : exactText2(ac.rawIndicator, ac.locs["indicator"]);
+      if (raw === "false" && !UNCL_5189_CODES.has(code))
+        emit("PEPPOL-EN16931-CL002", `${where} allowance has reason code "${code}", which is not a UNCL 5189 allowance reason code.`, ac.locs["reasonCode"], { actual: code, expected: "95, 100, 41 …" });
+      if (raw === "true" && !UNCL_7161_CODES.has(code))
+        emit("PEPPOL-EN16931-CL003", `${where} charge has reason code "${code}", which is not a UNCL 7161 charge reason code.`, ac.locs["reasonCode"], { actual: code, expected: "FC, ABL, ADR …" });
+    }
+  }
   if (opts.en16931) {
     if (m.lines.length === 0) emit("BR-16", "The invoice has no lines.");
     const unitWarned = /* @__PURE__ */ new Set();
@@ -7378,16 +9043,28 @@ function runRules(m, fmt, opts) {
           );
       }
       if (!ln.vatCategory) emit("BR-CO-04", `${label} has no VAT category.`, L("vatCategory"));
-      else if (!VAT_CATEGORIES[ln.vatCategory])
-        emit(
-          "BR-CL-17",
-          `${label} VAT category "${ln.vatCategory}" is not in UNCL5305.`,
-          L("vatCategory"),
-          {
-            actual: ln.vatCategory,
-            expected: "S, Z, E, AE, K, G, O"
-          }
-        );
+      for (const ac of [...ln.allowances, ...ln.charges]) {
+        const ind = m.syntax === "CII" ? exactText2(ac.rawIndicator, ac.locs["indicator"]) : xsBoolean(ac.rawIndicator);
+        const allowance = m.syntax === "CII" ? ind === "false" : ind === false;
+        const charge = m.syntax === "CII" ? ind === "true" : ind === true;
+        if ((allowance || charge) && !ac.locs["reason"] && !ac.locs["reasonCode"])
+          emit(
+            allowance ? "BR-CO-23" : "BR-CO-24",
+            `${label} has ${allowance ? "an allowance" : "a charge"} with neither a reason (${allowance ? "BT-139" : "BT-144"}) nor a reason code (${allowance ? "BT-140" : "BT-145"}).`,
+            ac.loc
+          );
+      }
+      if (opts.peppol) {
+        const refs = ln.documentRefs ?? [];
+        const objects = m.syntax === "CII" ? refs.filter((r) => r.typeCode === "130") : refs;
+        if (objects.length > 1)
+          emit("PEPPOL-EN16931-R100", `${label} has ${objects.length} ${m.syntax === "CII" ? "invoiced object references (type code 130)" : "document references"}; Peppol allows one per line.`, objects[1].loc);
+        if (refs.length > 0 && !refs.some((r) => r.typeCode === "130"))
+          emit("PEPPOL-EN16931-R101", `${label} has a document reference with type code ${refs[0].typeCode ?? "(none)"}; on a line it may only be an invoiced object (130).`, refs[0].loc, {
+            actual: refs[0].typeCode,
+            expected: "130"
+          });
+      }
       const cat = ln.vatCategory;
       const rate = ln.vatRate;
       if (cat === "S" && (rate === void 0 || rate <= 0))
@@ -7610,10 +9287,6 @@ function runRules(m, fmt, opts) {
       if (v.taxAmount === void 0 && !v.locs["taxAmount"])
         emit("BR-46", `${label} has no tax amount.`, v.loc);
       if (!v.category) emit("BR-47", "A VAT breakdown has no category code.", v.loc);
-      else if (!VAT_CATEGORIES[v.category])
-        emit("BR-CL-17", `VAT category "${v.category}" is not in UNCL5305.`, V("category"), {
-          actual: v.category
-        });
       if (v.category && v.category !== "O" && v.rate === void 0)
         emit("BR-48", `${label} has no rate.`, V("category"));
       if (v.taxableAmount !== void 0 && v.taxAmount !== void 0 && v.rate !== void 0) {
@@ -7623,13 +9296,13 @@ function runRules(m, fmt, opts) {
         const expected = zeroRate ? ZERO : round22(div(mul(abs(dec(v.taxableAmount)), rate), dec(100)));
         const ok = zeroRate ? isZero(round(tax)) : m.syntax === "CII" ? withinOrEqual(abs(tax), expected, ONE_UNIT) : within(abs(tax), expected, ONE_UNIT);
         if (!ok) {
-          const shown = v.taxableAmount < 0 ? neg(expected) : expected;
+          const shown2 = v.taxableAmount < 0 ? neg(expected) : expected;
           emit(
             "BR-CO-17",
-            `${f2(v.taxableAmount)} × ${v.rate}% = ${fd(shown)}, but the VAT amount is ${f2(v.taxAmount)}.`,
+            `${f2(v.taxableAmount)} × ${v.rate}% = ${fd(shown2)}, but the VAT amount is ${f2(v.taxAmount)}.`,
             V("taxAmount"),
             {
-              expected: fd(shown),
+              expected: fd(shown2),
               actual: f2(v.taxAmount)
             }
           );
@@ -7731,6 +9404,22 @@ function runRules(m, fmt, opts) {
         { expected: fd(computed), actual: f2(v.taxableAmount) }
       );
     }
+    vatCategoryRules(m, emit);
+    if (opts.peppol && m.syntax === "UBL") {
+      const taxCategories = [
+        ...m.vat.map((v) => ({ id: v.category, code: v.exemptionCode, codeLoc: v.locs["exemptionCode"], loc: v.locs["category"] ?? v.loc })),
+        ...everyAllowanceCharge(m).map(({ ac }) => ({ id: ac.vatCategory, code: ac.vatExemptionCode, codeLoc: ac.locs["vatExemptionCode"], loc: ac.locs["vatCategory"] ?? ac.loc }))
+      ];
+      for (const tc of taxCategories) {
+        if (!tc.codeLoc) continue;
+        const rule = VATEX_CATEGORY_RULES[exactText2(tc.code, tc.codeLoc).toUpperCase()];
+        if (!rule || normSpace2(tc.id) === rule.category) continue;
+        emit(rule.id, `Exemption reason code ${tc.code} belongs with VAT category ${rule.category}, but the category is ${tc.id ? `"${tc.id}"` : "missing"}.`, tc.loc, {
+          actual: tc.id,
+          expected: rule.category
+        });
+      }
+    }
     const cats = new Set([...used.values()].map((u) => u.category));
     for (const v of m.vat) if (v.category) cats.add(v.category);
     const sellerVat = Boolean(seller.vatId || m.taxRepresentative?.vatId);
@@ -7791,7 +9480,7 @@ function runRules(m, fmt, opts) {
     const b = m.buyer;
     const cii = m.syntax === "CII";
     const buyerNl = isNL(b.address?.country);
-    const tc = normSpace(m.typeCode);
+    const tc = normSpace2(m.typeCode);
     const isCreditNote = cii ? ["81", "83", "381", "396", "532"].includes(tc) : m.kind === "creditnote" && !!m.locs["typeCode"];
     if (isCreditNote && !m.precedingInvoices.some((p) => p.id))
       emit("NL-R-001", "This credit note from a Dutch supplier doesn't reference the invoice it corrects (BT-25).", at2(m.locs, "typeCode"));
@@ -8144,8 +9833,9 @@ function computeTotals(m) {
     lines
   };
 }
-function rulesApplicable(peppol, en16931, xrechnung, nlcius) {
+function rulesApplicable(peppol, en16931, xrechnung, nlcius, syntax) {
   return RULES.filter((r) => {
+    if (r.syntax && r.syntax !== syntax) return false;
     if (r.source === "Peppol") return peppol;
     if (r.source === "NLCIUS") return nlcius;
     if (r.source === "XRechnung" || r.id.startsWith("IV-DE-")) return xrechnung;
@@ -8244,13 +9934,13 @@ function validateInvoiceXml(xml, profile = "auto") {
     findings,
     counts,
     sections,
-    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius)
+    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius, model.syntax)
   });
 }
 
 // src/version.ts
 var TOOL_NAME = "peppol-ubl-check";
-var VERSION = "1.3.4";
+var VERSION = "1.4.0";
 var SITE_URL = "https://peppol-invoice-compass.lovable.app";
 var VALIDATOR_URL = `${SITE_URL}/validate`;
 var TOOL_PAGE_URL = `${SITE_URL}/tools/peppol-github-action`;
