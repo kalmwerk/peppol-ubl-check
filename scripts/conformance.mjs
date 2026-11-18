@@ -48,11 +48,35 @@ export function longDate(iso) {
 /** 1919 → 1,919 */
 export const num = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-const COUNTRIES = { AU: "Australia", DE: "Germany", DK: "Denmark", GR: "Greece", IT: "Italy", NL: "the Netherlands", NO: "Norway", SE: "Sweden" };
+const COUNTRIES = { AU: "Australia", DE: "Germany", DK: "Denmark", GR: "Greece", IS: "Iceland", IT: "Italy", NL: "the Netherlands", NO: "Norway", SE: "Sweden" };
 /** Countries whose national rules are among the uncovered ones, in alphabetical order. */
 export function nationalCountries(c) {
   const codes = new Set(c.uncovered.national.map((id) => /^([A-Z]{2})-/.exec(id)?.[1]).filter(Boolean));
   return [...codes].map((code) => COUNTRIES[code] ?? code).sort();
+}
+
+/** "Denmark, Germany … and Peppol's identifier formats": what the uncovered national rules are about. */
+export function nationalScope(c) {
+  const parts = nationalCountries(c);
+  if (c.uncovered.national.some((id) => id.startsWith("PEPPOL-COMMON-"))) parts.push("Peppol's identifier formats");
+  return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : (parts[0] ?? "");
+}
+
+/** True when every EN 16931 and Peppol BIS core rule the official tests exercise is checked. */
+export const coreComplete = (c) => c.uncovered.en16931.length === 0 && c.uncovered.peppol.length === 0;
+
+/**
+ * How much of the official rule sets in full the engine checks (from the run's count of every
+ * assertion in the CEN and Peppol Schematron files, tested or not).
+ */
+export function ruleSetsMarkdown(c) {
+  const { business: b, peppol: p, syntax, national } = c.ruleSets;
+  const alwaysTrue = b.alwaysTrue.length ? `, plus ${num(b.alwaysTrue.length)} the official files define as always true` : "";
+  const core =
+    b.notChecked.length === 0 && p.notChecked.length === 0
+      ? `Every EN 16931 business rule that can fail (${num(b.checked)}${alwaysTrue}) and every Peppol BIS core rule (${num(p.checked)}) is checked.`
+      : `Checked: ${num(b.checked)} of the ${num(b.official)} EN 16931 business rules and ${num(p.checked)} of the ${num(p.official)} Peppol BIS core rules.`;
+  return `${core} Not checked: ${num(syntax.official - syntax.checked)} of the ${num(syntax.official)} CEN syntax-binding and data-type rules (UBL-SR, UBL-CR, UBL-DT, CII-SR, CII-DT) and ${num(national.official - national.checked)} of Peppol's ${num(national.official)} national rules.`;
 }
 
 export function totals(c) {
@@ -72,7 +96,10 @@ export function summaryMarkdown(c) {
       : `on the ${num(t.cases)} official unit-test cases of the ${sourceLinks(c)}, the official verdict on ${num(t.compared - t.different)} of the ${num(t.compared)} verdicts compared for the rules this tool checks; ${num(t.different)} differ, listed in [\`${CONFORMANCE_FILE}\`](${CONFORMANCE_FILE}).`;
   return [
     `**Conformance, checked ${longDate(c.checkedOn)}:** ${verdict}`,
-    `Not covered: ${num(t.uncovered)} rules those tests exercise (${num(c.uncovered.en16931.length)} EN 16931, ${num(c.uncovered.peppol.length)} Peppol, ${num(c.uncovered.national.length)} national), listed in [\`${CONFORMANCE_FILE}\`](${CONFORMANCE_FILE}).`,
+    ruleSetsMarkdown(c),
+    coreComplete(c)
+      ? `The ${num(t.uncovered)} rules those tests exercise that aren't checked are all national (${nationalScope(c)}), listed in [\`${CONFORMANCE_FILE}\`](${CONFORMANCE_FILE}).`
+      : `Not covered: ${num(t.uncovered)} rules those tests exercise (${num(c.uncovered.en16931.length)} EN 16931, ${num(c.uncovered.peppol.length)} Peppol, ${num(c.uncovered.national.length)} national), listed in [\`${CONFORMANCE_FILE}\`](${CONFORMANCE_FILE}).`,
     `Reproduce it with \`${COMMAND}\`; CI reruns it on every push and pull request.`,
   ].join(" ");
 }
@@ -80,11 +107,13 @@ export function summaryMarkdown(c) {
 /** The paragraph in "Compared with the official rules". */
 export function detailsMarkdown(c) {
   const t = totals(c);
-  const countries = nationalCountries(c);
   return [
     `\`${COMMAND}\` downloads the official unit tests of the ${sourceLinks(c)} (${num(t.cases)} test cases in UBL and CII: ${num(c.cases.cen)} from CEN, ${num(c.cases.peppol)} from Peppol; the Peppol files may not be redistributed, so they aren't in this repository), compares every expected verdict of a rule this tool checks, and writes the result to [\`${CONFORMANCE_FILE}\`](${CONFORMANCE_FILE}) and the statement at the top of this README.`,
     `Last run, ${longDate(c.checkedOn)}: ${num(t.compared)} verdicts compared, ${num(t.different)} different.`,
-    `${num(t.uncovered)} rules those tests exercise aren't checked here: ${num(c.uncovered.en16931.length)} EN 16931 rules (mostly VAT details of allowances and charges and the VAT amount per category), ${num(c.uncovered.peppol.length)} Peppol BIS rules and ${num(c.uncovered.national.length)} national rules (${countries.join(", ")} and Peppol's identifier formats); \`${CONFORMANCE_FILE}\` lists every one, and \`--list-uncovered\` prints them.`,
+    `It also counts every rule in the official Schematron files, tested or not: ${ruleSetsMarkdown(c).replace(/^\w/, (x) => x.toLowerCase())}`,
+    coreComplete(c)
+      ? `Every EN 16931 and Peppol BIS core rule those tests exercise is checked. The ${num(t.uncovered)} they exercise that aren't checked here are national rules (${nationalScope(c)}); \`${CONFORMANCE_FILE}\` lists every one, and \`--list-uncovered\` prints them.`
+      : `${num(t.uncovered)} rules those tests exercise aren't checked here: ${num(c.uncovered.en16931.length)} EN 16931 rules, ${num(c.uncovered.peppol.length)} Peppol BIS rules and ${num(c.uncovered.national.length)} national rules (${nationalScope(c)}); \`${CONFORMANCE_FILE}\` lists every one, and \`--list-uncovered\` prints them.`,
     `\`${COMMAND} -- --check\` (run in CI) fails when the committed result no longer matches a fresh run or the engine.`,
   ].join(" ");
 }

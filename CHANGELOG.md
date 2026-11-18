@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-11-18
+
+Every EN 16931 business rule and every Peppol BIS Billing 3.0 core rule that can fail is now checked: 99 new rules, 321 in total. The verdicts of the rules 1.3.4 already checked are unchanged, apart from invoices the new rules now flag.
+
+### Added
+- EN 16931 (81 rules, CEN validation artefacts 1.3.17, UBL and CII): the VAT identifiers and the VAT rate that document-level allowances and charges need in every VAT category (BR-S, -Z, -E, -AE, -IC, -G, -O, -IG and -IP-03, -04, -06, -07), the VAT amount per category (the -09 rules), the seller's VAT identifier and the rate of IGIC and IPSI lines (BR-IG-02, -05, BR-IP-02, -05), the exemption reason for exports and its absence for IGIC and IPSI (BR-G-10, BR-IG-10, BR-IP-10), "not subject to VAT" alone on an invoice (BR-O-11…14), reasons for allowances and charges (BR-CO-21…24), the account number for credit transfers (BR-50), payment card numbers (BR-51), Italian split payment (BR-B-01, BR-B-02), the remaining code lists (BR-CL-03, -05…08, -10, -13, -15, -18…22, -26) and the UBL data-type rules for amounts and attachments (UBL-DT-01, -06, -07).
+- Peppol BIS Billing 3.0.22 (18 rules): one invoiced object on document level and per line (R006, CII only; R100, R101), one project reference (R080), the VAT total in accounting currency (R054), date formats (F001), Peppol's code lists for allowance and charge reasons, VAT dates and currencies (CL002, CL003, CL006, CL007) and VAT exemption codes that match their category (P0104…P0111).
+- `test/schematron-parity.test.ts`: 85 invoices (UBL and CII) that break or pass the new rules, each with the verdicts the official Schematron gave for them, compiled from the CEN and Peppol files with Saxon-HE 12.9.
+- 67 more official CEN unit tests in `test/fixtures/en16931-cen/` (UBL invoices and credit notes), now including warnings.
+
+### Changed
+- ISO 4217 currency codes follow the CEN 1.3.17 list exactly (CNH added; six codes the official list doesn't have removed).
+- The conformance statement says when every EN 16931 and Peppol BIS core rule the official tests exercise is checked; the national rules (other countries and Peppol's identifier formats) are still listed as not covered.
+
 ## [1.3.4] - 2026-11-17
 
 No rule changes: the same verdicts as 1.3.3. Ready for the GitHub Marketplace listing.

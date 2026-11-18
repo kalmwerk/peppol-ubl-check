@@ -10,7 +10,17 @@ import {
   type PaymentMeans,
   type VatBreakdown,
 } from "./model";
-import { ReadCtx, collectBinaryObjects, collectCiiSchemeIds, collectEmptyElements } from "./read-utils";
+import {
+  ReadCtx,
+  collectBinaryObjects,
+  collectCodedValues,
+  collectCiiSchemeIds,
+  collectCurrencyIds,
+  collectDates,
+  collectEmptyElements,
+  collectObjectIdSchemes,
+  exactText,
+} from "./read-utils";
 import { all, at, kids, text, type XNode } from "./xml";
 
 export const CII_NS = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100";
@@ -87,9 +97,11 @@ function readParty(ctx: ReadCtx, node: XNode | null): Party {
     p.endpoint = { id: text(uri) ?? "", scheme: uri.attrs["schemeID"] };
     L["endpoint"] = ctx.loc(uri);
   }
+  p.taxRegistrations = [];
   for (const reg of kids(node, "SpecifiedTaxRegistration")) {
     const id = at(reg, "ID");
     if (!id) continue;
+    p.taxRegistrations.push({ scheme: id.attrs["schemeID"], loc: ctx.loc(id) });
     const scheme = id.attrs["schemeID"]?.toUpperCase();
     if (scheme === "FC") {
       p.taxRegistrationId = text(id);
@@ -119,6 +131,7 @@ function readAllowanceCharge(ctx: ReadCtx, node: XNode, level: "doc" | "line"): 
     reasonCode: ctx.str(node, "ReasonCode", locs, "reasonCode"),
     vatCategory: ctx.str(node, "CategoryTradeTax/CategoryCode", locs, "vatCategory"),
     vatRate: ctx.num(node, "CategoryTradeTax/RateApplicablePercent", locs, "vatRate", "BT-96"),
+    vatScheme: ctx.str(node, "CategoryTradeTax/TypeCode", locs, "vatScheme"),
     locs,
     loc: ctx.loc(node),
   };
@@ -224,6 +237,7 @@ export function readCii(root: XNode): InvoiceModel {
       description: text(d, "Name"),
       filename: at(d, "AttachmentBinaryObject")?.attrs["filename"],
       mime: at(d, "AttachmentBinaryObject")?.attrs["mimeCode"],
+      typeCode: exactText(at(d, "TypeCode")),
       loc: ctx.loc(d),
     })),
     amountCurrencies: [],
@@ -326,6 +340,7 @@ export function readCii(root: XNode): InvoiceModel {
       rate: ctx.num(tax, "RateApplicablePercent", sl, "rate", "BT-119"),
       exemptionReason: ctx.str(tax, "ExemptionReason", sl, "exemptionReason"),
       exemptionCode: ctx.str(tax, "ExemptionReasonCode", sl, "exemptionCode"),
+      scheme: ctx.str(tax, "TypeCode", sl, "scheme"),
       locs: sl,
       loc: ctx.loc(tax),
     };
@@ -442,7 +457,7 @@ export function readCii(root: XNode): InvoiceModel {
       }
       line.classification = all(product, "DesignatedProductClassification").map((c) => {
         const code = at(c, "ClassCode");
-        return { id: text(code) ?? "", scheme: code?.attrs["listID"] };
+        return { id: text(code) ?? "", scheme: code?.attrs["listID"], loc: code ? ctx.loc(code) : undefined };
       });
       line.originCountry = ctx.str(product, "OriginTradeCountry/ID", L, "originCountry");
       line.attributes = kids(product, "ApplicableProductCharacteristic").map((c) => ({
@@ -488,6 +503,9 @@ export function readCii(root: XNode): InvoiceModel {
     if (lineTax) {
       line.vatCategory = ctx.str(lineTax, "CategoryCode", L, "vatCategory");
       line.vatRate = ctx.num(lineTax, "RateApplicablePercent", L, "vatRate", "BT-152");
+      line.vatScheme = ctx.str(lineTax, "TypeCode", L, "vatScheme");
+      // vatCategoryCode: the CategoryCode element itself; vatCategory falls back to the tax group for messages
+      if (L["vatCategory"]) L["vatCategoryCode"] = L["vatCategory"];
       if (!L["vatCategory"]) L["vatCategory"] = ctx.loc(lineTax);
     }
     const lp = at(ls, "BillingSpecifiedPeriod");
@@ -496,6 +514,10 @@ export function readCii(root: XNode): InvoiceModel {
       line.periodStart = ctx.ciiDate(lp, "StartDateTime", L, "periodStart", "BT-134");
       line.periodEnd = ctx.ciiDate(lp, "EndDateTime", L, "periodEnd", "BT-135");
     }
+    line.documentRefs = kids(ls, "AdditionalReferencedDocument").map((d) => ({
+      typeCode: exactText(at(d, "TypeCode")),
+      loc: ctx.loc(d),
+    }));
     for (const ac of kids(ls, "SpecifiedTradeAllowanceCharge")) {
       const item = readAllowanceCharge(ctx, ac, "line");
       (item.isCharge ? line.charges : line.allowances).push(item);
@@ -504,7 +526,11 @@ export function readCii(root: XNode): InvoiceModel {
   }
 
   model.schemeIds = collectCiiSchemeIds(root, ctx);
-  model.binaryObjects = collectBinaryObjects(root, "AttachmentBinaryObject", ctx);
+  model.binaryObjects = collectBinaryObjects(root, ctx);
+  model.currencyIds = collectCurrencyIds(root, ctx, "CII");
+  model.objectIdSchemes = collectObjectIdSchemes(root, ctx, "CII");
+  model.dates = collectDates(root, ctx, "CII");
+  model.codedValues = collectCodedValues(root, ctx, "CII");
   model.decimals = ctx.decimals;
   model.typeErrors = ctx.typeErrors;
   model.emptyElements = collectEmptyElements(root, ctx);

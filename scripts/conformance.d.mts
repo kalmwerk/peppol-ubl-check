@@ -7,6 +7,12 @@ export interface OfficialSource {
   /** The folder of the official unit tests the comparison runs */
   tests: string;
 }
+export interface RuleSetCount {
+  /** Distinct official rule IDs in the family */
+  official: number;
+  /** How many of them the engine checks */
+  checked: number;
+}
 export interface Conformance {
   /** Day of the run that wrote this result (UTC, YYYY-MM-DD) */
   checkedOn: string;
@@ -20,6 +26,18 @@ export interface Conformance {
   differences: string[];
   /** Official rule IDs the tests exercise that this tool doesn't check, by family */
   uncovered: { en16931: string[]; peppol: string[]; national: string[] };
+  /**
+   * Every rule of the official Schematron files (CEN UBL + CII, Peppol UBL + CII), tested or not, by
+   * family: how many there are and how many the engine checks; for the business and Peppol core
+   * rules also the ones it doesn't, split into always-true assertions and real gaps.
+   */
+  ruleSets: {
+    business: RuleSetCount & { alwaysTrue: string[]; notChecked: string[] };
+    peppol: RuleSetCount & { alwaysTrue: string[]; notChecked: string[] };
+    syntax: RuleSetCount;
+    /** `countries`: ID prefixes (ISO country codes) of the national rules not checked */
+    national: RuleSetCount & { countries: string[] };
+  };
   /** fingerprint() of the engine and comparison script the result belongs to */
   fingerprint: string;
 }
@@ -34,6 +52,12 @@ export function sameResult(a: Conformance, b: Conformance): boolean;
 export function longDate(iso: string): string;
 export function num(n: number): string;
 export function nationalCountries(c: Conformance): string[];
+/** What the uncovered national rules are about: "Denmark, Germany … and Peppol's identifier formats" */
+export function nationalScope(c: Conformance): string;
+/** True when every EN 16931 and Peppol BIS core rule the official tests exercise is checked */
+export function coreComplete(c: Conformance): boolean;
+/** The sentence on how much of the official rule sets in full the engine checks */
+export function ruleSetsMarkdown(c: Conformance): string;
 export function totals(c: Conformance): { cases: number; compared: number; different: number; uncovered: number };
 export function summaryMarkdown(c: Conformance): string;
 export function detailsMarkdown(c: Conformance): string;

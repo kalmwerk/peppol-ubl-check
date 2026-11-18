@@ -20,6 +20,7 @@ interface OfficialCase {
   description: string;
   xml: string;
   success: string[];
+  warning: string[];
   error: string[];
 }
 
@@ -42,6 +43,7 @@ function readCases(folder: string): OfficialCase[] {
         description: (/<description>([\s\S]*?)<\/description>/.exec(head)?.[1] ?? "").replace(/\s+/g, " ").trim(),
         xml: `<?xml version="1.0" encoding="UTF-8"?>\n${doc[1]!}`,
         success: ids("success"),
+        warning: ids("warning"),
         error: ids("error"),
       });
     });
@@ -68,8 +70,12 @@ describe.each(["ubl-invoice", "ubl-credit-note", "cii"])("CEN unit tests: %s", (
       const own = findings.filter((f) => f.ruleId === ourId(id));
       return own.some((f) => f.severity === "error") ? "error" : own.length ? "warning" : "success";
     };
-    const expected = [...c.success.map((id) => `${id}: success`), ...c.error.map((id) => `${id}: error`)];
-    const actual = [...c.success, ...c.error].map((id) => `${id}: ${verdict(id)}`);
+    const expected = [
+      ...c.success.map((id) => `${id}: success`),
+      ...c.warning.map((id) => `${id}: warning`),
+      ...c.error.map((id) => `${id}: error`),
+    ];
+    const actual = [...c.success, ...c.warning, ...c.error].map((id) => `${id}: ${verdict(id)}`);
     expect(actual, `${key}: ${c.description}`).toEqual(expected);
   });
 });

@@ -8,8 +8,8 @@ const opts: CheckOptions = { cwd: FIXTURES, profile: "peppol", failOn: "error", 
 const ids = (path: string, o: Partial<CheckOptions> = {}) => checkFile(path, { ...opts, ...o }).findings.map((f) => f.ruleId);
 
 describe("the rule engine", () => {
-  it("has 222 rules: 108 EN 16931, 40 Peppol, 32 XRechnung, 30 NLCIUS, 12 extra checks", () => {
-    expect(ruleCounts()).toEqual({ total: 222, EN16931: 108, Peppol: 40, XRechnung: 32, NLCIUS: 30, InvoiceVerify: 12 });
+  it("has 321 rules: 189 EN 16931, 58 Peppol, 32 XRechnung, 30 NLCIUS, 12 extra checks", () => {
+    expect(ruleCounts()).toEqual({ total: 321, EN16931: 189, Peppol: 58, XRechnung: 32, NLCIUS: 30, InvoiceVerify: 12 });
   });
 });
 
@@ -71,7 +71,7 @@ describe("checkFile on the test invoices", () => {
   it("finds the VAT calculation errors, each with a fix and its rule page", () => {
     const r = checkFile("invalid/invalid-vat-calculation.xml", opts);
     expect(r.status).toBe("errors");
-    expect(r.findings.map((f) => f.ruleId)).toEqual(["BR-CO-14", "BR-S-08", "BR-CO-17", "BR-CO-10", "PEPPOL-EN16931-R120"]);
+    expect(r.findings.map((f) => f.ruleId)).toEqual(["BR-CO-14", "BR-S-08", "BR-CO-17", "BR-S-09", "BR-CO-10", "PEPPOL-EN16931-R120"]);
     const vat = r.findings.find((f) => f.ruleId === "BR-CO-17")!;
     expect(vat).toMatchObject({ line: 91, expected: "411.60", actual: "392.00", url: "https://peppol-invoice-compass.lovable.app/rules/br-co-17" });
     expect(vat.fix).toMatch(/round once/);
@@ -138,9 +138,9 @@ describe("checkFiles", () => {
 
   it("adds up the totals and fails on errors", () => {
     const r = checkFiles(all, opts);
-    expect(r.totals).toEqual({ matched: 4, checked: 3, ok: 1, withWarnings: 1, withErrors: 1, skipped: 1, errors: 5, warnings: 1, info: 0 });
+    expect(r.totals).toEqual({ matched: 4, checked: 3, ok: 1, withWarnings: 1, withErrors: 1, skipped: 1, errors: 6, warnings: 1, info: 0 });
     expect(r.result).toBe("failed");
-    expect(r).toMatchObject({ tool: "peppol-ubl-check", rulesAvailable: 222, profile: "peppol", failOn: "error" });
+    expect(r).toMatchObject({ tool: "peppol-ubl-check", rulesAvailable: 321, profile: "peppol", failOn: "error" });
   });
 
   it("passes warnings unless fail-on is warning, and never fails with never", () => {

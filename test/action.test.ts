@@ -36,7 +36,7 @@ describe("the Action (dist/index.js)", () => {
   it("fails the job on errors, with a summary, annotations and outputs", () => {
     const r = runAction({}, repo);
     expect(r.code).toBe(1);
-    expect(r.outputs).toMatchObject({ result: "failed", checked: "3", failed: "1", errors: "5", warnings: "0", skipped: "1", "json-file": "" });
+    expect(r.outputs).toMatchObject({ result: "failed", checked: "3", failed: "1", errors: "6", warnings: "0", skipped: "1", "json-file": "" });
     expect(r.summary).toContain("## ❌ Peppol UBL check: 1 of 3 invoices has errors");
     expect(r.summary).toContain("[BR-CO-17](https://peppol-invoice-compass.lovable.app/rules/br-co-17)");
     expect(r.stdout).toContain("::error title=BR-CO-17%3A VAT amount does not match rate,file=invoices/bad-vat.xml,line=91,col=21::");
@@ -62,7 +62,7 @@ describe("the Action (dist/index.js)", () => {
     const all = runAction({ "fail-on": "never", annotations: "false" }, repo);
     expect(all.code).toBe(0);
     expect(all.outputs["result"]).toBe("passed");
-    expect(all.outputs["errors"]).toBe("5");
+    expect(all.outputs["errors"]).toBe("6");
   });
 
   it("fails when no invoice is found, unless told otherwise", () => {

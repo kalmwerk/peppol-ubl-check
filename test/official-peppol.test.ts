@@ -318,3 +318,285 @@ describe("EN 16931 rules the official artefacts check differently from the stand
     expect(verdict(xml('<ram:BillingSpecifiedPeriod><ram:StartDateTime><udt:DateTimeString format="102">20240101</udt:DateTimeString></ram:StartDateTime></ram:BillingSpecifiedPeriod>'), "BR-IC-11", "en16931")).toBe("success");
   });
 });
+
+describe("Peppol BIS 3.0 rules added in Peppol UBL check 1.4.0", () => {
+  const ac = (charge: boolean, codes: string[]) =>
+    `<cac:AllowanceCharge><cbc:ChargeIndicator>${charge}</cbc:ChargeIndicator>${codes.map((c) => `<cbc:AllowanceChargeReasonCode>${c}</cbc:AllowanceChargeReasonCode>`).join("")}</cac:AllowanceCharge>`;
+  const ciiAc = (charge: boolean, code: string) =>
+    `<ram:SpecifiedTradeAllowanceCharge><ram:ChargeIndicator><udt:Indicator>${charge}</udt:Indicator></ram:ChargeIndicator><ram:ReasonCode>${code}</ram:ReasonCode></ram:SpecifiedTradeAllowanceCharge>`;
+
+  it("CL002 and CL003 check allowance and charge reason codes against Peppol's lists (PEPPOL-EN16931-CL002/CL003.xml)", () => {
+    expect(verdict(ubl(ac(false, ["60", "70", "100"])), "PEPPOL-EN16931-CL002")).toBe("success");
+    expect(verdict(ubl(ac(false, ["40", "80", "110"])), "PEPPOL-EN16931-CL002")).toBe("error");
+    expect(verdict(ubl(ac(true, ["AA", "ABL", "ZZZ"])), "PEPPOL-EN16931-CL003")).toBe("success");
+    expect(verdict(ubl(ac(true, ["XYZ"])), "PEPPOL-EN16931-CL003")).toBe("error");
+    // An allowance code on a charge is a charge-code question, so CL002 leaves it alone
+    expect(verdict(ubl(ac(true, ["95"])), "PEPPOL-EN16931-CL002")).toBe("success");
+    const settle = (s: string) => cii(ciiTx({ settlement: s }));
+    expect(verdict(settle(ciiAc(false, "95")), "PEPPOL-EN16931-CL002")).toBe("success");
+    expect(verdict(settle(ciiAc(false, "110")), "PEPPOL-EN16931-CL002")).toBe("error");
+    expect(verdict(settle(ciiAc(true, "FC")), "PEPPOL-EN16931-CL003")).toBe("success");
+    expect(verdict(settle(ciiAc(true, "XYZ")), "PEPPOL-EN16931-CL003")).toBe("error");
+  });
+
+  it("CL007 needs an ISO 4217 currencyID on every UBL amount, and on CII VAT totals that carry one (PEPPOL-EN16931-CL007.xml)", () => {
+    const total = (attr: string) => ubl(`<cac:LegalMonetaryTotal><cbc:PayableAmount${attr}>100.00</cbc:PayableAmount></cac:LegalMonetaryTotal>`);
+    expect(verdict(total(' currencyID="EUR"'), "PEPPOL-EN16931-CL007")).toBe("success");
+    expect(verdict(total(' currencyID="EURO"'), "PEPPOL-EN16931-CL007")).toBe("error");
+    expect(verdict(total(""), "PEPPOL-EN16931-CL007")).toBe("error");
+    const ciiTotal = (attr: string) =>
+      cii(ciiTx({ settlement: `<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:TaxTotalAmount${attr}>21.00</ram:TaxTotalAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>` }));
+    expect(verdict(ciiTotal(' currencyID="NOK"'), "PEPPOL-EN16931-CL007")).toBe("success");
+    expect(verdict(ciiTotal(' currencyID="NOKK"'), "PEPPOL-EN16931-CL007")).toBe("error");
+    expect(verdict(ciiTotal(""), "PEPPOL-EN16931-CL007")).toBe("success");
+  });
+
+  it("F001 wants real YYYY-MM-DD dates in UBL and format 102 dates from 2000 on in CII (PEPPOL-EN16931-F001.xml)", () => {
+    expect(verdict(ubl("<cbc:IssueDate>2024-02-29</cbc:IssueDate>"), "PEPPOL-EN16931-F001")).toBe("success");
+    expect(verdict(ubl("<cbc:IssueDate>2023-02-29</cbc:IssueDate>"), "PEPPOL-EN16931-F001")).toBe("error");
+    expect(verdict(ubl("<cbc:DueDate>2024-1-05</cbc:DueDate>"), "PEPPOL-EN16931-F001")).toBe("error");
+    const date = (format: string, value: string) =>
+      cii(`<rsm:ExchangedDocument><ram:IssueDateTime><udt:DateTimeString format="${format}">${value}</udt:DateTimeString></ram:IssueDateTime></rsm:ExchangedDocument>`);
+    expect(verdict(date("102", "20240131"), "PEPPOL-EN16931-F001")).toBe("success");
+    expect(verdict(date("102", "2024-01-31"), "PEPPOL-EN16931-F001")).toBe("error");
+    expect(verdict(date("203", "202401311200"), "PEPPOL-EN16931-F001")).toBe("error");
+    expect(verdict(date("102", "19991231"), "PEPPOL-EN16931-F001")).toBe("error");
+  });
+
+  it("P0104 … P0111 tie each VATEX-EU code to its VAT category, wherever the category sits (PEPPOL-EN16931-P0104 … P0111.xml)", () => {
+    const pairs: [string, string, string][] = [
+      ["P0104", "VATEX-EU-G", "G"], ["P0105", "VATEX-EU-O", "O"], ["P0106", "VATEX-EU-IC", "K"], ["P0107", "VATEX-EU-AE", "AE"],
+      ["P0108", "VATEX-EU-D", "E"], ["P0109", "VATEX-EU-F", "E"], ["P0110", "VATEX-EU-I", "E"], ["P0111", "VATEX-EU-J", "E"],
+    ];
+    const subtotal = (cat: string, code: string) =>
+      ubl(`<cac:TaxTotal><cac:TaxSubtotal><cac:TaxCategory><cbc:ID>${cat}</cbc:ID><cbc:TaxExemptionReasonCode>${code}</cbc:TaxExemptionReasonCode><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>`);
+    for (const [rule, code, cat] of pairs) {
+      expect(verdict(subtotal(cat, code), `PEPPOL-EN16931-${rule}`), `${rule} ${cat}`).toBe("success");
+      expect(verdict(subtotal(cat === "E" ? "S" : "E", code), `PEPPOL-EN16931-${rule}`), `${rule} wrong category`).toBe("error");
+      // The code is compared case-insensitively
+      expect(verdict(subtotal("Z", code.toLowerCase()), `PEPPOL-EN16931-${rule}`), `${rule} lower case`).toBe("error");
+    }
+    const allowance = ubl(`<cac:AllowanceCharge><cbc:ChargeIndicator>false</cbc:ChargeIndicator><cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:TaxExemptionReasonCode>VATEX-EU-G</cbc:TaxExemptionReasonCode><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory></cac:AllowanceCharge>`);
+    expect(verdict(allowance, "PEPPOL-EN16931-P0104")).toBe("error");
+    // They are UBL rules: Peppol's CII rules have no counterpart
+    const ciiRow = cii(ciiTx({ settlement: "<ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:ExemptionReasonCode>VATEX-EU-G</ram:ExemptionReasonCode><ram:CategoryCode>S</ram:CategoryCode></ram:ApplicableTradeTax>" }));
+    expect(verdict(ciiRow, "PEPPOL-EN16931-P0104")).toBe("success");
+  });
+
+  it("R006 allows one invoiced object (type 130) on document level, in CII only (PEPPOL-EN16931-R006.xml)", () => {
+    const refs = (n: number, type = "130") =>
+      Array.from({ length: n }, (_, i) => `<ram:AdditionalReferencedDocument><ram:IssuerAssignedID>OBJ-${i}</ram:IssuerAssignedID><ram:TypeCode>${type}</ram:TypeCode></ram:AdditionalReferencedDocument>`).join("");
+    expect(verdict(cii(ciiTx({ agreement: refs(1) })), "PEPPOL-EN16931-R006")).toBe("success");
+    expect(verdict(cii(ciiTx({ agreement: refs(2, "916") })), "PEPPOL-EN16931-R006")).toBe("success");
+    expect(verdict(cii(ciiTx({ agreement: refs(2) })), "PEPPOL-EN16931-R006")).toBe("error");
+    const ublRefs = '<cac:AdditionalDocumentReference><cbc:ID>A</cbc:ID><cbc:DocumentTypeCode>130</cbc:DocumentTypeCode></cac:AdditionalDocumentReference><cac:AdditionalDocumentReference><cbc:ID>B</cbc:ID><cbc:DocumentTypeCode>130</cbc:DocumentTypeCode></cac:AdditionalDocumentReference>';
+    expect(verdict(ubl(ublRefs), "PEPPOL-EN16931-R006")).toBe("success");
+  });
+
+  it("R054 asks for exactly one VAT total in the accounting currency when TaxCurrencyCode is given, and none otherwise (PEPPOL-EN16931-R054.xml)", () => {
+    const sub = '<cac:TaxTotal><cbc:TaxAmount currencyID="EUR">25.00</cbc:TaxAmount><cac:TaxSubtotal><cbc:TaxAmount currencyID="EUR">25.00</cbc:TaxAmount></cac:TaxSubtotal></cac:TaxTotal>';
+    const acc = '<cac:TaxTotal><cbc:TaxAmount currencyID="SEK">280.00</cbc:TaxAmount></cac:TaxTotal>';
+    const cur = "<cbc:TaxCurrencyCode>SEK</cbc:TaxCurrencyCode>";
+    expect(verdict(ubl(sub), "PEPPOL-EN16931-R054")).toBe("success");
+    expect(verdict(ubl(cur + sub + acc), "PEPPOL-EN16931-R054")).toBe("success");
+    expect(verdict(ubl(cur + sub), "PEPPOL-EN16931-R054")).toBe("error");
+    expect(verdict(ubl(sub + acc), "PEPPOL-EN16931-R054")).toBe("error");
+    expect(verdict(ubl(cur + sub + acc + acc), "PEPPOL-EN16931-R054")).toBe("error");
+    const ciiSettle = (taxCur: string, totals: string[]) =>
+      cii(`<rsm:SupplyChainTradeTransaction><ram:ApplicableHeaderTradeSettlement>${taxCur}<ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode><ram:SpecifiedTradeSettlementHeaderMonetarySummation>${totals.map((c) => `<ram:TaxTotalAmount currencyID="${c}">10.00</ram:TaxTotalAmount>`).join("")}</ram:SpecifiedTradeSettlementHeaderMonetarySummation></ram:ApplicableHeaderTradeSettlement></rsm:SupplyChainTradeTransaction>`);
+    const ciiCur = "<ram:TaxCurrencyCode>SEK</ram:TaxCurrencyCode>";
+    expect(verdict(ciiSettle("", ["EUR"]), "PEPPOL-EN16931-R054")).toBe("success");
+    expect(verdict(ciiSettle(ciiCur, ["EUR", "SEK"]), "PEPPOL-EN16931-R054")).toBe("success");
+    expect(verdict(ciiSettle(ciiCur, ["EUR"]), "PEPPOL-EN16931-R054")).toBe("error");
+    expect(verdict(ciiSettle("", ["EUR", "SEK"]), "PEPPOL-EN16931-R054")).toBe("error");
+  });
+
+  it("R080 allows one project reference (type 50): on UBL credit notes, and in CII (PEPPOL-EN16931-R080.xml)", () => {
+    const two = '<cac:AdditionalDocumentReference><cbc:ID>P1</cbc:ID><cbc:DocumentTypeCode>50</cbc:DocumentTypeCode></cac:AdditionalDocumentReference><cac:AdditionalDocumentReference><cbc:ID>P2</cbc:ID><cbc:DocumentTypeCode>50</cbc:DocumentTypeCode></cac:AdditionalDocumentReference>';
+    expect(verdict(ubl(two, "CreditNote"), "PEPPOL-EN16931-R080")).toBe("error");
+    expect(verdict(ubl(two.replace("<cbc:DocumentTypeCode>50</cbc:DocumentTypeCode>", "<cbc:DocumentTypeCode>130</cbc:DocumentTypeCode>"), "CreditNote"), "PEPPOL-EN16931-R080")).toBe("success");
+    // An invoice states its project in ProjectReference; Peppol's rules leave these references alone
+    expect(verdict(ubl(two), "PEPPOL-EN16931-R080")).toBe("success");
+    const refs = (n: number) =>
+      Array.from({ length: n }, (_, i) => `<ram:AdditionalReferencedDocument><ram:IssuerAssignedID>P${i}</ram:IssuerAssignedID><ram:TypeCode>50</ram:TypeCode></ram:AdditionalReferencedDocument>`).join("");
+    expect(verdict(cii(ciiTx({ agreement: refs(1) })), "PEPPOL-EN16931-R080")).toBe("success");
+    expect(verdict(cii(ciiTx({ agreement: refs(2) })), "PEPPOL-EN16931-R080")).toBe("error");
+  });
+
+  it("R100 and R101: a line may carry one document reference, and only for its invoiced object (PEPPOL-EN16931-R100/R101.xml)", () => {
+    const docRef = (type: string) => `<cac:DocumentReference><cbc:ID>OBJ</cbc:ID><cbc:DocumentTypeCode>${type}</cbc:DocumentTypeCode></cac:DocumentReference>`;
+    const line = (refs: string, root: "Invoice" | "CreditNote" = "Invoice") =>
+      ubl(`<cac:${root}Line><cbc:ID>1</cbc:ID>${refs}</cac:${root}Line>`, root);
+    expect(verdict(line(docRef("130")), "PEPPOL-EN16931-R100")).toBe("success");
+    expect(verdict(line(docRef("130") + docRef("130")), "PEPPOL-EN16931-R100")).toBe("error");
+    expect(verdict(line(docRef("130") + docRef("130"), "CreditNote"), "PEPPOL-EN16931-R100")).toBe("error");
+    expect(verdict(line(docRef("130")), "PEPPOL-EN16931-R101")).toBe("success");
+    expect(verdict(line(docRef("916")), "PEPPOL-EN16931-R101")).toBe("error");
+    // UBL: one reference of type 130 among several is enough for R101
+    expect(verdict(line(docRef("916") + docRef("130")), "PEPPOL-EN16931-R101")).toBe("success");
+    const ciiLine = (types: string[]) =>
+      cii(ciiTx({ lines: `<ram:IncludedSupplyChainTradeLineItem><ram:SpecifiedLineTradeSettlement>${types.map((t) => `<ram:AdditionalReferencedDocument><ram:IssuerAssignedID>OBJ</ram:IssuerAssignedID><ram:TypeCode>${t}</ram:TypeCode></ram:AdditionalReferencedDocument>`).join("")}</ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>` }));
+    expect(verdict(ciiLine(["130"]), "PEPPOL-EN16931-R100")).toBe("success");
+    expect(verdict(ciiLine(["130", "130"]), "PEPPOL-EN16931-R100")).toBe("error");
+    // CII's R100 counts invoiced objects only
+    expect(verdict(ciiLine(["130", "916"]), "PEPPOL-EN16931-R100")).toBe("success");
+    expect(verdict(ciiLine(["916"]), "PEPPOL-EN16931-R101")).toBe("error");
+  });
+});
+
+describe("EN 16931 rules added in Peppol UBL check 1.4.0: how CII differs from UBL", () => {
+  const row = (cat: string, extra = "") =>
+    `<ram:ApplicableTradeTax><ram:CalculatedAmount>0.00</ram:CalculatedAmount><ram:TypeCode>VAT</ram:TypeCode>${extra}<ram:BasisAmount>100.00</ram:BasisAmount><ram:CategoryCode>${cat}</ram:CategoryCode><ram:RateApplicablePercent>0</ram:RateApplicablePercent></ram:ApplicableTradeTax>`;
+  const settle = (s: string) => cii(ciiTx({ settlement: `<ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>${s}` }));
+
+  it("CII checks intra-community supply (K) under BR-IC and the IGIC/IPSI categories (L, M) under swapped IDs, as the official CII rules do", () => {
+    // CEN's CII rules check category L under the BR-IP IDs and M under BR-IG (the UBL rules do the reverse)
+    expect(verdict(settle(row("L", "<ram:ExemptionReason>x</ram:ExemptionReason>")), "BR-IP-10", "en16931")).toBe("error");
+    expect(verdict(settle(row("L", "<ram:ExemptionReason>x</ram:ExemptionReason>")), "BR-IG-10", "en16931")).toBe("success");
+    expect(verdict(settle(row("M", "<ram:ExemptionReason>x</ram:ExemptionReason>")), "BR-IG-10", "en16931")).toBe("error");
+    // BR-IG-09 and BR-IP-09 can't fail in CII: the official test there is always true
+    expect(verdict(settle(row("M").replace("<ram:CalculatedAmount>0.00", "<ram:CalculatedAmount>99.00")), "BR-IG-09", "en16931")).toBe("success");
+  });
+
+  it("BR-CO-21 … BR-CO-24 count an empty reason element as given (Invoice-unit-UBL/BR-CO-21 … 24.xml)", () => {
+    const allowance = (reason: string) =>
+      settle(`<ram:SpecifiedTradeAllowanceCharge><ram:ChargeIndicator><udt:Indicator>false</udt:Indicator></ram:ChargeIndicator><ram:ActualAmount>10.00</ram:ActualAmount>${reason}</ram:SpecifiedTradeAllowanceCharge>`);
+    expect(verdict(allowance("<ram:Reason/>"), "BR-CO-21", "en16931")).toBe("success");
+    expect(verdict(allowance(""), "BR-CO-21", "en16931")).toBe("error");
+    expect(verdict(ubl('<cac:AllowanceCharge><cbc:ChargeIndicator>true</cbc:ChargeIndicator><cbc:AllowanceChargeReason/></cac:AllowanceCharge>'), "BR-CO-22", "en16931")).toBe("success");
+    expect(verdict(ubl('<cac:AllowanceCharge><cbc:ChargeIndicator>true</cbc:ChargeIndicator></cac:AllowanceCharge>'), "BR-CO-22", "en16931")).toBe("error");
+  });
+
+  it("BR-51 is a warning in UBL but an error in CII (Invoice-unit-UBL/BR-51.xml)", () => {
+    const card = (n: string) => ubl(`<cac:PaymentMeans><cac:CardAccount><cbc:PrimaryAccountNumberID>${n}</cbc:PrimaryAccountNumberID></cac:CardAccount></cac:PaymentMeans>`);
+    expect(verdict(card("123456"), "BR-51", "en16931")).toBe("success");
+    expect(verdict(card("12345678901234"), "BR-51", "en16931")).toBe("warning");
+    const ciiCard = (n: string) => settle(`<ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>48</ram:TypeCode><ram:ApplicableTradeSettlementFinancialCard><ram:ID>${n}</ram:ID></ram:ApplicableTradeSettlementFinancialCard></ram:SpecifiedTradeSettlementPaymentMeans>`);
+    expect(verdict(ciiCard("1234569876"), "BR-51", "en16931")).toBe("success");
+    expect(verdict(ciiCard("12345678901234"), "BR-51", "en16931")).toBe("error");
+  });
+
+  it("BR-CL-05 checks the tax currency in both syntaxes; the UBL data-type rules don't run on CII", () => {
+    expect(verdict(ubl("<cbc:TaxCurrencyCode>ABC</cbc:TaxCurrencyCode>"), "BR-CL-05", "en16931")).toBe("error");
+    expect(verdict(ubl("<cbc:TaxCurrencyCode>SEK</cbc:TaxCurrencyCode>"), "BR-CL-05", "en16931")).toBe("success");
+    expect(verdict(settle("<ram:TaxCurrencyCode>ABC</ram:TaxCurrencyCode>"), "BR-CL-05", "en16931")).toBe("error");
+    expect(verdict(ubl('<cac:LegalMonetaryTotal><cbc:PayableAmount currencyID="EUR">1.005</cbc:PayableAmount></cac:LegalMonetaryTotal>'), "UBL-DT-01", "en16931")).toBe("error");
+    expect(verdict(settle("<ram:SpecifiedTradeSettlementHeaderMonetarySummation><ram:DuePayableAmount>1.005</ram:DuePayableAmount></ram:SpecifiedTradeSettlementHeaderMonetarySummation>"), "UBL-DT-01", "en16931")).toBe("success");
+  });
+});
+
+describe("Official rules without official unit tests, checked as the Schematron is written (1.4.0)", () => {
+  const vat = "<cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>";
+  const sellerTax = `<cac:AccountingSupplierParty><cac:Party><cac:PartyTaxScheme><cbc:CompanyID>BE0123456749</cbc:CompanyID>${vat}</cac:PartyTaxScheme></cac:Party></cac:AccountingSupplierParty>`;
+  const buyerTax = `<cac:AccountingCustomerParty><cac:Party><cac:PartyTaxScheme><cbc:CompanyID>NL123456789B01</cbc:CompanyID>${vat}</cac:PartyTaxScheme></cac:Party></cac:AccountingCustomerParty>`;
+  const buyerLegal = "<cac:AccountingCustomerParty><cac:Party><cac:PartyLegalEntity><cbc:CompanyID>0123456789</cbc:CompanyID></cac:PartyLegalEntity></cac:Party></cac:AccountingCustomerParty>";
+  const docAc = (charge: boolean, cat: string) =>
+    `<cac:AllowanceCharge><cbc:ChargeIndicator>${charge}</cbc:ChargeIndicator><cac:TaxCategory><cbc:ID>${cat}</cbc:ID>${vat}</cac:TaxCategory></cac:AllowanceCharge>`;
+
+  it("BR-E-03/04 and BR-IG-03/04 need a seller VAT identifier next to an exempt or IGIC allowance or charge", () => {
+    expect(verdict(ubl(docAc(false, "E")), "BR-E-03", "en16931")).toBe("error");
+    expect(verdict(ubl(sellerTax + docAc(false, "E")), "BR-E-03", "en16931")).toBe("success");
+    expect(verdict(ubl(docAc(true, "E")), "BR-E-04", "en16931")).toBe("error");
+    expect(verdict(ubl(docAc(false, "L")), "BR-IG-03", "en16931")).toBe("error");
+    expect(verdict(ubl(docAc(true, "L")), "BR-IG-04", "en16931")).toBe("error");
+    // UBL's BR-IG-04 reads the category as written in its second half, so " L " slips through
+    expect(verdict(ubl(docAc(true, " L ")), "BR-IG-04", "en16931")).toBe("success");
+    expect(verdict(ubl(docAc(false, " L ")), "BR-IG-03", "en16931")).toBe("error");
+  });
+
+  it("BR-AE-03/04 need the seller's and the buyer's identifier (VAT number or legal registration)", () => {
+    expect(verdict(ubl(sellerTax + docAc(false, "AE")), "BR-AE-03", "en16931")).toBe("error");
+    expect(verdict(ubl(sellerTax + buyerTax + docAc(false, "AE")), "BR-AE-03", "en16931")).toBe("success");
+    expect(verdict(ubl(sellerTax + buyerLegal + docAc(true, "AE")), "BR-AE-04", "en16931")).toBe("success");
+    expect(verdict(ubl(buyerTax + docAc(true, "AE")), "BR-AE-04", "en16931")).toBe("error");
+  });
+
+  it("BR-IG-02 / BR-IP-02: IGIC and IPSI lines need a seller VAT identifier; CII swaps the categories", () => {
+    const line = (cat: string) => `<cac:InvoiceLine><cbc:ID>1</cbc:ID><cac:Item><cac:ClassifiedTaxCategory><cbc:ID>${cat}</cbc:ID>${vat}</cac:ClassifiedTaxCategory></cac:Item></cac:InvoiceLine>`;
+    expect(verdict(ubl(line("L")), "BR-IG-02", "en16931")).toBe("error");
+    expect(verdict(ubl(sellerTax + line("L")), "BR-IG-02", "en16931")).toBe("success");
+    expect(verdict(ubl(line("M")), "BR-IP-02", "en16931")).toBe("error");
+    const ciiLine = (cat: string) =>
+      cii(ciiTx({ lines: `<ram:IncludedSupplyChainTradeLineItem><ram:SpecifiedLineTradeSettlement><ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${cat}</ram:CategoryCode></ram:ApplicableTradeTax></ram:SpecifiedLineTradeSettlement></ram:IncludedSupplyChainTradeLineItem>` }));
+    expect(verdict(ciiLine("M"), "BR-IG-02", "en16931")).toBe("error");
+    expect(verdict(ciiLine("L"), "BR-IG-02", "en16931")).toBe("success");
+    expect(verdict(ciiLine("L"), "BR-IP-02", "en16931")).toBe("error");
+  });
+
+  it("BR-50 asks for the account identifier of a credit transfer (codes 30 and 58)", () => {
+    const pm = (code: string, account: string) => ubl(`<cac:PaymentMeans><cbc:PaymentMeansCode>${code}</cbc:PaymentMeansCode><cac:PayeeFinancialAccount>${account}</cac:PayeeFinancialAccount></cac:PaymentMeans>`);
+    expect(verdict(pm("30", "<cbc:ID>BE68539007547034</cbc:ID>"), "BR-50", "en16931")).toBe("success");
+    expect(verdict(pm("58", "<cbc:ID> </cbc:ID>"), "BR-50", "en16931")).toBe("error");
+    expect(verdict(pm("31", ""), "BR-50", "en16931")).toBe("success");
+    const ciiPm = (account: string) =>
+      cii(ciiTx({ settlement: `<ram:SpecifiedTradeSettlementPaymentMeans><ram:TypeCode>58</ram:TypeCode><ram:PayeePartyCreditorFinancialAccount>${account}</ram:PayeePartyCreditorFinancialAccount></ram:SpecifiedTradeSettlementPaymentMeans>` }));
+    expect(verdict(ciiPm("<ram:ProprietaryID>12345</ram:ProprietaryID>"), "BR-50", "en16931")).toBe("success");
+    expect(verdict(ciiPm("<ram:IBANID/>"), "BR-50", "en16931")).toBe("error");
+  });
+
+  it("BR-B-01 / BR-B-02: split payment (B) only on Italian invoices, and never with standard rate", () => {
+    const country = (c: string) => `<cac:AccountingSupplierParty><cac:Party><cac:PostalAddress><cac:Country><cbc:IdentificationCode>${c}</cbc:IdentificationCode></cac:Country></cac:PostalAddress></cac:Party></cac:AccountingSupplierParty>`;
+    const row = (cat: string) => `<cac:TaxTotal><cac:TaxSubtotal><cac:TaxCategory><cbc:ID>${cat}</cbc:ID>${vat}</cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>`;
+    expect(verdict(ubl(country("IT") + row("B")), "BR-B-01", "en16931")).toBe("success");
+    expect(verdict(ubl(country("BE") + row("B")), "BR-B-01", "en16931")).toBe("error");
+    expect(verdict(ubl(country("BE") + row("S")), "BR-B-01", "en16931")).toBe("success");
+    expect(verdict(ubl(row("B") + row("S")), "BR-B-02", "en16931")).toBe("error");
+    expect(verdict(ubl(row("B")), "BR-B-02", "en16931")).toBe("success");
+    const ciiRows = (cats: string[], countryId: string) =>
+      cii(ciiTx({ agreement: `<ram:SellerTradeParty><ram:PostalTradeAddress><ram:CountryID>${countryId}</ram:CountryID></ram:PostalTradeAddress></ram:SellerTradeParty>`, settlement: cats.map((c) => `<ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>${c}</ram:CategoryCode></ram:ApplicableTradeTax>`).join("") }));
+    expect(verdict(ciiRows(["B"], "FR"), "BR-B-01", "en16931")).toBe("error");
+    expect(verdict(ciiRows(["B", "S"], "IT"), "BR-B-02", "en16931")).toBe("error");
+  });
+
+  it("BR-CL-06 and Peppol's CL006 check the VAT point date code (UBL 3, 35, 432; CII 5, 29, 72)", () => {
+    const period = (code: string) => ubl(`<cac:InvoicePeriod><cbc:DescriptionCode>${code}</cbc:DescriptionCode></cac:InvoicePeriod>`);
+    expect(verdict(period("35"), "BR-CL-06", "en16931")).toBe("success");
+    expect(verdict(period("5"), "BR-CL-06", "en16931")).toBe("error");
+    expect(verdict(period("5"), "PEPPOL-EN16931-CL006")).toBe("error");
+    expect(verdict(period(" 432 "), "PEPPOL-EN16931-CL006")).toBe("success");
+    const due = (code: string) => cii(ciiTx({ settlement: `<ram:ApplicableTradeTax><ram:DueDateTypeCode>${code}</ram:DueDateTypeCode></ram:ApplicableTradeTax>` }));
+    expect(verdict(due("29"), "BR-CL-06", "en16931")).toBe("success");
+    expect(verdict(due("35"), "BR-CL-06", "en16931")).toBe("error");
+  });
+
+  it("BR-CL-08 checks a note's subject code: UBL the three letters between the first two #, CII ram:SubjectCode", () => {
+    const note = (text: string) => ubl(`<cbc:Note>${text}</cbc:Note>`);
+    expect(verdict(note("#AAI#Payment within 30 days"), "BR-CL-08", "en16931")).toBe("success");
+    expect(verdict(note("#XYZ#Payment within 30 days"), "BR-CL-08", "en16931")).toBe("error");
+    // Not a three-character code between two #, so not tested; "AA " is part of the written-out list
+    expect(verdict(note("#AB#x"), "BR-CL-08", "en16931")).toBe("success");
+    expect(verdict(note("#AA #x"), "BR-CL-08", "en16931")).toBe("success");
+    const subject = (code: string) => cii(`<rsm:ExchangedDocument><ram:IncludedNote><ram:Content>x</ram:Content><ram:SubjectCode>${code}</ram:SubjectCode></ram:IncludedNote></rsm:ExchangedDocument>`);
+    expect(verdict(subject("SUR"), "BR-CL-08", "en16931")).toBe("success");
+    expect(verdict(subject("XYZ"), "BR-CL-08", "en16931")).toBe("error");
+  });
+
+  it("BR-CL-10, -21 and -26 want ISO 6523 schemes for party, item and delivery location identifiers", () => {
+    const party = (holder: string, scheme: string) => ubl(`<cac:${holder}><cac:Party><cac:PartyIdentification><cbc:ID schemeID="${scheme}">123</cbc:ID></cac:PartyIdentification></cac:Party></cac:${holder}>`);
+    expect(verdict(party("AccountingCustomerParty", "0088"), "BR-CL-10", "en16931")).toBe("success");
+    expect(verdict(party("AccountingCustomerParty", "9999"), "BR-CL-10", "en16931")).toBe("error");
+    // A SEPA creditor identifier is fine for the seller (and payee), not for the buyer
+    expect(verdict(party("AccountingSupplierParty", "SEPA"), "BR-CL-10", "en16931")).toBe("success");
+    expect(verdict(party("AccountingCustomerParty", "SEPA"), "BR-CL-10", "en16931")).toBe("error");
+    expect(verdict(ubl('<cac:InvoiceLine><cac:Item><cac:StandardItemIdentification><cbc:ID schemeID="0160">5412345000013</cbc:ID></cac:StandardItemIdentification></cac:Item></cac:InvoiceLine>'), "BR-CL-21", "en16931")).toBe("success");
+    expect(verdict(ubl('<cac:InvoiceLine><cac:Item><cac:StandardItemIdentification><cbc:ID schemeID="EAN">5412345000013</cbc:ID></cac:StandardItemIdentification></cac:Item></cac:InvoiceLine>'), "BR-CL-21", "en16931")).toBe("error");
+    expect(verdict(ubl('<cac:Delivery><cac:DeliveryLocation><cbc:ID schemeID="GLN">5412345000013</cbc:ID></cac:DeliveryLocation></cac:Delivery>'), "BR-CL-26", "en16931")).toBe("error");
+    // CII: a GlobalID under the product or the ship-to party is BR-CL-21's or BR-CL-26's, not BR-CL-10's
+    const ciiProduct = (scheme: string) => cii(ciiTx({ lines: `<ram:IncludedSupplyChainTradeLineItem><ram:SpecifiedTradeProduct><ram:GlobalID schemeID="${scheme}">1</ram:GlobalID></ram:SpecifiedTradeProduct></ram:IncludedSupplyChainTradeLineItem>` }));
+    expect(verdict(ciiProduct("EAN"), "BR-CL-21", "en16931")).toBe("error");
+    expect(verdict(ciiProduct("EAN"), "BR-CL-10", "en16931")).toBe("success");
+    const shipTo = (scheme: string) => cii(ciiTx({ delivery: `<ram:ShipToTradeParty><ram:GlobalID schemeID="${scheme}">1</ram:GlobalID></ram:ShipToTradeParty>` }));
+    expect(verdict(shipTo("0088"), "BR-CL-26", "en16931")).toBe("success");
+    expect(verdict(shipTo("GLN"), "BR-CL-26", "en16931")).toBe("error");
+  });
+
+  it("BR-CL-22 wants a VATEX exemption reason code, in any letter case", () => {
+    const code = (c: string) => ubl(`<cac:TaxTotal><cac:TaxSubtotal><cac:TaxCategory><cbc:ID>E</cbc:ID><cbc:TaxExemptionReasonCode>${c}</cbc:TaxExemptionReasonCode>${vat}</cac:TaxCategory></cac:TaxSubtotal></cac:TaxTotal>`);
+    expect(verdict(code("VATEX-EU-132-1F"), "BR-CL-22", "en16931")).toBe("success");
+    expect(verdict(code("vatex-eu-ae"), "BR-CL-22", "en16931")).toBe("success");
+    expect(verdict(code("VATEX-BE-123"), "BR-CL-22", "en16931")).toBe("error");
+    const ciiCode = (c: string) => cii(ciiTx({ settlement: `<ram:ApplicableTradeTax><ram:TypeCode>VAT</ram:TypeCode><ram:CategoryCode>E</ram:CategoryCode><ram:ExemptionReasonCode>${c}</ram:ExemptionReasonCode></ram:ApplicableTradeTax>` }));
+    expect(verdict(ciiCode("VATEX-FR-FRANCHISE"), "BR-CL-22", "en16931")).toBe("success");
+    expect(verdict(ciiCode("EXEMPT"), "BR-CL-22", "en16931")).toBe("error");
+  });
+});

@@ -9,7 +9,19 @@ import {
   type PaymentMeans,
   type VatBreakdown,
 } from "./model";
-import { ReadCtx, collectBinaryObjects, collectEmptyElements, collectUblAmountCurrencies, collectUblSchemeIds } from "./read-utils";
+import {
+  ReadCtx,
+  collectBinaryObjects,
+  collectCodedValues,
+  collectCurrencyIds,
+  collectDates,
+  collectEmptyElements,
+  collectObjectIdSchemes,
+  collectUblAmountCurrencies,
+  collectUblAmountTexts,
+  collectUblSchemeIds,
+  exactText,
+} from "./read-utils";
 import { all, at, kids, text, type XNode } from "./xml";
 
 export const UBL_INVOICE_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
@@ -51,10 +63,12 @@ function readParty(ctx: ReadCtx, partyNode: XNode | null): Party {
   // Payee/tax representative use PartyName for their name; seller/buyer use it for trading name
   p.tradingName = ctx.str(partyNode, "PartyName/Name", L, "tradingName");
   p.address = readAddress(ctx, at(partyNode, "PostalAddress"), L, "address");
+  p.taxRegistrations = [];
   for (const pts of kids(partyNode, "PartyTaxScheme")) {
     const scheme = text(pts, "TaxScheme/ID");
     const company = at(pts, "CompanyID");
     if (!company) continue;
+    p.taxRegistrations.push({ scheme, loc: ctx.loc(company) });
     if (scheme?.toUpperCase() === "VAT") {
       p.vatId = text(company);
       L["vatId"] = ctx.loc(company);
@@ -85,13 +99,19 @@ function readParty(ctx: ReadCtx, partyNode: XNode | null): Party {
   return p;
 }
 
-function readAllowanceCharge(ctx: ReadCtx, node: XNode, level: "doc" | "line"): AllowanceCharge {
+/**
+ * One cac:AllowanceCharge. Price-level ones ("price") are read for the rules that check every AllowanceCharge;
+ * their amounts are BT-147/148 on the line, so they don't add decimal or data-type findings a second time.
+ */
+function readAllowanceCharge(readCtx: ReadCtx, node: XNode, level: "doc" | "line" | "price"): AllowanceCharge {
+  const ctx = level === "price" ? new ReadCtx() : readCtx;
   const locs: LocMap = {};
   const rawIndicator = ctx.str(node, "ChargeIndicator", locs, "indicator");
   const isCharge = rawIndicator?.toLowerCase() === "true";
   const amountBt =
-    level === "doc" ? (isCharge ? "BT-99" : "BT-92") : isCharge ? "BT-141" : "BT-136";
-  const baseBt = level === "doc" ? (isCharge ? "BT-100" : "BT-93") : isCharge ? "BT-142" : "BT-137";
+    level === "price" ? "BT-147" : level === "doc" ? (isCharge ? "BT-99" : "BT-92") : isCharge ? "BT-141" : "BT-136";
+  const baseBt =
+    level === "price" ? "BT-148" : level === "doc" ? (isCharge ? "BT-100" : "BT-93") : isCharge ? "BT-142" : "BT-137";
   return {
     isCharge,
     rawIndicator,
@@ -102,6 +122,8 @@ function readAllowanceCharge(ctx: ReadCtx, node: XNode, level: "doc" | "line"): 
     reasonCode: ctx.str(node, "AllowanceChargeReasonCode", locs, "reasonCode"),
     vatCategory: ctx.str(node, "TaxCategory/ID", locs, "vatCategory"),
     vatRate: ctx.num(node, "TaxCategory/Percent", locs, "vatRate", "BT-96"),
+    vatScheme: ctx.str(node, "TaxCategory/TaxScheme/ID", locs, "vatScheme"),
+    vatExemptionCode: ctx.str(node, "TaxCategory/TaxExemptionReasonCode", locs, "vatExemptionCode"),
     locs,
     loc: ctx.loc(node),
   };
@@ -111,8 +133,6 @@ export function readUbl(root: XNode): InvoiceModel {
   const ctx = new ReadCtx();
   const isCredit = root.local === "CreditNote";
   const locs: LocMap = {};
-  const linesTag = isCredit ? "CreditNoteLine" : "InvoiceLine";
-  const qtyTag = isCredit ? "CreditedQuantity" : "InvoicedQuantity";
 
   const model: InvoiceModel = {
     syntax: "UBL",
@@ -158,6 +178,7 @@ export function readUbl(root: XNode): InvoiceModel {
       description: text(d, "DocumentDescription"),
       filename: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["filename"],
       mime: at(d, "Attachment/EmbeddedDocumentBinaryObject")?.attrs["mimeCode"],
+      typeCode: exactText(at(d, "DocumentTypeCode")),
       loc: ctx.loc(d),
     })),
     amountCurrencies: [],
@@ -265,6 +286,7 @@ export function readUbl(root: XNode): InvoiceModel {
         rate: ctx.num(st, "TaxCategory/Percent", sl, "rate", "BT-119"),
         exemptionReason: ctx.str(st, "TaxCategory/TaxExemptionReason", sl, "exemptionReason"),
         exemptionCode: ctx.str(st, "TaxCategory/TaxExemptionReasonCode", sl, "exemptionCode"),
+        scheme: ctx.str(st, "TaxCategory/TaxScheme/ID", sl, "scheme"),
         locs: sl,
         loc: ctx.loc(st),
       };
@@ -321,7 +343,11 @@ export function readUbl(root: XNode): InvoiceModel {
     );
   }
 
-  for (const ln of kids(root, linesTag)) {
+  // Both line elements, whatever the root: the official rules read `cac:InvoiceLine | cac:CreditNoteLine`
+  // everywhere, so a credit note with InvoiceLine elements still has lines to check
+  const lineNodes = root.children.filter((c) => c.local === "InvoiceLine" || c.local === "CreditNoteLine");
+  for (const ln of lineNodes) {
+    const qtyTag = ln.local === "CreditNoteLine" ? "CreditedQuantity" : "InvoicedQuantity";
     const L: LocMap = {};
     const qtyNode = at(ln, qtyTag);
     const line: InvoiceLine = {
@@ -361,11 +387,14 @@ export function readUbl(root: XNode): InvoiceModel {
       }
       line.classification = all(item, "CommodityClassification").map((cc) => {
         const code = at(cc, "ItemClassificationCode");
-        return { id: text(code) ?? "", scheme: code?.attrs["listID"] };
+        return { id: text(code) ?? "", scheme: code?.attrs["listID"], loc: code ? ctx.loc(code) : undefined };
       });
       line.originCountry = ctx.str(item, "OriginCountry/IdentificationCode", L, "originCountry");
       line.vatCategory = ctx.str(item, "ClassifiedTaxCategory/ID", L, "vatCategory");
       line.vatRate = ctx.num(item, "ClassifiedTaxCategory/Percent", L, "vatRate", "BT-152");
+      line.vatScheme = ctx.str(item, "ClassifiedTaxCategory/TaxScheme/ID", L, "vatScheme");
+      // vatCategoryCode: the ID element itself; vatCategory falls back to the ClassifiedTaxCategory for messages
+      if (L["vatCategory"]) L["vatCategoryCode"] = L["vatCategory"];
       if (!L["vatCategory"] && at(item, "ClassifiedTaxCategory"))
         L["vatCategory"] = ctx.loc(at(item, "ClassifiedTaxCategory")!);
       line.attributes = kids(item, "AdditionalItemProperty").map((ap) => ({
@@ -373,8 +402,13 @@ export function readUbl(root: XNode): InvoiceModel {
         value: text(ap, "Value"),
       }));
     }
+    line.documentRefs = kids(ln, "DocumentReference").map((d) => ({
+      typeCode: exactText(at(d, "DocumentTypeCode")),
+      loc: ctx.loc(d),
+    }));
     const price = at(ln, "Price");
     if (price) {
+      line.priceAllowanceCharges = kids(price, "AllowanceCharge").map((pac) => readAllowanceCharge(ctx, pac, "price"));
       L["price"] = ctx.loc(price);
       line.priceAmount = ctx.num(price, "PriceAmount", L, "priceAmount", "BT-146");
       const bq = at(price, "BaseQuantity");
@@ -400,7 +434,12 @@ export function readUbl(root: XNode): InvoiceModel {
 
   model.amountCurrencies = collectUblAmountCurrencies(root, ctx);
   model.schemeIds = collectUblSchemeIds(root, ctx);
-  model.binaryObjects = collectBinaryObjects(root, "EmbeddedDocumentBinaryObject", ctx);
+  model.binaryObjects = collectBinaryObjects(root, ctx);
+  model.currencyIds = collectCurrencyIds(root, ctx, "UBL");
+  model.objectIdSchemes = collectObjectIdSchemes(root, ctx, "UBL");
+  model.dates = collectDates(root, ctx, "UBL");
+  model.codedValues = collectCodedValues(root, ctx, "UBL");
+  model.amountTexts = collectUblAmountTexts(root, ctx);
   model.decimals = ctx.decimals;
   model.typeErrors = ctx.typeErrors;
   model.emptyElements = collectEmptyElements(root, ctx);

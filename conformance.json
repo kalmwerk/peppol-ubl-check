@@ -1,5 +1,5 @@
 {
-  "checkedOn": "2026-11-17",
+  "checkedOn": "2026-11-18",
   "command": "npm run compare-official",
   "sources": {
     "cen": {
@@ -21,94 +21,11 @@
     "cen": 913,
     "peppol": 1006
   },
-  "compared": 929,
+  "compared": 1235,
   "differences": [],
   "uncovered": {
-    "en16931": [
-      "BR-51",
-      "BR-AE-06",
-      "BR-AE-07",
-      "BR-AE-09",
-      "BR-CL-03",
-      "BR-CL-05",
-      "BR-CL-07",
-      "BR-CL-13",
-      "BR-CL-15",
-      "BR-CL-18",
-      "BR-CL-19",
-      "BR-CL-20",
-      "BR-CO-21",
-      "BR-CO-22",
-      "BR-CO-23",
-      "BR-CO-24",
-      "BR-E-06",
-      "BR-E-07",
-      "BR-E-09",
-      "BR-G-03",
-      "BR-G-04",
-      "BR-G-06",
-      "BR-G-07",
-      "BR-G-09",
-      "BR-G-10",
-      "BR-IC-03",
-      "BR-IC-04",
-      "BR-IC-06",
-      "BR-IC-07",
-      "BR-IC-09",
-      "BR-IG-05",
-      "BR-IG-06",
-      "BR-IG-07",
-      "BR-IG-09",
-      "BR-IG-10",
-      "BR-IP-03",
-      "BR-IP-04",
-      "BR-IP-05",
-      "BR-IP-06",
-      "BR-IP-07",
-      "BR-IP-09",
-      "BR-IP-10",
-      "BR-O-03",
-      "BR-O-04",
-      "BR-O-06",
-      "BR-O-07",
-      "BR-O-09",
-      "BR-O-11",
-      "BR-O-12",
-      "BR-O-13",
-      "BR-O-14",
-      "BR-S-03",
-      "BR-S-04",
-      "BR-S-06",
-      "BR-S-07",
-      "BR-S-09",
-      "BR-Z-03",
-      "BR-Z-04",
-      "BR-Z-06",
-      "BR-Z-07",
-      "BR-Z-09",
-      "UBL-DT-01",
-      "UBL-DT-06",
-      "UBL-DT-07"
-    ],
-    "peppol": [
-      "PEPPOL-EN16931-CL002",
-      "PEPPOL-EN16931-CL003",
-      "PEPPOL-EN16931-CL007",
-      "PEPPOL-EN16931-F001",
-      "PEPPOL-EN16931-P0104",
-      "PEPPOL-EN16931-P0105",
-      "PEPPOL-EN16931-P0106",
-      "PEPPOL-EN16931-P0107",
-      "PEPPOL-EN16931-P0108",
-      "PEPPOL-EN16931-P0109",
-      "PEPPOL-EN16931-P0110",
-      "PEPPOL-EN16931-P0111",
-      "PEPPOL-EN16931-R006",
-      "PEPPOL-EN16931-R054",
-      "PEPPOL-EN16931-R080",
-      "PEPPOL-EN16931-R100",
-      "PEPPOL-EN16931-R101"
-    ],
+    "en16931": [],
+    "peppol": [],
     "national": [
       "DE-R-001",
       "DE-R-002",
@@ -208,5 +125,41 @@
       "SE-R-013"
     ]
   },
-  "fingerprint": "1875c3700d4bf824033b9b07bc9f2acacd83327e350ec300a19967a4a7adc221"
+  "ruleSets": {
+    "business": {
+      "official": 223,
+      "checked": 219,
+      "alwaysTrue": [
+        "BR-CO-05",
+        "BR-CO-06",
+        "BR-CO-07",
+        "BR-CO-08"
+      ],
+      "notChecked": []
+    },
+    "peppol": {
+      "official": 47,
+      "checked": 47,
+      "alwaysTrue": [],
+      "notChecked": []
+    },
+    "syntax": {
+      "official": 1346,
+      "checked": 3
+    },
+    "national": {
+      "official": 119,
+      "checked": 11,
+      "countries": [
+        "DE",
+        "DK",
+        "GR",
+        "IS",
+        "IT",
+        "NO",
+        "SE"
+      ]
+    }
+  },
+  "fingerprint": "4fbf62393a06fe34b77a0cb6b910dc4d2f7bc8ace741f4086cbfbbef1fb86396"
 }
