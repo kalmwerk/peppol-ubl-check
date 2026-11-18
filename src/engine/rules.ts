@@ -46,6 +46,9 @@ import {
   checkIban,
   checkLeitwegId,
   checkVatId,
+  isPeppol0007,
+  isPeppol0184,
+  isPeppol0192,
   isPeppol0208,
   looksLikeLeitwegId,
   type LeitwegProblem,
@@ -646,9 +649,10 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         { actual: scheme, expected: "0208, 0106, 0002 …" },
       );
   }
-  // Peppol's identifier rules look at every identifier with that scheme, wherever it sits: GLN (0088)
-  // and Belgian enterprise numbers (0208) in EndpointID / party identifiers / CompanyID (UBL) or
-  // URIID / ID / GlobalID (CII), and the Peppol address scheme list for each UBL EndpointID (CL008)
+  // Peppol's identifier rules look at every identifier with that scheme, wherever it sits: GLN (0088),
+  // Norwegian (0192), Danish CVR (0184), Belgian (0208) and Swedish (0007) organisation numbers in
+  // EndpointID / party identifiers / CompanyID (UBL) or URIID / ID / GlobalID (CII), and the Peppol
+  // address scheme list for each UBL EndpointID (CL008)
   if (opts.peppol) {
     for (const sid of m.schemeIds) {
       const what = `${sid.owner} ${sid.kind}`;
@@ -662,6 +666,29 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
           `${what} "${sid.id}" uses scheme 0208 but is not a 10-digit Belgian enterprise number with valid check digits (no BE, dots or spaces).`,
           sid.loc,
           { actual: sid.id, expected: "0123456749" },
+        );
+      if (sid.scheme === "0192" && !isPeppol0192(exactText(sid.id, sid.loc)))
+        emit(
+          "PEPPOL-COMMON-R041",
+          `${what} "${sid.id}" uses scheme 0192 but is not a 9-digit Norwegian organisation number with a valid check digit (no NO, MVA or spaces).`,
+          sid.loc,
+          { actual: sid.id, expected: "987654325" },
+        );
+      if (sid.scheme === "0184" && !isPeppol0184(exactText(sid.id, sid.loc)))
+        emit(
+          "PEPPOL-COMMON-R042",
+          isPeppol0184(sid.id)
+            ? `${what} "${sid.id}" uses scheme 0184 and has spaces or line breaks around it; Peppol reads the Danish CVR number exactly as written.`
+            : `${what} "${sid.id}" uses scheme 0184 but is not a Danish CVR number: 8 digits, or DK and 8 digits, with no spaces.`,
+          sid.loc,
+          { actual: sid.id, expected: "12345678" },
+        );
+      if (sid.scheme === "0007" && !isPeppol0007(exactText(sid.id, sid.loc)))
+        emit(
+          "PEPPOL-COMMON-R049",
+          `${what} "${sid.id}" uses scheme 0007 but is not a 10-digit Swedish organisation number with a valid check digit (no SE, hyphen or spaces).`,
+          sid.loc,
+          { actual: sid.id, expected: "2021005489" },
         );
       if (m.syntax === "UBL" && sid.element === "EndpointID" && !PEPPOL_EAS_CODES.has(sid.scheme))
         emit(
