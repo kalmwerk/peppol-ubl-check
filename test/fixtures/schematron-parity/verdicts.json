@@ -83,6 +83,9 @@
   "BR-Z-06",
   "BR-Z-07",
   "BR-Z-09",
+  "PEPPOL-COMMON-R041",
+  "PEPPOL-COMMON-R042",
+  "PEPPOL-COMMON-R049",
   "PEPPOL-EN16931-CL001",
   "PEPPOL-EN16931-CL002",
   "PEPPOL-EN16931-CL003",
@@ -1362,6 +1365,42 @@
    "BR-Z-09": "error",
    "PEPPOL-EN16931-CL007": "error",
    "PEPPOL-EN16931-F001": "error"
+  },
+  "ubl/nordic-01.xml": {},
+  "ubl/nordic-02.xml": {
+   "PEPPOL-COMMON-R041": "error"
+  },
+  "ubl/nordic-03.xml": {},
+  "ubl/nordic-04.xml": {
+   "PEPPOL-COMMON-R042": "error"
+  },
+  "ubl/nordic-05.xml": {},
+  "ubl/nordic-06.xml": {
+   "PEPPOL-COMMON-R049": "error"
+  },
+  "ubl/nordic-07.xml": {
+   "PEPPOL-COMMON-R041": "error",
+   "PEPPOL-COMMON-R042": "error",
+   "PEPPOL-COMMON-R049": "error"
+  },
+  "ubl/nordic-08.xml": {
+   "PEPPOL-COMMON-R041": "error"
+  },
+  "cii/nordic-01.xml": {},
+  "cii/nordic-02.xml": {
+   "PEPPOL-COMMON-R041": "error"
+  },
+  "cii/nordic-03.xml": {},
+  "cii/nordic-04.xml": {
+   "PEPPOL-COMMON-R042": "error"
+  },
+  "cii/nordic-05.xml": {
+   "PEPPOL-COMMON-R049": "error"
+  },
+  "cii/nordic-06.xml": {
+   "PEPPOL-COMMON-R041": "error",
+   "PEPPOL-COMMON-R042": "error",
+   "PEPPOL-COMMON-R049": "error"
   }
  }
 }
