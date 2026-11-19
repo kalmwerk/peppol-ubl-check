@@ -53,3 +53,48 @@ describe("official verdicts on generated invoices", () => {
     expect(verdicts(xml)).toEqual(expected);
   });
 });
+
+/**
+ * Peppol UBL check 1.5.1: single-change edge cases of the library's valid samples (an element that is
+ * there but empty or partly filled in, an identifier in an unusual but valid form), held to the official
+ * verdicts recorded by `bun scripts/record-official-edge-cases.ts` in edge-verdicts.json. Each case is
+ * checked under both profiles: en16931 against the CEN artefacts, peppol against CEN and Peppol together,
+ * on the rules it is about and on the overall verdict (any fatal finding or none).
+ */
+interface EdgeRecorded {
+  cases: Record<string, { about: string; rules: string[]; cen: Record<string, "error" | "warning">; peppol: Record<string, "error" | "warning"> }>;
+}
+const edge = JSON.parse(readFileSync(resolve(DIR, "edge-verdicts.json"), "utf8")) as EdgeRecorded;
+
+function engineVerdicts(xml: string, profile: "peppol" | "en16931") {
+  const out: Record<string, "error" | "warning"> = {};
+  for (const f of validateInvoiceXml(xml, profile).findings) {
+    if (f.severity === "info") continue;
+    if (out[f.ruleId] !== "error") out[f.ruleId] = f.severity === "error" ? "error" : "warning";
+  }
+  return out;
+}
+const only = (v: Record<string, "error" | "warning">, rules: string[]) =>
+  Object.fromEntries(rules.filter((r) => v[r]).map((r) => [r, v[r]]));
+const fails = (v: Record<string, "error" | "warning">) => Object.values(v).includes("error");
+
+describe("official verdicts on edge cases", () => {
+  it("covers both syntaxes and every rule it names is in the catalog", () => {
+    const files = Object.keys(edge.cases);
+    expect(files.filter((f) => f.startsWith("edge/ubl-")).length).toBeGreaterThan(10);
+    expect(files.filter((f) => f.startsWith("edge/cii-")).length).toBeGreaterThan(10);
+    const ids = new Set(RULES.map((r) => r.id));
+    expect(Object.values(edge.cases).flatMap((c) => c.rules).filter((id) => !ids.has(id))).toEqual([]);
+  });
+
+  it.each(Object.entries(edge.cases))("%s", (file, c) => {
+    const xml = readFileSync(resolve(DIR, file), "utf8");
+    const official = { en16931: c.cen, peppol: { ...c.peppol, ...c.cen } };
+    for (const [k, v] of Object.entries(c.peppol)) if (v === "error") official.peppol[k] = "error";
+    for (const profile of ["en16931", "peppol"] as const) {
+      const ours = engineVerdicts(xml, profile);
+      expect({ profile, rules: only(ours, c.rules) }).toEqual({ profile, rules: only(official[profile], c.rules) });
+      expect({ profile, fails: fails(ours) }).toEqual({ profile, fails: fails(official[profile]) });
+    }
+  });
+});
