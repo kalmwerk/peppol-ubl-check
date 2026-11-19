@@ -49,7 +49,8 @@ export interface Party {
    * PartyTaxScheme with a CompanyID (`scheme` = its TaxScheme/ID), CII each SpecifiedTaxRegistration/ID
    * (`scheme` = its schemeID attribute, VA or FC). vatId / taxRegistrationId above pick one of each.
    */
-  taxRegistrations?: { scheme?: string; loc: Loc }[];
+  /** Every UBL PartyTaxScheme with a CompanyID (scheme: its TaxScheme/ID) or CII SpecifiedTaxRegistration/ID (scheme: schemeID as written); id: the text */
+  taxRegistrations?: { scheme?: string; id: string; loc: Loc }[];
   locs: LocMap;
   loc?: Loc;
 }
@@ -101,7 +102,8 @@ export interface InvoiceLine {
    */
   priceAllowanceCharges?: AllowanceCharge[];
   /** Line object references (UBL cac:DocumentReference, CII line AdditionalReferencedDocument) with their type code as written */
-  documentRefs?: { typeCode?: string; loc: Loc }[];
+  /** idGiven (CII): a filled-in IssuerAssignedID (BR-52 reads every AdditionalReferencedDocument) */
+  documentRefs?: { typeCode?: string; idGiven?: boolean; loc: Loc }[];
   vatCategory?: string; // BT-151
   vatRate?: number; // BT-152
   /** Tax scheme of the line VAT category (UBL ClassifiedTaxCategory/TaxScheme/ID, CII ApplicableTradeTax/TypeCode) */
@@ -112,7 +114,8 @@ export interface InvoiceLine {
   standardItemId?: Identifier; // BT-157
   classification?: Identifier[]; // BT-158
   originCountry?: string; // BT-159
-  attributes: { name?: string; value?: string }[]; // BG-32
+  /** BG-32; hasName/hasValue: the elements are there, filled or not (BR-54) */
+  attributes: { name?: string; value?: string; hasName?: boolean; hasValue?: boolean }[];
   locs: LocMap;
   loc?: Loc;
 }
@@ -154,6 +157,12 @@ export type CodedKind =
   | "itemIdScheme"
   /** schemeID of UBL cac:DeliveryLocation/cbc:ID or the CII header ship-to party's ram:GlobalID (BR-CL-26) */
   | "deliveryIdScheme"
+  /** schemeID of UBL cac:PartyLegalEntity/cbc:CompanyID, or of any CII ram:ID outside ram:SpecifiedTaxRegistration (BR-CL-11) */
+  | "legalIdScheme"
+  /** schemeID of every UBL cbc:EndpointID, or of every CII ram:URIUniversalCommunication/ram:URIID (BR-CL-25) */
+  | "endpointScheme"
+  /** A VAT identifier as BR-CO-09 reads it: UBL each cac:PartyTaxScheme with TaxScheme VAT (its CompanyID as written, "" without one); CII each ram:SpecifiedTaxRegistration/ram:ID with schemeID exactly "VA" */
+  | "vatIdentifier"
   /** UBL cbc:TaxExemptionReasonCode, CII ram:ExemptionReasonCode (BR-CL-22) */
   | "exemptionCode"
   /** The payee account of a credit-transfer payment means (code 30 or 58): its identifier(s), normalised (BR-50) */
@@ -171,6 +180,8 @@ export interface CodedValue {
 }
 
 export interface PaymentMeans {
+  /** CII: a PayeePartyCreditorFinancialAccount has an IBANID or ProprietaryID element (BR-61) */
+  accountIdGiven?: boolean;
   code?: string; // BT-81
   text?: string; // BT-82
   paymentId?: string; // BT-83
@@ -251,7 +262,8 @@ export interface InvoiceModel {
   /** BT-90 bank assigned creditor identifier (SEPA creditor ID) */
   creditorId?: string;
   notes: string[]; // BT-22
-  precedingInvoices: { id?: string; date?: string; loc?: Loc }[]; // BG-3
+  /** BG-3; idGiven: the element BR-55 asks for (UBL InvoiceDocumentReference/ID, filled or not; CII a filled-in IssuerAssignedID) */
+  precedingInvoices: { id?: string; date?: string; idGiven?: boolean; loc?: Loc }[];
   periodStart?: string; // BT-73
   periodEnd?: string; // BT-74
   hasPeriod: boolean;
@@ -264,6 +276,12 @@ export interface InvoiceModel {
   seller: Party; // BG-4
   buyer: Party; // BG-7
   payee?: Party; // BG-10
+  /**
+   * BR-17's second half: what the payee repeats from the seller, as the official XPath general comparison
+   * finds it (any equal pair of strings as written): UBL PartyName/Name or PartyIdentification/ID; CII
+   * ram:Name, ram:ID or SpecifiedLegalOrganization/ram:ID. Undefined when the payee repeats none of them.
+   */
+  payeeRepeatsSeller?: "name" | "identifier" | "legal registration identifier";
   taxRepresentative?: Party; // BG-11
   delivery?: { date?: string; partyName?: string; address?: Address; locs: LocMap; loc?: Loc }; // BG-13
   paymentMeans: PaymentMeans[]; // BG-16

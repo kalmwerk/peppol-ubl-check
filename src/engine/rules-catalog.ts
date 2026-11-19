@@ -1478,7 +1478,7 @@ const CATALOG: RuleMeta[] = [
     "parties",
     ["BT-34", "BT-49", "BT-29"],
     "Invalid GLN",
-    "GLN must have a valid format according to GS1 rules (13 digits with a valid check digit).",
+    "GLN must have a valid format according to GS1 rules (digits only, with a valid GS1 check digit; Peppol BIS 3.0 sets no length).",
     "Check the Global Location Number with your GS1 member organisation.",
   ),
   R(

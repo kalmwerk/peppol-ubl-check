@@ -1,5 +1,6 @@
 import type { CodedKind, CodedValue, Loc, LocMap, InvoiceModel, SchemeIdentifier } from "./model";
 import { at, text, xpathOf, type XNode } from "./xml";
+import { normalizeSpace, xmlTrim } from "./xpath-text";
 
 export const DECIMAL_BTS = new Set([
   "BT-92",
@@ -48,7 +49,8 @@ export class ReadCtx {
 
   attr(node: XNode | null | undefined, path: string, name: string): string | undefined {
     const n = path ? at(node, path) : node;
-    const v = n?.attrs[name]?.trim();
+    const raw = n?.attrs[name];
+    const v = raw === undefined ? undefined : xmlTrim(raw);
     return v ? v : undefined;
   }
 
@@ -127,7 +129,8 @@ function validYmd(y: string, m: string, d: string) {
 export function collectEmptyElements(root: XNode, ctx: ReadCtx): Loc[] {
   const out: Loc[] = [];
   const visit = (n: XNode) => {
-    if (n.children.length === 0 && n.text.trim() === "") out.push(ctx.loc(n));
+    // PEPPOL-EN16931-R008: //*[not(*) and not(normalize-space())] (a non-breaking space is not empty)
+    if (n.children.length === 0 && n.text === "") out.push(ctx.loc(n));
     for (const c of n.children) visit(c);
   };
   visit(root);
@@ -188,7 +191,7 @@ export function collectUblSchemeIds(root: XNode, ctx: ReadCtx): SchemeIdentifier
     out.push({
       element: kind === "party identifier" ? "PartyIdentification/ID" : n.local,
       scheme,
-      id: n.text.trim(),
+      id: n.text,
       owner,
       kind,
       endpoint:
@@ -238,7 +241,7 @@ export function collectCiiSchemeIds(root: XNode, ctx: ReadCtx): SchemeIdentifier
     out.push({
       element: n.local,
       scheme,
-      id: n.text.trim(),
+      id: n.text,
       owner,
       kind,
       endpoint:
@@ -285,7 +288,7 @@ function ublAmountTerm(n: XNode): string | undefined {
   if (n.local === "PriceAmount" && p === "Price") return "BT-146";
   if (p === "AllowanceCharge" && (n.local === "Amount" || n.local === "BaseAmount")) {
     const where = parent?.parent?.local;
-    const charge = parent!.children.find((c) => c.local === "ChargeIndicator")?.text.trim().toLowerCase() === "true";
+    const charge = parent!.children.find((c) => c.local === "ChargeIndicator")?.text.toLowerCase() === "true";
     if (where === "Price") return n.local === "Amount" ? "BT-147" : "BT-148";
     if (where === "InvoiceLine" || where === "CreditNoteLine")
       return n.local === "Amount" ? (charge ? "BT-141" : "BT-136") : charge ? "BT-142" : "BT-137";
@@ -327,6 +330,12 @@ export function collectBinaryObjects(root: XNode, ctx: ReadCtx): NonNullable<Inv
 
 /** An element's text exactly as written (`text()` trims). */
 export const exactText = (n: XNode | null | undefined): string | undefined => (n ? (n.raw ?? n.text) : undefined);
+
+/** XPath `A = B` on two node sets: true when any string value of one equals any of the other, exactly as written. */
+export const anyEqual = (a: XNode[], b: XNode[]): boolean => {
+  const right = new Set(b.map((n) => exactText(n) ?? ""));
+  return a.some((n) => right.has(exactText(n) ?? ""));
+};
 
 const UBL_CAC = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
 const CII_RAM = "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100";
@@ -430,7 +439,7 @@ const hasAncestor = (n: XNode, ns: string, names: readonly string[]) => {
   return false;
 };
 const childrenNamed = (n: XNode, ns: string, local: string) => n.children.filter((c) => c.ns === ns && c.local === local);
-const normalise = (v: string | undefined) => (v ?? "").replace(/\s+/g, " ").trim();
+const normalise = normalizeSpace;
 
 /**
  * Every coded value the official code-list rules read, wherever it sits (the official contexts are not tied
@@ -456,6 +465,15 @@ export function collectCodedValues(root: XNode, ctx: ReadCtx, syntax: "UBL" | "C
             push("creditTransferAccount", acc, normalise(childrenNamed(acc, UBL_CBC, "ID").map(stringValue).join(" ")));
         return;
       }
+      if (n.ns === UBL_CAC && n.local === "PartyTaxScheme") {
+        // BR-CO-09: //cac:PartyTaxScheme[cac:TaxScheme/normalize-space(upper-case(cbc:ID))='VAT'], substring(cbc:CompanyID,1,2)
+        const scheme = childrenNamed(n, UBL_CAC, "TaxScheme").flatMap((t) => childrenNamed(t, UBL_CBC, "ID"));
+        if (scheme.some((id) => normalise((exactText(id) ?? "").toUpperCase()) === "VAT")) {
+          const company = childrenNamed(n, UBL_CBC, "CompanyID")[0];
+          push("vatIdentifier", company ?? n, company ? (exactText(company) ?? "") : "");
+        }
+        return;
+      }
       if (n.ns !== UBL_CBC) return;
       if (n.local === "IdentificationCode") {
         push("identificationCode", n, value);
@@ -479,7 +497,9 @@ export function collectCodedValues(root: XNode, ctx: ReadCtx, syntax: "UBL" | "C
           push("partyIdScheme", n, scheme, { sellerOrPayee: hasAncestor(n, UBL_CAC, ["AccountingSupplierParty", "PayeeParty"]) });
         else if (parent === "StandardItemIdentification") push("itemIdScheme", n, scheme);
         else if (parent === "DeliveryLocation") push("deliveryIdScheme", n, scheme);
-      }
+      } else if (n.local === "CompanyID" && parent === "PartyLegalEntity" && n.attrs["schemeID"] !== undefined)
+        push("legalIdScheme", n, n.attrs["schemeID"]!);
+      else if (n.local === "EndpointID" && n.attrs["schemeID"] !== undefined) push("endpointScheme", n, n.attrs["schemeID"]!);
     } else {
       if (n.ns !== CII_RAM) return;
       if (n.local === "SpecifiedTradeSettlementPaymentMeans") {
@@ -493,6 +513,13 @@ export function collectCodedValues(root: XNode, ctx: ReadCtx, syntax: "UBL" | "C
           }
         return;
       }
+      // BR-CO-09: //ram:SpecifiedTaxRegistration/ram:ID[@schemeID='VA'], its text as written
+      if (n.local === "ID" && parent === "SpecifiedTaxRegistration" && n.attrs["schemeID"] === "VA") push("vatIdentifier", n, value);
+      // BR-CL-11: ram:ID[@schemeID][not(ancestor::ram:SpecifiedTaxRegistration)], wherever it sits
+      if (n.local === "ID" && n.attrs["schemeID"] !== undefined && !hasAncestor(n, CII_RAM, ["SpecifiedTaxRegistration"]))
+        push("legalIdScheme", n, n.attrs["schemeID"]!);
+      if (n.local === "URIID" && parent === "URIUniversalCommunication" && n.attrs["schemeID"] !== undefined)
+        push("endpointScheme", n, n.attrs["schemeID"]!);
       if (n.local === "CountryID") push("country", n, value);
       // An OriginTradeCountry/ID with a schemeID is BR-CL-11's (an earlier rule in the same official pattern)
       else if (n.local === "ID" && parent === "OriginTradeCountry" && n.attrs["schemeID"] === undefined) push("originCountry", n, value);

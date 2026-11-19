@@ -2,6 +2,7 @@
  * EU VAT identification number checks: normalisation, per-country format and,
  * where the public algorithm is well documented, check-digit verification.
  */
+import { normalizeSpace } from "./xpath-text";
 
 export type VatCheckStatus = "valid" | "invalid_format" | "invalid_checksum" | "unknown_country";
 
@@ -428,12 +429,19 @@ export function checkIban(input: string): boolean {
   return mod97(numeric) === 1;
 }
 
-/** GS1 GLN check digit (13 digits) */
-export function checkGln(gln: string): boolean {
-  if (!/^\d{13}$/.test(gln)) return false;
+/**
+ * PEPPOL-COMMON-R040 (Peppol BIS Billing 3.0.22) for an identifier with scheme 0088, given its text as
+ * written: `matches(normalize-space(), '^[0-9]+$') and u:gln(normalize-space())`. u:gln checks the GS1
+ * check digit of a digit string of any length (weights 3, 1, 3 … from the right, last digit excluded), so
+ * an 8-digit GLN-8, a 14-digit GTIN or a GLN without its leading zero pass when their check digit is
+ * right; there is no 13-digit length test. A single digit passes only as "0" (empty sum, check digit 0).
+ */
+export function isPeppolGln(written: string): boolean {
+  const n = xpathNormalizeSpace(written);
+  if (!/^[0-9]+$/.test(n)) return false;
   let sum = 0;
-  for (let i = 0; i < 12; i++) sum += dg(gln, i) * (i % 2 === 0 ? 1 : 3);
-  return (10 - (sum % 10)) % 10 === dg(gln, 12);
+  for (let i = 0; i < n.length - 1; i++) sum += dg(n, n.length - 2 - i) * (i % 2 === 0 ? 3 : 1);
+  return (10 - (sum % 10)) % 10 === dg(n, n.length - 1);
 }
 
 /** Belgian enterprise number (KBO/BCE, scheme 0208) */
@@ -444,12 +452,13 @@ export function checkBelgianEnterprise(id: string): boolean {
 }
 
 /**
- * The exact Peppol test behind PEPPOL-COMMON-R043 for any identifier with scheme
- * 0208: after trimming, exactly 10 digits (no BE prefix, dots or spaces) and
+ * The exact Peppol test behind PEPPOL-COMMON-R043 for any identifier with scheme 0208, given its text as
+ * written: `matches(normalize-space(), '^[0-9]{10}$') and u:mod97-0208(normalize-space())`, so exactly
+ * 10 digits after XML whitespace is collapsed (no BE prefix, dots, spaces or non-breaking spaces) and
  * the last two digits equal 97 − (first eight mod 97).
  */
 export function isPeppol0208(id: string): boolean {
-  const n = id.trim();
+  const n = xpathNormalizeSpace(id);
   if (!/^[0-9]{10}$/.test(n)) return false;
   return 97 - (Number(n.slice(0, 8)) % 97) === Number(n.slice(8));
 }
@@ -460,7 +469,7 @@ export function isPeppol0208(id: string): boolean {
  * trim() also strip non-breaking and other Unicode spaces, which the official rules keep.
  */
 export function xpathNormalizeSpace(value: string): string {
-  return value.replace(/[\x20\x09\x0A\x0D]+/g, " ").replace(/^ | $/g, "");
+  return normalizeSpace(value);
 }
 
 /** XPath string-length(): counts characters (code points), not UTF-16 units. */

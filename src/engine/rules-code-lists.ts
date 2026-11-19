@@ -1,4 +1,4 @@
-import { CEN_VATEX_CODES, CII_DUE_DATE_TYPE_CODES, ICD_CODES, UBL_VAT_DATE_CODES, UNTDID_4451_CODES, UNTDID_4451_TEXT } from "./codes";
+import { CEN_VATEX_CODES, CII_DUE_DATE_TYPE_CODES, EAS_CODES, ICD_CODES, UBL_VAT_DATE_CODES, UNTDID_4451_CODES, UNTDID_4451_TEXT } from "./codes";
 import type { CodedKind, CodedValue, InvoiceModel } from "./model";
 import { normSpace, type Emit } from "./rules-vat-categories";
 
@@ -70,6 +70,25 @@ export function codeListRules(m: InvoiceModel, emit: Emit, peppol: boolean): voi
         expected: kind === "partyIdScheme" && !cii ? "an ICD code such as 0088 (GLN), or SEPA for the seller or payee" : "an ICD code such as 0088 (GLN) or 0160 (GTIN)",
       });
     }
+
+  // BR-CL-11: legal registration identifier schemes (UBL PartyLegalEntity/CompanyID; CII every ram:ID with a
+  // schemeID outside a tax registration, party identifiers included) from ISO/IEC 6523
+  for (const c of of("legalIdScheme")) {
+    if (listed(ICD_CODES, c.value)) continue;
+    emit("BR-CL-11", `${c.owner} ${cii ? "identifier" : "legal registration number"} scheme ${shown(c.value)} is not an ISO/IEC 6523 ICD code.`, c.loc, {
+      actual: normSpace(c.value),
+      expected: "an ICD code such as 0208 (Belgian enterprise number) or 0106 (KvK)",
+    });
+  }
+  // BR-CL-25: every electronic address scheme (UBL EndpointID, CII URIUniversalCommunication/URIID) from the EAS list
+  const EAS = new Set(Object.keys(EAS_CODES));
+  for (const c of of("endpointScheme")) {
+    if (listed(EAS, c.value)) continue;
+    emit("BR-CL-25", `${c.owner} electronic address scheme ${shown(c.value)} is not in the EAS code list.`, c.loc, {
+      actual: normSpace(c.value),
+      expected: "0208, 9925, 0088 …",
+    });
+  }
 
   // BR-CL-22: VAT exemption reason codes from the VATEX list, compared in upper case
   for (const c of of("exemptionCode")) {

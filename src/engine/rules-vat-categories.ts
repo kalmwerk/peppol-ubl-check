@@ -1,6 +1,7 @@
 import * as D from "./decimal";
 import type { AllowanceCharge, InvoiceLine, InvoiceModel, Loc, Party, VatBreakdown } from "./model";
 import type { Severity } from "./rules-catalog";
+import { normalizeSpace } from "./xpath-text";
 
 /**
  * The per-category VAT rules of EN 16931 that look at allowances and charges, the VAT breakdown and the
@@ -25,7 +26,8 @@ export type Emit = (
 ) => void;
 
 /** XPath normalize-space(): trimmed, inner whitespace runs collapsed to one space. */
-export const normSpace = (v: string | undefined) => (v ?? "").replace(/\s+/g, " ").trim();
+/** XPath normalize-space() (XML whitespace only; a non-breaking space stays). */
+export const normSpace = normalizeSpace;
 /** An element's text exactly as written (model values are trimmed; the loc keeps the original when it differs). */
 export const exactText = (value: string | undefined, loc: Loc | undefined) => loc?.raw ?? value ?? "";
 
@@ -318,22 +320,32 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
     }
   }
 
-  /* ------------ lines: BR-IG-02, BR-IP-02 (seller identifiers), BR-IG-05, BR-IP-05 (rates) ------------ */
-  for (const prefix of ["IG", "IP"] as const) {
+  /* ------------ lines: BR-x-02, the VAT identifiers an invoice with lines in a category needs ------------ */
+  // UBL tests the document once for any cac:ClassifiedTaxCategory in the category (normalize-space) with
+  // TaxScheme VAT; CII each line's ApplicableTradeTax with that CategoryCode and TypeCode VAT as written.
+  // Only the elements count, filled or not: an empty CompanyID (UBL) or ID with the right schemeID (CII) is there.
+  const lineCategory = (ln: InvoiceLine) => {
+    const codeLoc = ln.locs["vatCategoryCode"];
+    if (!codeLoc) return undefined;
+    return cii ? exactText(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
+  };
+  for (const prefix of PREFIXES) {
     const category = categoryOf(prefix, cii);
-    const inCategory = m.lines.filter((ln) => {
-      const codeLoc = ln.locs["vatCategoryCode"];
-      if (!codeLoc) return false;
-      const c = cii ? exactText(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
-      return c === category && isVat(ln.vatScheme, ln.locs["vatScheme"]);
-    });
+    const inCategory = m.lines.filter((ln) => lineCategory(ln) === category && isVat(ln.vatScheme, ln.locs["vatScheme"]));
+    // UBL's BR-S-02 alone tests "no S line" without TaxScheme: an S line without VAT and no S line with VAT fails
+    const sWithoutVat = !cii && prefix === "S" && inCategory.length === 0 ? m.lines.find((ln) => lineCategory(ln) === "S") : undefined;
+    if (sWithoutVat) {
+      emit("BR-S-02", `Line ${sWithoutVat.id ?? "?"} is in VAT category ${catName("S")}, but its tax scheme isn't VAT, so the official rule can't find a standard-rated VAT line to accept.`, sWithoutVat.locs["vatScheme"] ?? sWithoutVat.locs["vatCategoryCode"] ?? sWithoutVat.loc);
+      continue;
+    }
     if (inCategory.length === 0 || identifiersOk(prefix)) continue;
-    // UBL tests the document once; CII each line
     for (const ln of cii ? inCategory : inCategory.slice(0, 1))
       emit(
         `BR-${prefix}-02`,
-        `${cii ? `Line ${ln.id ?? "?"} is` : "The invoice has lines"} in VAT category ${catName(category)}, so it needs ${SELLER_IDS}.`,
-        ln.locs["vatCategoryCode"] ?? ln.loc,
+        prefix === "O"
+          ? `${cii ? `Line ${ln.id ?? "?"} is` : "The invoice has lines"} in VAT category ${catName(category)}, so it must not carry the seller's, tax representative's or buyer's VAT identifier.`
+          : `${cii ? `Line ${ln.id ?? "?"} is` : "The invoice has lines"} in VAT category ${catName(category)}, so it needs ${NEEDS[prefix]}.`,
+        prefix === "O" ? (m.seller.locs["vatId"] ?? m.buyer.locs["vatId"] ?? ln.locs["vatCategoryCode"] ?? ln.loc) : (ln.locs["vatCategoryCode"] ?? ln.loc),
       );
   }
   /* ------------ lines: BR-IG-05, BR-IP-05 ------------ */
