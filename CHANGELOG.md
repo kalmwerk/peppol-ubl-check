@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-11-19
+
+Fixes false errors where the checker was stricter than the official CEN EN 16931 1.3.17 and Peppol BIS Billing 3.0.22 Schematron, and the few places where it was more lenient. No new rules: still 324. Every change was checked against the compiled official files on single-change copies of the test invoices (`test/schematron-parity.test.ts`, 44 new edge cases); the official unit tests still give 0 differences.
+
+### Fixed
+- PEPPOL-COMMON-R040 (GLN, scheme 0088) no longer requires 13 digits. Like the official rule, it accepts digits only with a valid GS1 check digit, whatever the length, so a GLN-8, a 14-digit GTIN or an 18-digit number with the right check digit passes. A non-breaking space next to the number now fails, as it does officially.
+- BR-65 (item classification scheme) only checks classification codes: a `cac:CommodityClassification` with just a `cbc:NatureCode`, or an empty one, no longer fails it (Peppol's PEPPOL-EN16931-R008 still reports the empty element), and a UBL `listID=""` is reported as BR-CL-13, not BR-65. In CII a blank `listID` still fails BR-65.
+- Text handling follows XPath: only spaces, tabs and line breaks count as whitespace. A non-breaking space is no longer stripped, so codes, schemes and identifiers written with one fail their code-list or format rule (BR-CL-…, PEPPOL-COMMON-R043 and the other identifier formats), and an element holding only one isn't empty for R008.
+- Elements that are there but empty now count as given wherever the official rule only asks for the element: BR-17, BR-23, BR-31 … BR-33, BR-36 … BR-38, BR-41 … BR-44, BR-47, BR-49, BR-54 … BR-57, BR-61, BR-CO-04, BR-CO-26, BR-S/Z/E/AE/IC/O-10 and the VAT identifier rules BR-S/Z/E/AE/IC/G/O-02. The code-list rules then report the empty value (BR-CL-01, -04, -16, -23, -25), as the official files do.
+- Identifier schemes: an empty UBL `schemeID` counts as given for BR-62, BR-63 and BR-64 (BR-CL-25 reports it), a blank CII one fails them; BR-CL-25 checks every electronic address and accepts a padded scheme like `" 0208 "`; BR-CL-11 checks every legal registration identifier, and in CII every `ram:ID` with a schemeID outside a tax registration.
+- VAT identifiers: BR-CO-09 reads every VAT identifier element as written (in CII only `schemeID="VA"`, so a leading space or an empty identifier fails and another scheme isn't a VAT number), and BR-S/Z/E/AE/IC/G/O-02 now follow the official tests (the line's category, the identifier elements, CII's VA and FC schemes).
+- BR-17 also fails when the payee repeats the seller's name or identifier (CII: or legal registration identifier).
+- CII: BR-09, BR-11 and BR-20 fail when the postal address itself is missing; BR-53 also needs the VAT accounting currency to differ from the invoice currency; BR-61 checks the payee account's IBAN or proprietary ID; BR-52 also reads line-level referenced documents; BR-CL-23 also reads the gross price's base quantity.
+- Allowances and charges are told apart as each syntax's official rules read the indicator (UBL `1`/`0` as true/false, CII exactly `true`/`false`); BR-32, BR-37, BR-47, BR-48 and BR-CO-04 need the tax scheme VAT; BR-23 and BR-27 also fail when the line has no quantity or net price; BR-55 needs an `InvoiceDocumentReference` (a credit note reference alone doesn't count); BR-CL-24 and PEPPOL-EN16931-CL001 compare the MIME code exactly as written.
+
 ## [1.5.0] - 2026-11-18
 
 Peppol's own format checks for Norwegian, Danish and Swedish company numbers: 3 new rules, 324 in total. The verdicts of the rules 1.4.0 already checked are unchanged, apart from invoices the new rules now flag.
