@@ -1,0 +1,471 @@
+{
+ "checkedWith": "CEN EN 16931 validation artefacts 1.3.17 (EN16931-UBL/CII-validation.xslt) and Peppol BIS Billing 3.0.22 (PEPPOL-EN16931-UBL/CII.sch compiled with SchXslt 1.10.1), Saxon-HE",
+ "recordedOn": "2026-11-19",
+ "cases": {
+  "edge/ubl-sample.xml": {
+   "about": "the UBL sample, unchanged",
+   "rules": [],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/cii-sample.xml": {
+   "about": "the CII sample (Peppol BIS guideline), unchanged",
+   "rules": [],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-classification-nature-code-only.xml": {
+   "about": "CommodityClassification with only a NatureCode",
+   "rules": [
+    "BR-65",
+    "BR-CL-13"
+   ],
+   "cen": {
+    "UBL-CR-592": "warning"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-classification-empty.xml": {
+   "about": "an empty CommodityClassification",
+   "rules": [
+    "BR-65",
+    "BR-CL-13",
+    "PEPPOL-EN16931-R008"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "edge/ubl-classification-listid-empty.xml": {
+   "about": "ItemClassificationCode with listID=\"\"",
+   "rules": [
+    "BR-65",
+    "BR-CL-13"
+   ],
+   "cen": {
+    "BR-CL-13": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-classification-no-listid.xml": {
+   "about": "ItemClassificationCode without listID",
+   "rules": [
+    "BR-65",
+    "BR-CL-13"
+   ],
+   "cen": {
+    "BR-65": "error"
+   },
+   "peppol": {}
+  },
+  "edge/cii-classification-without-code.xml": {
+   "about": "DesignatedProductClassification with only a ClassName",
+   "rules": [
+    "BR-65",
+    "BR-CL-13"
+   ],
+   "cen": {
+    "CII-SR-083": "warning"
+   },
+   "peppol": {}
+  },
+  "edge/cii-classification-listid-blank.xml": {
+   "about": "ClassCode with listID=\" \"",
+   "rules": [
+    "BR-65",
+    "BR-CL-13"
+   ],
+   "cen": {
+    "BR-65": "error",
+    "BR-CL-13": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-gln-8-digits.xml": {
+   "about": "buyer party identifier: a GLN-8 (scheme 0088) with a valid check digit",
+   "rules": [
+    "PEPPOL-COMMON-R040"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-gln-14-digits.xml": {
+   "about": "buyer party identifier: a 14-digit GTIN-style number (scheme 0088) with a valid check digit",
+   "rules": [
+    "PEPPOL-COMMON-R040"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-gln-18-digits.xml": {
+   "about": "buyer party identifier: 18 digits (scheme 0088) with a valid check digit",
+   "rules": [
+    "PEPPOL-COMMON-R040"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-gln-13-digits.xml": {
+   "about": "buyer party identifier: a valid 13-digit GLN",
+   "rules": [
+    "PEPPOL-COMMON-R040"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-gln-wrong-check-digit.xml": {
+   "about": "buyer party identifier: a 13-digit GLN with a wrong check digit",
+   "rules": [
+    "PEPPOL-COMMON-R040"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-COMMON-R040": "error"
+   }
+  },
+  "edge/ubl-gln-nbsp.xml": {
+   "about": "buyer party identifier: a valid GLN after a non-breaking space",
+   "rules": [
+    "PEPPOL-COMMON-R040"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-COMMON-R040": "error"
+   }
+  },
+  "edge/ubl-gln-line-breaks.xml": {
+   "about": "buyer party identifier: a valid GLN between a line break and a tab",
+   "rules": [
+    "PEPPOL-COMMON-R040"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-gln-endpoint-8-digits.xml": {
+   "about": "seller EndpointID: a GLN-8 (scheme 0088)",
+   "rules": [
+    "PEPPOL-COMMON-R040",
+    "PEPPOL-EN16931-CL008",
+    "BR-CL-25"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/cii-gln-8-digits.xml": {
+   "about": "buyer GlobalID: a GLN-8 (scheme 0088)",
+   "rules": [
+    "PEPPOL-COMMON-R040",
+    "BR-CL-10"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/cii-gln-wrong-check-digit.xml": {
+   "about": "buyer GlobalID: a GLN with a wrong check digit",
+   "rules": [
+    "PEPPOL-COMMON-R040",
+    "BR-CL-10"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-COMMON-R040": "error"
+   }
+  },
+  "edge/ubl-0208-nbsp.xml": {
+   "about": "buyer party identifier: a valid 0208 number after a non-breaking space",
+   "rules": [
+    "PEPPOL-COMMON-R043"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-COMMON-R043": "error"
+   }
+  },
+  "edge/ubl-0208-line-breaks.xml": {
+   "about": "buyer party identifier: a valid 0208 number between line breaks",
+   "rules": [
+    "PEPPOL-COMMON-R043"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-endpoint-scheme-empty.xml": {
+   "about": "seller EndpointID with schemeID=\"\"",
+   "rules": [
+    "BR-62",
+    "BR-CL-25",
+    "PEPPOL-EN16931-CL008"
+   ],
+   "cen": {
+    "BR-CL-25": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-CL008": "error"
+   }
+  },
+  "edge/ubl-endpoint-scheme-padded.xml": {
+   "about": "seller EndpointID with schemeID=\" 0208 \"",
+   "rules": [
+    "BR-62",
+    "BR-CL-25",
+    "PEPPOL-EN16931-CL008"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-CL008": "error"
+   }
+  },
+  "edge/cii-endpoint-scheme-blank.xml": {
+   "about": "buyer URIID with schemeID=\" \"",
+   "rules": [
+    "BR-63",
+    "BR-CL-25",
+    "PEPPOL-EN16931-CL008"
+   ],
+   "cen": {
+    "BR-63": "error",
+    "BR-CL-25": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-CL008": "error"
+   }
+  },
+  "edge/cii-endpoint-scheme-padded.xml": {
+   "about": "buyer URIID with schemeID=\" 0225 \"",
+   "rules": [
+    "BR-63",
+    "BR-CL-25",
+    "PEPPOL-EN16931-CL008"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-CL008": "error"
+   }
+  },
+  "edge/cii-legal-id-scheme-9925.xml": {
+   "about": "seller legal registration identifier with the address scheme 9925",
+   "rules": [
+    "BR-CL-11"
+   ],
+   "cen": {
+    "BR-CL-11": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-legal-id-scheme-nbsp.xml": {
+   "about": "seller legal registration identifier whose schemeID starts with a non-breaking space",
+   "rules": [
+    "BR-CL-11"
+   ],
+   "cen": {
+    "BR-CL-11": "error"
+   },
+   "peppol": {}
+  },
+  "edge/cii-tax-registration-0007.xml": {
+   "about": "seller SpecifiedTaxRegistration/ID with schemeID \"0007\" instead of \"VA\"",
+   "rules": [
+    "BR-CO-09",
+    "BR-S-02",
+    "BR-CO-26"
+   ],
+   "cen": {
+    "BR-S-02": "error"
+   },
+   "peppol": {}
+  },
+  "edge/cii-tax-registration-fc.xml": {
+   "about": "seller SpecifiedTaxRegistration/ID with schemeID \"FC\" (tax number) only",
+   "rules": [
+    "BR-CO-09",
+    "BR-S-02",
+    "BR-CO-26"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-vat-id-leading-space.xml": {
+   "about": "seller VAT identifier written with a leading space",
+   "rules": [
+    "BR-CO-09",
+    "BR-S-02"
+   ],
+   "cen": {
+    "BR-CO-09": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-vat-id-empty.xml": {
+   "about": "seller VAT identifier element left empty",
+   "rules": [
+    "BR-CO-09",
+    "BR-S-02",
+    "BR-CO-26",
+    "PEPPOL-EN16931-R008"
+   ],
+   "cen": {
+    "BR-CO-09": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "edge/ubl-payee-name-blank.xml": {
+   "about": "payee whose name is a single space",
+   "rules": [
+    "BR-17",
+    "PEPPOL-EN16931-R008"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "edge/ubl-payee-same-name-as-seller.xml": {
+   "about": "payee with the seller's trading name",
+   "rules": [
+    "BR-17"
+   ],
+   "cen": {
+    "BR-17": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-payee-same-identifier-as-seller.xml": {
+   "about": "payee with the seller's party identifier",
+   "rules": [
+    "BR-17"
+   ],
+   "cen": {
+    "BR-17": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-payee-blank-vs-empty-identifier.xml": {
+   "about": "seller party identifier a single space, payee party identifier empty (they differ as written)",
+   "rules": [
+    "BR-17",
+    "PEPPOL-EN16931-R008"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "edge/cii-payee-name-empty.xml": {
+   "about": "payee with an empty Name element",
+   "rules": [
+    "BR-17"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/cii-payee-same-legal-id.xml": {
+   "about": "payee with the seller's legal registration identifier",
+   "rules": [
+    "BR-17"
+   ],
+   "cen": {
+    "BR-17": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-item-attribute-name-empty.xml": {
+   "about": "item attribute with an empty Name",
+   "rules": [
+    "BR-54",
+    "PEPPOL-EN16931-R008"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "edge/cii-item-attribute-description-empty.xml": {
+   "about": "item attribute with an empty Description",
+   "rules": [
+    "BR-54"
+   ],
+   "cen": {},
+   "peppol": {}
+  },
+  "edge/ubl-allowance-reason-empty.xml": {
+   "about": "document allowance whose only reason element is empty",
+   "rules": [
+    "BR-33",
+    "BR-CO-21",
+    "PEPPOL-EN16931-R008"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "edge/ubl-unit-code-empty.xml": {
+   "about": "line quantity with unitCode=\"\"",
+   "rules": [
+    "BR-23",
+    "BR-CL-23"
+   ],
+   "cen": {
+    "BR-CL-23": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-payment-means-code-empty.xml": {
+   "about": "payment means with an empty PaymentMeansCode",
+   "rules": [
+    "BR-49",
+    "BR-CL-16",
+    "BR-61",
+    "PEPPOL-EN16931-R008"
+   ],
+   "cen": {
+    "BR-CL-16": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "edge/ubl-payee-account-id-empty.xml": {
+   "about": "credit transfer (58) whose account ID element is empty",
+   "rules": [
+    "BR-61",
+    "BR-50",
+    "PEPPOL-EN16931-R008"
+   ],
+   "cen": {
+    "BR-50": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "edge/cii-account-without-id.xml": {
+   "about": "credit transfer (58) account with only an account name",
+   "rules": [
+    "BR-61",
+    "BR-50"
+   ],
+   "cen": {
+    "BR-50": "error",
+    "BR-61": "error",
+    "CII-SR-470": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-preceding-credit-note-only.xml": {
+   "about": "BillingReference with only a CreditNoteDocumentReference",
+   "rules": [
+    "BR-55"
+   ],
+   "cen": {
+    "BR-55": "error",
+    "UBL-CR-039": "warning",
+    "UBL-SR-07": "error"
+   },
+   "peppol": {}
+  }
+ }
+}
