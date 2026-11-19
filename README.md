@@ -222,6 +222,17 @@ For a visual report of one invoice (header, parties, lines, VAT breakdown, with 
 - No dependencies are installed when it runs. `dist/index.js` (Action) and `dist/cli.js` (CLI) are built from `src/` with esbuild; the only third-party code in them is the XML reader saxes and its helper xmlchars ([licenses](THIRD_PARTY_LICENSES.md)). CI fails if `dist/` doesn't match the source.
 - It reads files up to 5 MB and stops after looking at 200,000 files and folders, so a broad pattern can't run away.
 
+## Related tools
+
+Free tools on [InvoiceVerify](https://peppol-invoice-compass.lovable.app), Kalmwerk's website (see the disclosure above), for the parts of e-invoicing this Action leaves out. You don't need any of them to use the Action.
+
+- **[Online e-invoice validator](https://peppol-invoice-compass.lovable.app/validate):** the same rules on one UBL, Peppol BIS, XRechnung or Factur-X invoice at a time, with a visual report of the invoice and its recalculated totals. Three checks a month without an account.
+- **[Peppol and EN 16931 error codes](https://peppol-invoice-compass.lovable.app/rules):** a page for every rule ID in the job summary, with what it means and how to fix it, some with a worked before/after XML example. Most are also explained in Dutch ([foutcodes](https://peppol-invoice-compass.lovable.app/nl/foutcodes)) and French ([codes d’erreur](https://peppol-invoice-compass.lovable.app/fr/codes-erreur)).
+- **[SI-UBL 2.0 / NLCIUS checker](https://peppol-invoice-compass.lovable.app/tools/si-ubl-nlcius-checker):** one Dutch SimplerInvoicing invoice against the 30 Dutch rules plus EN 16931 and Peppol, in your browser; the file isn't uploaded.
+- **[Factur-X / ZUGFeRD generator](https://peppol-invoice-compass.lovable.app/tools/factur-x-generator):** makes a PDF/A-3 invoice with the CII XML embedded (MINIMUM, BASIC or EN 16931 profile) in your browser and checks it straight away. This Action reads XML only, so it doesn't check those PDFs.
+- **Is the buyer on Peppol?** Search the official Peppol Directory by company name, VAT or company number, or Peppol ID: [Peppol ID lookup](https://peppol-invoice-compass.lovable.app/tools/peppol-lookup), in Dutch [Peppol-ID opzoeken](https://peppol-invoice-compass.lovable.app/nl/peppol-id-opzoeken), in French [recherche d’identifiant Peppol](https://peppol-invoice-compass.lovable.app/fr/recherche-identifiant-peppol). It shows each Peppol ID a company has and whether it receives BIS Billing 3.0 invoices, which this Action can't tell you because it makes no network requests.
+- **Belgian client lists:** up to 500 Belgian company or VAT numbers checked at once under both of their Peppol IDs (0208 and 9925), because a company registered under only one of them can't receive invoices sent to the other; the first 10 results are free. [Peppol check for a whole client list](https://peppol-invoice-compass.lovable.app/peppol-client-list-check), in Dutch [Peppol-controle voor uw hele klantenbestand](https://peppol-invoice-compass.lovable.app/nl/peppol-controle-klantenbestand), in French [contrôle Peppol de tout votre portefeuille clients](https://peppol-invoice-compass.lovable.app/fr/controle-peppol-portefeuille-clients).
+
 ## Development
 
 ```sh
@@ -231,8 +242,6 @@ npm run build     # rebuild dist/; commit it with the source
 ```
 
 `src/engine/` is a copy of InvoiceVerify's rule engine; see [its README](src/engine/README.md). `test/fixtures/` holds valid and deliberately broken invoices from the website's [sample library](https://peppol-invoice-compass.lovable.app/samples).
-
-Need to know whether your customers can receive Peppol invoices at all? [InvoiceVerify](https://peppol-invoice-compass.lovable.app) checks Belgian companies under both of their Peppol IDs (0208 and 9925), free for single lookups.
 
 ## License
 
