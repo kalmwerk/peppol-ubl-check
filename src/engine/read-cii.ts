@@ -19,9 +19,11 @@ import {
   collectDates,
   collectEmptyElements,
   collectObjectIdSchemes,
+  anyEqual,
   exactText,
 } from "./read-utils";
 import { all, at, kids, text, type XNode } from "./xml";
+import { normalizeSpace } from "./xpath-text";
 
 export const CII_NS = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100";
 
@@ -92,7 +94,9 @@ function readParty(ctx: ReadCtx, node: XNode | null): Party {
     };
   }
   p.address = readAddress(ctx, at(node, "PostalTradeAddress"), L, "address");
-  const uri = at(node, "URIUniversalCommunication/URIID");
+  const uriGroup = at(node, "URIUniversalCommunication");
+  if (uriGroup) L["endpointGroup"] = ctx.loc(uriGroup);
+  const uri = at(uriGroup, "URIID");
   if (uri) {
     p.endpoint = { id: text(uri) ?? "", scheme: uri.attrs["schemeID"] };
     L["endpoint"] = ctx.loc(uri);
@@ -101,7 +105,7 @@ function readParty(ctx: ReadCtx, node: XNode | null): Party {
   for (const reg of kids(node, "SpecifiedTaxRegistration")) {
     const id = at(reg, "ID");
     if (!id) continue;
-    p.taxRegistrations.push({ scheme: id.attrs["schemeID"], loc: ctx.loc(id) });
+    p.taxRegistrations.push({ scheme: id.attrs["schemeID"], id: text(id) ?? "", loc: ctx.loc(id) });
     const scheme = id.attrs["schemeID"]?.toUpperCase();
     if (scheme === "FC") {
       p.taxRegistrationId = text(id);
@@ -220,6 +224,7 @@ export function readCii(root: XNode): InvoiceModel {
     precedingInvoices: kids(settlement, "InvoiceReferencedDocument").map((r) => ({
       id: text(r, "IssuerAssignedID"),
       date: text(r, "FormattedIssueDateTime/DateTimeString"),
+      idGiven: normalizeSpace(at(r, "IssuerAssignedID")?.text) !== "",
       loc: ctx.loc(r),
     })),
     hasPeriod: false,
@@ -258,7 +263,16 @@ export function readCii(root: XNode): InvoiceModel {
   const taxRep = at(agreement, "SellerTaxRepresentativeTradeParty");
   if (taxRep) model.taxRepresentative = readParty(ctx, taxRep);
   const payee = at(settlement, "PayeeTradeParty");
-  if (payee) model.payee = readParty(ctx, payee);
+  if (payee) {
+    model.payee = readParty(ctx, payee);
+    // BR-17: not(ram:Name = …SellerTradeParty/ram:Name) and not(ram:ID = …SellerTradeParty/ram:ID) and
+    // not(ram:SpecifiedLegalOrganization/ram:ID = …SellerTradeParty/ram:SpecifiedLegalOrganization/ram:ID)
+    const sellerParty = at(agreement, "SellerTradeParty");
+    const legalIds = (n: XNode | null) => kids(n, "SpecifiedLegalOrganization").flatMap((o) => kids(o, "ID"));
+    if (anyEqual(kids(payee, "Name"), kids(sellerParty, "Name"))) model.payeeRepeatsSeller = "name";
+    else if (anyEqual(kids(payee, "ID"), kids(sellerParty, "ID"))) model.payeeRepeatsSeller = "identifier";
+    else if (anyEqual(legalIds(payee), legalIds(sellerParty))) model.payeeRepeatsSeller = "legal registration identifier";
+  }
 
   model.deliveryDateGiven = !!at(deliveryNode, "ActualDeliverySupplyChainEvent/OccurrenceDateTime/DateTimeString");
   if (deliveryNode) {
@@ -317,6 +331,7 @@ export function readCii(root: XNode): InvoiceModel {
       mandateRef: mandate,
       debitedAccount: ctx.str(pm, "PayerPartyDebtorFinancialAccount/IBANID", pl, "debitedAccount"),
       hasCreditTransfer: !!at(pm, "PayeePartyCreditorFinancialAccount"),
+      accountIdGiven: kids(pm, "PayeePartyCreditorFinancialAccount").every((a) => !!(at(a, "IBANID") || at(a, "ProprietaryID"))),
       hasCard: !!at(pm, "ApplicableTradeSettlementFinancialCard"),
       // CII has no element for BG-19; it exists when any of its three terms is given
       hasDirectDebit: !!(mandate || text(settlement, "CreditorReferenceID") || text(pm, "PayerPartyDebtorFinancialAccount/IBANID")),
@@ -455,14 +470,17 @@ export function readCii(root: XNode): InvoiceModel {
         line.standardItemId = { id: text(gid) ?? "", scheme: gid.attrs["schemeID"] };
         L["standardItemId"] = ctx.loc(gid);
       }
-      line.classification = all(product, "DesignatedProductClassification").map((c) => {
-        const code = at(c, "ClassCode");
-        return { id: text(code) ?? "", scheme: code?.attrs["listID"], loc: code ? ctx.loc(code) : undefined };
-      });
+      // BT-158: one entry per ClassCode element, its listID exactly as written. A
+      // DesignatedProductClassification without a ClassCode has no classification to check.
+      line.classification = all(product, "DesignatedProductClassification")
+        .flatMap((c) => kids(c, "ClassCode"))
+        .map((code) => ({ id: text(code) ?? "", scheme: code.attrs["listID"], loc: ctx.loc(code) }));
       line.originCountry = ctx.str(product, "OriginTradeCountry/ID", L, "originCountry");
       line.attributes = kids(product, "ApplicableProductCharacteristic").map((c) => ({
         name: text(c, "Description"),
         value: text(c, "Value"),
+        hasName: !!at(c, "Description"),
+        hasValue: !!at(c, "Value"),
       }));
     }
     const net = at(la, "NetPriceProductTradePrice");
@@ -516,6 +534,7 @@ export function readCii(root: XNode): InvoiceModel {
     }
     line.documentRefs = kids(ls, "AdditionalReferencedDocument").map((d) => ({
       typeCode: exactText(at(d, "TypeCode")),
+      idGiven: normalizeSpace(at(d, "IssuerAssignedID")?.text) !== "",
       loc: ctx.loc(d),
     }));
     for (const ac of kids(ls, "SpecifiedTradeAllowanceCharge")) {

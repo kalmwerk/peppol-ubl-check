@@ -1,5 +1,5 @@
 {
-  "checkedOn": "2026-11-18",
+  "checkedOn": "2026-11-19",
   "command": "npm run compare-official",
   "sources": {
     "cen": {
@@ -266,5 +266,5 @@
       ]
     }
   },
-  "fingerprint": "da44d014dd27052be7966bb9c32ea85f8e17eb9b315bd2874911a44561f72c19"
+  "fingerprint": "73c0550d88a2768622ca4239497f6590221bb2b58a2e3232c5b4aa9b3f231f26"
 }

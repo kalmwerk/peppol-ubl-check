@@ -16,3 +16,15 @@ Peppol BIS Billing 3.0.22 (`PEPPOL-EN16931-UBL.sch`, `PEPPOL-EN16931-CII.sch`, c
 SchXslt) under Saxon-HE 12.9. Rules not listed for an invoice passed.
 
 `src/lib/einvoice/schematron-parity.test.ts` holds the checker to every one of these verdicts.
+
+## Edge cases (`edge/`, `edge-verdicts.json`)
+
+Single-change copies of the library's valid samples (`peppol-valid` in UBL, `factur-x-en16931` turned
+into a Peppol BIS CII invoice), written by `bun scripts/record-official-edge-cases.ts`: an element that
+is there but empty or only partly filled in (a classification without a code, an empty name, reason
+or code), and identifiers written in unusual but valid forms (GLNs of other lengths, schemeIDs with
+spaces, non-breaking spaces, VAT identifiers under another CII scheme). `edge-verdicts.json` records,
+per invoice, what it changes, the rules it is about and every failed assert of the CEN artefacts
+(`cen`) and of the Peppol rules (`peppol`), produced by the same artefacts and the same Saxon run as
+`verdicts.json`. `schematron-parity.test.ts` checks each one under the en16931 profile against the
+CEN verdicts and under the peppol profile against both, on its rules and on the overall verdict.

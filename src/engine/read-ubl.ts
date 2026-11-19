@@ -20,6 +20,7 @@ import {
   collectUblAmountCurrencies,
   collectUblAmountTexts,
   collectUblSchemeIds,
+  anyEqual,
   exactText,
 } from "./read-utils";
 import { all, at, kids, text, type XNode } from "./xml";
@@ -68,7 +69,7 @@ function readParty(ctx: ReadCtx, partyNode: XNode | null): Party {
     const scheme = text(pts, "TaxScheme/ID");
     const company = at(pts, "CompanyID");
     if (!company) continue;
-    p.taxRegistrations.push({ scheme, loc: ctx.loc(company) });
+    p.taxRegistrations.push({ scheme, id: text(company) ?? "", loc: ctx.loc(company) });
     if (scheme?.toUpperCase() === "VAT") {
       p.vatId = text(company);
       L["vatId"] = ctx.loc(company);
@@ -161,7 +162,7 @@ export function readUbl(root: XNode): InvoiceModel {
     notes: kids(root, "Note").map((n) => text(n) ?? ""),
     precedingInvoices: all(root, "BillingReference").map((br) => {
       const ref = at(br, "InvoiceDocumentReference") ?? at(br, "CreditNoteDocumentReference");
-      return { id: text(ref, "ID"), date: text(ref, "IssueDate"), loc: ctx.loc(br) };
+      return { id: text(ref, "ID"), date: text(ref, "IssueDate"), idGiven: !!at(br, "InvoiceDocumentReference/ID"), loc: ctx.loc(br) };
     }),
     hasPeriod: false,
     seller: readParty(ctx, at(root, "AccountingSupplierParty/Party")),
@@ -207,8 +208,15 @@ export function readUbl(root: XNode): InvoiceModel {
   if (payee) {
     const p = readParty(ctx, payee);
     p.name = p.tradingName;
-    p.locs["name"] = p.locs["tradingName"] ?? p.loc!;
+    if (p.locs["tradingName"]) p.locs["name"] = p.locs["tradingName"];
     model.payee = p;
+    // BR-17: not(cac:PartyName/cbc:Name = ../cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name) and
+    // not(cac:PartyIdentification/cbc:ID = ../cac:AccountingSupplierParty/cac:Party/cac:PartyIdentification/cbc:ID)
+    const sellerParty = at(root, "AccountingSupplierParty/Party");
+    const names = (n: XNode | null) => kids(n, "PartyName").flatMap((pn) => kids(pn, "Name"));
+    const ids = (n: XNode | null) => kids(n, "PartyIdentification").flatMap((pi) => kids(pi, "ID"));
+    if (anyEqual(names(payee), names(sellerParty))) model.payeeRepeatsSeller = "name";
+    else if (anyEqual(ids(payee), ids(sellerParty))) model.payeeRepeatsSeller = "identifier";
   }
   const taxRep = at(root, "TaxRepresentativeParty");
   if (taxRep) {
@@ -224,7 +232,8 @@ export function readUbl(root: XNode): InvoiceModel {
   model.creditorId = sepa(model.seller) ?? sepa(model.payee);
 
   const delivery = at(root, "Delivery");
-  model.deliveryDateGiven = (at(delivery, "ActualDeliveryDate")?.text.trim().length ?? 0) > 1;
+  // BR-IC-11: string-length(cac:Delivery/cbc:ActualDeliveryDate) > 1, on the text as written
+  model.deliveryDateGiven = Array.from(exactText(at(delivery, "ActualDeliveryDate")) ?? "").length > 1;
   if (delivery) {
     const dl: LocMap = {};
     model.delivery = {
@@ -385,10 +394,11 @@ export function readUbl(root: XNode): InvoiceModel {
         line.standardItemId = { id: text(sid) ?? "", scheme: sid.attrs["schemeID"] };
         L["standardItemId"] = ctx.loc(sid);
       }
-      line.classification = all(item, "CommodityClassification").map((cc) => {
-        const code = at(cc, "ItemClassificationCode");
-        return { id: text(code) ?? "", scheme: code?.attrs["listID"], loc: code ? ctx.loc(code) : undefined };
-      });
+      // BT-158: one entry per ItemClassificationCode element, its listID exactly as written. A
+      // CommodityClassification without one (empty, or only a NatureCode) has no classification to check.
+      line.classification = all(item, "CommodityClassification")
+        .flatMap((cc) => kids(cc, "ItemClassificationCode"))
+        .map((code) => ({ id: text(code) ?? "", scheme: code.attrs["listID"], loc: ctx.loc(code) }));
       line.originCountry = ctx.str(item, "OriginCountry/IdentificationCode", L, "originCountry");
       line.vatCategory = ctx.str(item, "ClassifiedTaxCategory/ID", L, "vatCategory");
       line.vatRate = ctx.num(item, "ClassifiedTaxCategory/Percent", L, "vatRate", "BT-152");
@@ -400,6 +410,8 @@ export function readUbl(root: XNode): InvoiceModel {
       line.attributes = kids(item, "AdditionalItemProperty").map((ap) => ({
         name: text(ap, "Name"),
         value: text(ap, "Value"),
+        hasName: !!at(ap, "Name"),
+        hasValue: !!at(ap, "Value"),
       }));
     }
     line.documentRefs = kids(ln, "DocumentReference").map((d) => ({

@@ -1,4 +1,5 @@
 import { SaxesParser } from "saxes";
+import { xmlTrim } from "./xpath-text";
 
 /**
  * Lightweight, namespace-aware XML tree with source positions.
@@ -95,8 +96,10 @@ export function parseXml(input: string): XNode {
   parser.on("closetag", () => {
     const node = stack.pop();
     if (node) {
-      const trimmed = node.text.trim();
-      if (trimmed !== node.text && trimmed !== "" && node.children.length === 0) node.raw = node.text;
+      const trimmed = xmlTrim(node.text);
+      // The text as written whenever trimming changed it, whitespace-only text included: the official
+      // string comparisons (BR-17's payee = seller, BR-53's currency, string-length tests) see it unchanged
+      if (trimmed !== node.text && node.children.length === 0) node.raw = node.text;
       node.text = trimmed;
     }
   });
@@ -153,8 +156,7 @@ export function all(node: XNode | null | undefined, path: string): XNode[] {
 export function text(node: XNode | null | undefined, path?: string): string | undefined {
   const n = path ? at(node, path) : node;
   if (!n) return undefined;
-  const t = n.text.trim();
-  return t === "" ? undefined : t;
+  return n.text === "" ? undefined : n.text;
 }
 
 /** XPath-like location used in reports, e.g. /Invoice/cac:InvoiceLine[2]/cbc:ID */

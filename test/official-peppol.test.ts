@@ -668,3 +668,19 @@ describe("Peppol's identifier formats for Norway, Denmark and Sweden (PEPPOL-COM
     expect(verdict(endpoint("0184", "1234567"), "PEPPOL-COMMON-R042", "en16931")).toBe("success");
   });
 });
+
+describe("deliberate differences (src/content/official-parity.ts)", () => {
+  it("BR-CO-09 accepts the Greek VAT prefix EL, which CEN 1.3.17 dropped by mistake (CEN issue 532)", () => {
+    const seller = (vat: string) =>
+      ubl(`<cac:AccountingSupplierParty><cac:Party><cac:PartyTaxScheme><cbc:CompanyID>${vat}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme></cac:Party></cac:AccountingSupplierParty>`);
+    expect(verdict(seller("EL094019245"), "BR-CO-09", "en16931")).toBe("success");
+    expect(verdict(seller("GR094019245"), "BR-CO-09", "en16931")).toBe("success");
+    expect(verdict(seller("ZZ094019245"), "BR-CO-09", "en16931")).toBe("error");
+    const ciiSeller = (scheme: string, vat: string) =>
+      cii(`${ciiContext()}${ciiTx({ agreement: `<ram:SellerTradeParty><ram:SpecifiedTaxRegistration><ram:ID schemeID="${scheme}">${vat}</ram:ID></ram:SpecifiedTaxRegistration></ram:SellerTradeParty>` })}`);
+    expect(verdict(ciiSeller("VA", "EL094019245"), "BR-CO-09", "en16931")).toBe("success");
+    // CII reads only schemeID "VA" as a VAT number: another scheme isn't checked for a prefix
+    expect(verdict(ciiSeller("VA", "094019245"), "BR-CO-09", "en16931")).toBe("error");
+    expect(verdict(ciiSeller("FC", "094019245"), "BR-CO-09", "en16931")).toBe("success");
+  });
+});
