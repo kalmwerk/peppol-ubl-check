@@ -1103,3 +1103,24 @@ export const CEN_VATEX_CODES: ReadonlySet<string> = new Set(
 export const UBL_VAT_DATE_CODES: ReadonlySet<string> = new Set(["3", "35", "432"]);
 /** UNTDID 2475 codes for CII's VAT due date type code (BR-CL-06: 5 invoice date, 29 delivery date, 72 paid to date). */
 export const CII_DUE_DATE_TYPE_CODES: ReadonlySet<string> = new Set(["5", "29", "72"]);
+
+/* ---------------- CEN 1.3.16 (the copy Peppol BIS 3.0.22 ships) ---------------- */
+// The code lists above are CEN 1.3.17's. Peppol BIS 3.0.22 runs its own copy of CEN 1.3.16, whose lists
+// differ in these codes only (read from both versions' Schematron files; `bun scripts/check-cen-code-lists.ts`
+// compares them with the official files again). The other lists are the same in both versions.
+const without = (list: readonly string[], drop: readonly string[]) => list.filter((c) => !drop.includes(c));
+const IGIC_IPSI_VATEX = "VATEX-ES-N1 VATEX-ES-N2 VATEX-ES-IVA20 VATEX-ES-IVA21 VATEX-ES-IVA22 VATEX-ES-IVA23/24 VATEX-ES-IVA25 VATEX-ES-IVA140BIS VATEX-ES-OTROS VATEX-ES-IGIC1TR VATEX-ES-IGIC11 VATEX-ES-IGIC12 VATEX-ES-IGIC13 VATEX-ES-IGIC25 VATEX-ES-IGIC47 VATEX-ES-IGIC90 VATEX-ES-IPSI7 VATEX-ES-IPSI8".split(" ");
+/** Currencies of BR-CL-03, -04 and -05 in 1.3.16: São Tomé's dobra still as STD (1.3.17: STN) */
+export const CEN_1316_ISO_4217: ReadonlySet<string> = new Set([...without([...ISO_4217], ["STN"]), "STD"]);
+/** ISO/IEC 6523 schemes of BR-CL-10, -11, -21 and -26 in 1.3.16: without 0249, 0250 and 0251 */
+export const CEN_1316_ICD_CODES: ReadonlySet<string> = new Set(without([...ICD_CODES], ["0249", "0250", "0251"]));
+/** EAS schemes of BR-CL-25 in 1.3.16: 0219 and 0220 still listed, 9960 not yet */
+export const CEN_1316_EAS_CODES: ReadonlySet<string> = new Set([...without(Object.keys(EAS_CODES), ["9960"]), "0219", "0220"]);
+/** VATEX codes of BR-CL-22 in 1.3.16: without the Spanish VATEX-ES codes */
+export const CEN_1316_VATEX_CODES: ReadonlySet<string> = new Set(without([...CEN_VATEX_CODES], IGIC_IPSI_VATEX));
+/** UBL's BR-CL-08 list in 1.3.16 (CII's is the same in both versions): without BAT … BBB, BMF … BMH and CCJ … CCO */
+const UNTDID_4451_1317_ONLY = "BAT BAU BAV BAW BAX BAY BAZ BBA BBB BMF BMG BMH CCJ CCK CCL CCM CCN CCO".split(" ");
+export const CEN_1316_UBL_UNTDID_4451_CODES: ReadonlySet<string> = new Set(without(UNTDID_4451_LIST, UNTDID_4451_1317_ONLY));
+export const CEN_1316_UBL_UNTDID_4451_TEXT = ` ${without(UNTDID_4451_LIST, UNTDID_4451_1317_ONLY).join(" ")} `;
+/** CII's BR-CL-14 and BR-CL-15 in 1.3.16: AN (Netherlands Antilles) still listed, SS (South Sudan) not yet; UBL's are the same in both */
+export const CEN_1316_CII_COUNTRY_CODES: ReadonlySet<string> = new Set([...without([...CEN_COUNTRY_CODES], ["SS"]), "AN"]);

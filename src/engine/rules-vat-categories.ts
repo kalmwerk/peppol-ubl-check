@@ -2,6 +2,7 @@ import * as D from "./decimal";
 import type { AllowanceCharge, InvoiceLine, InvoiceModel, Loc, LocMap, Party, VatBreakdown } from "./model";
 import type { Severity } from "./rules-catalog";
 import { normalizeSpace } from "./xpath-text";
+import type { CenVersion } from "./syntax-binding";
 
 /**
  * The per-category VAT rules of EN 16931 that look at allowances and charges, the VAT breakdown and the
@@ -13,8 +14,9 @@ import { normalizeSpace } from "./xpath-text";
  *   and its S and Z breakdown rules don't look at TypeCode.
  * - UBL looks at every cac:AllowanceCharge (document, line and price level), CII at every
  *   SpecifiedTradeAllowanceCharge (document and line level); BR-O-03/04 in UBL at document level only.
- * - The CEN CII artefacts swap the IGIC and IPSI rule IDs: in CII, BR-IG-* check category M and BR-IP-*
- *   category L (and BR-IP-05/06/07 ask for a rate above zero), the reverse of UBL.
+ * - CEN 1.3.17's CII artefacts swap the IGIC and IPSI rule IDs: in CII, BR-IG-* check category M and BR-IP-*
+ *   category L, the reverse of UBL. CEN 1.3.16 (Peppol BIS 3.0.22's copy, IDs BR-AF-* and BR-AG-*) doesn't: its
+ *   BR-AF-* check L. In CII the rate tests stay with the category: L (IGIC) above zero, M (IPSI) zero or more.
  * - A missing rate or amount fails a comparison test (`xs:decimal(()) = 0` is false).
  */
 
@@ -116,27 +118,35 @@ const catName = (c: string) => CATEGORY_NAME[c] ?? c;
 type Prefix = "S" | "Z" | "E" | "AE" | "IC" | "G" | "O" | "IG" | "IP";
 const PREFIXES: readonly Prefix[] = ["S", "Z", "E", "AE", "IC", "G", "O", "IG", "IP"];
 
-/** The category code each rule prefix checks, per syntax (IG and IP swap in the CEN CII artefacts). */
-function categoryOf(prefix: Prefix, cii: boolean): string {
+/**
+ * The category code each rule prefix checks, per syntax and CEN version: CEN 1.3.17's CII artefacts swap IG and IP
+ * (BR-IG-* on M, BR-IP-* on L); 1.3.16's (Peppol BIS 3.0.22's copy, where they are still named BR-AF-* and BR-AG-*)
+ * check IGIC as L and IPSI as M, as UBL does, so this engine reports those under BR-IG-* and BR-IP-*.
+ */
+function categoryOf(prefix: Prefix, cii: boolean, cen: CenVersion = "1.3.17"): string {
+  const swapped = cii && cen === "1.3.17";
   switch (prefix) {
     case "IC":
       return "K";
     case "IG":
-      return cii ? "M" : "L";
+      return swapped ? "M" : "L";
     case "IP":
-      return cii ? "L" : "M";
+      return swapped ? "L" : "M";
     default:
       return prefix;
   }
 }
 
 type RateTest = "positive" | "zero" | "non-negative" | "absent";
-/** BR-x-06/07: what a document allowance's or charge's VAT rate must be, per rule prefix and syntax. */
-function allowanceRateTest(prefix: Prefix, cii: boolean): RateTest {
+/**
+ * BR-x-06/07: what a document allowance's or charge's VAT rate must be, per rule prefix and syntax. CII's IGIC rows (L)
+ * need a rate above 0 and its IPSI rows (M) 0 or more, whichever ID the CEN version gives them (1.3.16: BR-AF / BR-AG,
+ * 1.3.17: BR-IP / BR-IG); UBL accepts 0 for both.
+ */
+function allowanceRateTest(prefix: Prefix, cii: boolean, category: string): RateTest {
   if (prefix === "S") return "positive";
   if (prefix === "O") return "absent";
-  if (prefix === "IG") return "non-negative";
-  if (prefix === "IP") return cii ? "positive" : "non-negative";
+  if (prefix === "IG" || prefix === "IP") return cii && category === "L" ? "positive" : "non-negative";
   return "zero";
 }
 
@@ -155,7 +165,7 @@ const RATE_EXPECTED: Record<RateTest, string> = {
   absent: "no rate",
 };
 
-export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
+export function vatCategoryRules(m: InvoiceModel, emit: Emit, cen: CenVersion = "1.3.17"): void {
   const cii = m.syntax === "CII";
   const isVat = (scheme: string | undefined, loc: Loc | undefined) =>
     cii ? exactText(scheme, loc).toUpperCase() === "VAT" : normSpace(scheme).toUpperCase() === "VAT";
@@ -183,8 +193,8 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
 
   // BR-x-06 (allowances) and BR-x-07 (charges): the VAT rate of an allowance or charge in that category
   for (const prefix of PREFIXES) {
-    const category = categoryOf(prefix, cii);
-    const test = allowanceRateTest(prefix, cii);
+    const category = categoryOf(prefix, cii, cen);
+    const test = allowanceRateTest(prefix, cii, category);
     for (const x of acs) {
       if (x.charge === undefined || !x.vat || x.category !== category) continue;
       const present = !!x.ac.locs["vatRate"];
@@ -240,7 +250,7 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
     IC: "the seller's (BT-31) or tax representative's (BT-63) VAT identifier and the buyer's VAT identifier (BT-48)",
   };
   for (const prefix of PREFIXES) {
-    const category = categoryOf(prefix, cii);
+    const category = categoryOf(prefix, cii, cen);
     for (const charge of [false, true]) {
       // UBL's BR-IG-04 tests its "no such charge" half on cbc:ID = 'L' as written (not normalised), so only those fail
       const rawOnly = !cii && prefix === "IG" && charge;
@@ -277,7 +287,7 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
 
   // BR-x-09: the VAT amount of a breakdown row
   for (const prefix of PREFIXES) {
-    const category = categoryOf(prefix, cii);
+    const category = categoryOf(prefix, cii, cen);
     // CII's S and Z rules match the CategoryCode whatever the TypeCode; its IGIC/IPSI rules test true()
     if (cii && (prefix === "IG" || prefix === "IP")) continue;
     const needsVat = !(cii && (prefix === "S" || prefix === "Z"));
@@ -316,7 +326,7 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
 
   // BR-G-10: an export row needs an exemption reason; BR-IG-10 / BR-IP-10: IGIC and IPSI rows must not have one
   for (const prefix of ["G", "IG", "IP"] as const) {
-    const category = categoryOf(prefix, cii);
+    const category = categoryOf(prefix, cii, cen);
     for (const { v, category: c, vat } of rows) {
       if (c !== category || !vat) continue;
       const hasReason = !!(v.locs["exemptionReason"] || v.locs["exemptionCode"]);
@@ -379,7 +389,7 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
     return cii ? exactText(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
   };
   for (const prefix of PREFIXES) {
-    const category = categoryOf(prefix, cii);
+    const category = categoryOf(prefix, cii, cen);
     // each VAT category group of a line counts (CII: each is a context of its own)
     const groups = m.lines.flatMap(lineTaxViews);
     const inCategory = groups.filter((ln) => lineCategory(ln) === category && isVat(ln.vatScheme, ln.locs["vatScheme"]));
@@ -401,8 +411,9 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
   }
   /* ------------ lines: BR-IG-05, BR-IP-05 ------------ */
   for (const prefix of ["IG", "IP"] as const) {
-    const category = categoryOf(prefix, cii);
-    const test: RateTest = cii && prefix === "IP" ? "positive" : "non-negative";
+    const category = categoryOf(prefix, cii, cen);
+    // CII: IGIC (L) above 0, IPSI (M) 0 or more, whichever ID the version gives them; UBL: 0 or more for both
+    const test: RateTest = cii && category === "L" ? "positive" : "non-negative";
     for (const ln of m.lines.flatMap(lineTaxViews)) {
       const codeLoc = ln.locs["vatCategoryCode"];
       if (!codeLoc) continue;

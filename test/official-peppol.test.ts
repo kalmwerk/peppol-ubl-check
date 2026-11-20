@@ -283,11 +283,14 @@ describe("EN 16931 rules the official artefacts check differently from the stand
   it("BR-CO-25 never fires on credit notes (CreditNote-unit-UBL/BR-CO-25.xml)", () => {
     expect(verdict(payable("CreditNote"), "BR-CO-25", "en16931")).toBe("success");
   });
-  it("BR-CO-25 stays an error for Factur-X, whose rule packs still check it", () => {
+  it("BR-CO-25 stays an error for Factur-X EXTENDED only, the one profile FeRD's Factur-X 1.09 Schematron still checks it for", () => {
     const xml = getSample("factur-x-en16931")!.content
       .replace(/<ram:SpecifiedTradePaymentTerms>[\s\S]*?<\/ram:SpecifiedTradePaymentTerms>/, "");
     expect(xml).not.toContain("SpecifiedTradePaymentTerms");
-    expect(verdict(xml, "BR-CO-25", "auto")).toBe("error");
+    expect(verdict(xml, "BR-CO-25", "auto")).toBe("warning");
+    const extended = xml.replace(/(<ram:GuidelineSpecifiedDocumentContextParameter>\s*<ram:ID>)urn:cen\.eu:en16931:2017</, "$1urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended<");
+    expect(extended).toContain("urn:factur-x.eu:1p0:extended");
+    expect(verdict(extended, "BR-CO-25", "auto")).toBe("error");
   });
   it("BR-AE-10 accepts any exemption reason code or text (Invoice-unit-UBL/BR-AE-10.xml)", () => {
     const xml = getSample("reverse-charge-valid")!.content.replace(

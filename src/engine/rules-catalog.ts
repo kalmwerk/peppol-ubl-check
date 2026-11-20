@@ -24,6 +24,8 @@ export interface RuleMeta {
   fix: string;
   /** Set when the rule exists in one syntax only (a UBL syntax binding, a Peppol rule without a CII twin) */
   syntax?: "UBL" | "CII";
+  /** Set when only one CEN version has the rule (SyntaxBindingRule.cen): Peppol BIS 3.0.22 checks the 1.3.16 set */
+  cen?: "1.3.16" | "1.3.17";
 }
 
 export const SECTION_LABELS: Record<Section, string> = {
@@ -2408,6 +2410,16 @@ const CATALOG: RuleMeta[] = [
     "A Leitweg-ID has a coarse address (2–12 digits, starting 01–16 or 99), an optional fine address (up to 30 letters or digits) and two check digits (ISO/IEC 7064 MOD 97-10), separated by hyphens. This check follows the KoSIT Leitweg-ID format specification 2.0.2; it does not tell whether the authority uses the ID.",
     "Copy the Leitweg-ID exactly from the order or the authority's letter; a single wrong digit makes the check digits fail.",
   ),
+  R(
+    "IV-DE-02",
+    "InvoiceVerify",
+    "error",
+    "header",
+    ["BT-24"],
+    "XRechnung identifier KoSIT's validator has no scenario for",
+    "KoSIT's XRechnung validator, which German recipients run, picks its checks by the exact specification identifier (BT-24): urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0, or its Extension or CVD form (the Extension only on invoices). Any other value, such as an older XRechnung version, a typo or a space before or after it, matches none of its scenarios, and it rejects the invoice without checking further. BR-DE-21 names the identifier; this check stands for that rejection.",
+    "Set the specification identifier (UBL cbc:CustomizationID, CII ram:GuidelineSpecifiedDocumentContextParameter/ram:ID) to exactly urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0, with no spaces around it.",
+  ),
 
   // ---------- Added 17 Nov 2026: the remaining EN 16931 and Peppol BIS rules with official test cases ----------
   // (CEN validation artefacts 1.3.17, Peppol BIS Billing 3.0.22; written per syntax as the official Schematron tests them)
@@ -3403,6 +3415,378 @@ const CATALOG: RuleMeta[] = [
   ),
 ];
 
+/* ---------------------------------------------------------------- CEN syntax-binding rules (fatal ones) */
+
+export type SyntaxBindingKind =
+  | "max"
+  | "exactly"
+  | "exactly-if"
+  | "required"
+  | "required-if"
+  | "not-allowed"
+  | "not-allowed-unless"
+  | "same-value"
+  | "payee"
+  | "custom";
+/** The exceptions of the CII referenced-document rules (CII-DT-015 … 027) */
+export type SyntaxBindingException = "ard916" | "ard50" | "ard130" | "ird";
+export interface SyntaxBindingRule {
+  id: string;
+  section: Section;
+  kind: SyntaxBindingKind;
+  /** The element or attribute concerned, as an XML path relative to `scope` (the same in every language) */
+  subject: string;
+  /** Where it is checked: an XML element, "ram:…X" for every ram element whose name ends in X, "" for the invoice */
+  scope: string;
+  /** "max": the most allowed (default 1) */
+  max?: number;
+  /** "exactly-if" / "required-if": the element whose presence opens the rule */
+  cond?: string;
+  unless?: SyntaxBindingException;
+  /** The assertion text exactly as CEN's Schematron prints it */
+  official: string;
+  /**
+   * Only in one CEN version: "1.3.17" (and Peppol BIS 3.1.0, which ships it) or "1.3.16" (the copy Peppol BIS 3.0.22
+   * ships). The Peppol 3.0.22 profile runs the 1.3.16 set, every other profile the 1.3.17 set (syntax-binding.ts).
+   */
+  cen?: "1.3.16" | "1.3.17";
+  /** A warning in CEN that KoSIT's XRechnung configuration makes an error (kosit-levels.ts): a warning here, an error in XRechnung */
+  kosit?: true;
+}
+
+/**
+ * The fatal assertions of CEN's syntax-binding patterns (EN16931-UBL-validation.sch "UBL-syntax", EN16931-CII-validation.sch
+ * "EN16931-CII-Syntax", artefacts 1.3.17) other than UBL-DT-01/06/07 above, checked by syntax-binding.ts, plus CII-SR-471 from
+ * the 1.3.16 copy Peppol BIS 3.0.22 ships (`cen`). CII-DT-010 … 012 are left out: an earlier rule of the same pattern takes
+ * every ram:TypeCode, so they never run in the official files. UBL-SR-25 differs by version (1.3.16: at most one deliver-to
+ * party name; 1.3.17: exactly one when there is a deliver-to party).
+ */
+export const SYNTAX_BINDING_RULES: SyntaxBindingRule[] = [
+  { id: "UBL-SR-51", section: "parties", kind: "max", subject: "cac:AddressLine", scope: "cac:PostalAddress", official: "[UBL-SR-51]-An address can only have one third line." },
+  { id: "UBL-SR-42", section: "parties", kind: "max", subject: "cac:PartyTaxScheme", scope: "cac:AccountingSupplierParty/cac:Party", max: 2, official: "[UBL-SR-42]-Party tax scheme shall occur maximum twice in accounting supplier party" },
+  { id: "UBL-SR-33", section: "document", kind: "max", subject: "cbc:DocumentDescription", scope: "cac:AdditionalDocumentReference", official: "[UBL-SR-33]-Supporting document description shall occur maximum once" },
+  { id: "UBL-SR-43", section: "document", kind: "custom", subject: "cbc:ID/@schemeID", scope: "cac:AdditionalDocumentReference", official: "[UBL-SR-43]-Scheme identifier shall only be used for invoiced object (document type code with value 130 or 50)" },
+  { id: "UBL-SR-25", section: "parties", kind: "exactly-if", subject: "cac:DeliveryParty/cac:PartyName/cbc:Name", scope: "cac:Delivery", cond: "cac:DeliveryParty", official: "[UBL-SR-25]-Deliver to party name shall occur maximum once" },
+  { id: "UBL-SR-30", section: "document", kind: "max", subject: "cbc:AllowanceChargeReason", scope: "cac:AllowanceCharge (allowance)", official: "[UBL-SR-30]-Document level allowance reason shall occur maximum once" },
+  { id: "UBL-SR-31", section: "document", kind: "max", subject: "cbc:AllowanceChargeReason", scope: "cac:AllowanceCharge (charge)", official: "[UBL-SR-31]-Document level charge reason shall occur maximum once" },
+  { id: "UBL-SR-53", section: "parties", kind: "custom", subject: "cbc:CompanyID", scope: "cac:PartyTaxScheme", official: "[UBL-SR-53]- CompanyID (VAT Identifier) must be stated when providing the PartyTaxScheme/TaxScheme/ID." },
+  { id: "UBL-CR-666", section: "document", kind: "custom", subject: "cac:Attachment", scope: "", official: "[UBL-CR-666]-A UBL invoice shall not include an AdditionalDocumentReference simultaneously referring an Invoice Object Identifier and an Attachment" },
+  { id: "UBL-CR-673", section: "document", kind: "custom", subject: "cbc:DocumentDescription", scope: "", official: "[UBL-CR-673]-A UBL invoice shall not include an AdditionalDocumentReference simultaneously referring an Invoice Object Identifier and an Document Description" },
+  { id: "UBL-SR-01", section: "document", kind: "max", subject: "cac:ContractDocumentReference/cbc:ID", scope: "", official: "[UBL-SR-01]-Contract identifier shall occur maximum once." },
+  { id: "UBL-SR-02", section: "document", kind: "max", subject: "cac:ReceiptDocumentReference/cbc:ID", scope: "", official: "[UBL-SR-02]-Receive advice identifier shall occur maximum once" },
+  { id: "UBL-SR-03", section: "document", kind: "max", subject: "cac:DespatchDocumentReference/cbc:ID", scope: "", official: "[UBL-SR-03]-Despatch advice identifier shall occur maximum once" },
+  { id: "UBL-SR-04", section: "document", kind: "max", subject: "cac:AdditionalDocumentReference/cbc:ID (DocumentTypeCode 130)", scope: "", official: "[UBL-SR-04]-Invoice object identifier shall occur maximum once" },
+  { id: "UBL-SR-05", section: "payment", kind: "max", subject: "cac:PaymentTerms/cbc:Note", scope: "", official: "[UBL-SR-05]-Payment terms shall occur maximum once" },
+  { id: "UBL-SR-08", section: "document", kind: "max", subject: "cac:InvoicePeriod", scope: "", official: "[UBL-SR-08]-Invoice period shall occur maximum once" },
+  { id: "UBL-SR-09", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName", scope: "", official: "[UBL-SR-09]-Seller name shall occur maximum once" },
+  { id: "UBL-SR-10", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name", scope: "", official: "[UBL-SR-10]-Seller trader name shall occur maximum once" },
+  { id: "UBL-SR-11", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID", scope: "", official: "[UBL-SR-11]-Seller legal registration identifier shall occur maximum once" },
+  { id: "UBL-SR-12", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID (VAT)", scope: "", official: "[UBL-SR-12]-Seller VAT identifier shall occur maximum once" },
+  { id: "UBL-SR-13", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID (not VAT)", scope: "", official: "[UBL-SR-13]-Seller tax registration shall occur maximum once" },
+  { id: "UBL-SR-14", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyLegalForm", scope: "", official: "[UBL-SR-14]-Seller additional legal information shall occur maximum once" },
+  { id: "UBL-SR-15", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName", scope: "", official: "[UBL-SR-15]-Buyer name shall occur maximum once" },
+  { id: "UBL-SR-16", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyIdentification/cbc:ID", scope: "", official: "[UBL-SR-16]-Buyer identifier shall occur maximum once" },
+  { id: "UBL-SR-17", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID", scope: "", official: "[UBL-SR-17]-Buyer legal registration identifier shall occur maximum once" },
+  { id: "UBL-SR-18", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID (VAT)", scope: "", official: "[UBL-SR-18]-Buyer VAT identifier shall occur maximum once" },
+  { id: "UBL-SR-24", section: "parties", kind: "max", subject: "cac:Delivery", scope: "", official: "[UBL-SR-24]-Deliver to information shall occur maximum once" },
+  { id: "UBL-SR-29", section: "parties", kind: "max", subject: "cac:PartyIdentification/cbc:ID (schemeID SEPA)", scope: "", official: "[UBL-SR-29]-Bank creditor reference shall occur maximum once" },
+  { id: "UBL-SR-39", section: "document", kind: "max", subject: "cac:ProjectReference/cbc:ID", scope: "", official: "[UBL-SR-39]-Project reference shall occur maximum once." },
+  { id: "UBL-SR-40", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyName/cbc:Name", scope: "", official: "[UBL-SR-40]-Buyer trade name shall occur maximum once" },
+  { id: "UBL-SR-44", section: "payment", kind: "same-value", subject: "cbc:PaymentID", scope: "", official: "[UBL-SR-44]-An Invoice may only have one unique PaymentID, but the PaymentID may be used for multiple PaymentMeans" },
+  { id: "UBL-SR-45", section: "payment", kind: "max", subject: "cac:PaymentMeans/cbc:PaymentDueDate", scope: "", official: "[UBL-SR-45]-Due Date shall occur maximum once" },
+  { id: "UBL-SR-46", section: "payment", kind: "max", subject: "cac:PaymentMeans/cbc:PaymentMeansCode/@name", scope: "", official: "[UBL-SR-46]-Payment means text shall occur maximum once" },
+  { id: "UBL-SR-47", section: "payment", kind: "same-value", subject: "cbc:PaymentMeansCode", scope: "", official: "[UBL-SR-47]-When there are more than one payment means code, they shall be equal" },
+  { id: "UBL-SR-49", section: "document", kind: "max", subject: "cac:InvoicePeriod/cbc:DescriptionCode", scope: "", official: "[UBL-SR-49]-Value tax point date shall occur maximum once" },
+  { id: "UBL-SR-54", section: "payment", kind: "max", subject: "cac:PaymentMeans/cac:CardAccount", scope: "", official: "[UBL-SR-54]-An Invoice shall contain maximum one Payment Card account (BG-18)." },
+  { id: "UBL-SR-55", section: "payment", kind: "max", subject: "cac:PaymentMeans/cac:PaymentMandate", scope: "", official: "[UBL-SR-55]-An Invoice shall contain maximum one Payment Mandate (BG-19)." },
+  { id: "UBL-SR-56", section: "document", kind: "max", subject: "cac:OriginatorDocumentReference/cbc:ID", scope: "", official: "[UBL-SR-56]-An Invoice shall contain maximum one Originator document reference identifier (BT-17)." },
+  { id: "UBL-SR-57", section: "parties", kind: "custom", subject: "cac:PartyLegalEntity", scope: "", cen: "1.3.17", official: "[UBL-SR-57]-PartyLegalEntity shall occur maximum once within a Party." },
+  { id: "UBL-SR-34", section: "lines", kind: "max", subject: "cbc:Note", scope: "cac:InvoiceLine", official: "[UBL-SR-34]-Invoice line note shall occur maximum once" },
+  { id: "UBL-SR-35", section: "lines", kind: "max", subject: "cac:OrderLineReference/cbc:LineID", scope: "cac:InvoiceLine", official: "[UBL-SR-35]-Referenced purchase order line identifier shall occur maximum once" },
+  { id: "UBL-SR-36", section: "lines", kind: "max", subject: "cac:InvoicePeriod", scope: "cac:InvoiceLine", official: "[UBL-SR-36]-Invoice line period shall occur maximum once" },
+  { id: "UBL-SR-37", section: "lines", kind: "max", subject: "cac:Price/cac:AllowanceCharge/cbc:Amount", scope: "cac:InvoiceLine", official: "[UBL-SR-37]-Item price discount shall occur maximum once" },
+  { id: "UBL-SR-48", section: "lines", kind: "exactly", subject: "cac:Item/cac:ClassifiedTaxCategory", scope: "cac:InvoiceLine", official: "[UBL-SR-48]-Invoice lines shall have one and only one classified tax category." },
+  { id: "UBL-SR-50", section: "lines", kind: "max", subject: "cac:Item/cbc:Description", scope: "cac:InvoiceLine", official: "[UBL-SR-50]-Item description shall occur maximum once" },
+  { id: "UBL-SR-52", section: "lines", kind: "max", subject: "cac:DocumentReference", scope: "cac:InvoiceLine", official: "[UBL-SR-52]-Document reference shall occur maximum once" },
+  { id: "UBL-SR-19", section: "payment", kind: "payee", subject: "cac:PartyName/cbc:Name", scope: "cac:PayeeParty", official: "[UBL-SR-19]-Payee name shall occur maximum once, if the Payee is different from the Seller" },
+  { id: "UBL-SR-20", section: "payment", kind: "payee", subject: "cac:PartyIdentification/cbc:ID (not SEPA)", scope: "cac:PayeeParty", official: "[UBL-SR-20]-Payee identifier shall occur maximum once, if the Payee is different from the Seller" },
+  { id: "UBL-SR-21", section: "payment", kind: "payee", subject: "cac:PartyLegalEntity/cbc:CompanyID", scope: "cac:PayeeParty", official: "[UBL-SR-21]-Payee legal registration identifier shall occur maximum once, if the Payee is different from the Seller" },
+  { id: "UBL-SR-26", section: "payment", kind: "max", subject: "cbc:PaymentID", scope: "cac:PaymentMeans", official: "[UBL-SR-26]-Payment reference shall occur maximum once" },
+  { id: "UBL-SR-27", section: "payment", kind: "max", subject: "cbc:PaymentMeansCode", scope: "cac:PaymentMeans", official: "[UBL-SR-27]-Payment means text shall occur maximum once" },
+  { id: "UBL-SR-28", section: "payment", kind: "max", subject: "cac:PaymentMandate/cbc:ID", scope: "cac:PaymentMeans", official: "[UBL-SR-28]-Mandate reference identifier shall occur maximum once" },
+  { id: "UBL-SR-58", section: "payment", kind: "exactly-if", subject: "cac:PayeeFinancialAccount/cac:FinancialInstitutionBranch/cbc:ID", scope: "cac:PaymentMeans", cond: "cac:PayeeFinancialAccount/cac:FinancialInstitutionBranch", cen: "1.3.17", official: "[UBL-SR-58]-A Financial Institution Branch shall contain exactly one Payment service provider identifier (BT-86)." },
+  { id: "UBL-SR-59", section: "payment", kind: "exactly-if", subject: "cac:PayeeFinancialAccount/cbc:ID", scope: "cac:PaymentMeans", cond: "cac:PayeeFinancialAccount", cen: "1.3.17", official: "[UBL-SR-59]-A Financial Institution Branch shall contain exactly one Payment account identifier (BT-84)." },
+  { id: "UBL-SR-06", section: "document", kind: "max", subject: "cac:InvoiceDocumentReference", scope: "cac:BillingReference", official: "[UBL-SR-06]-Preceding invoice reference shall occur maximum once" },
+  { id: "UBL-SR-07", section: "document", kind: "required", subject: "cac:InvoiceDocumentReference/cbc:ID", scope: "cac:BillingReference", official: "[UBL-SR-07]-If there is a preceding invoice reference, the preceding invoice number shall be present" },
+  { id: "UBL-SR-22", section: "parties", kind: "max", subject: "cac:PartyName/cbc:Name", scope: "cac:TaxRepresentativeParty", official: "[UBL-SR-22]-Seller tax representative name shall occur maximum once, if the Seller has a tax representative" },
+  { id: "UBL-SR-23", section: "parties", kind: "max", subject: "cac:PartyTaxScheme/cbc:CompanyID", scope: "cac:TaxRepresentativeParty", official: "[UBL-SR-23]-Seller tax representative VAT identifier shall occur maximum once, if the Seller has a tax representative" },
+  { id: "UBL-SR-32", section: "vat", kind: "max", subject: "cac:TaxCategory/cbc:TaxExemptionReason", scope: "cac:TaxSubtotal", official: "[UBL-SR-32]-VAT exemption reason text shall occur maximum once" },
+  { id: "CII-SR-009", section: "document", kind: "exactly", subject: "ram:GuidelineSpecifiedDocumentContextParameter", scope: "rsm:ExchangedDocumentContext", official: "[CII-SR-009] - GuidelineSpecifiedDocumentContextParameter must exist exactly once" },
+  { id: "CII-SR-010", section: "document", kind: "exactly", subject: "ram:GuidelineSpecifiedDocumentContextParameter/ram:ID", scope: "rsm:ExchangedDocumentContext", official: "[CII-SR-010] - ID must exist exactly once" },
+  { id: "CII-SR-014", section: "document", kind: "exactly", subject: "ram:TypeCode", scope: "rsm:ExchangedDocument", official: "[CII-SR-014] - TypeCode must exist exactly once" },
+  { id: "CII-SR-046", section: "lines", kind: "required-if", subject: "ram:GlobalID/@schemeID", scope: "ram:SpecifiedTradeProduct", cond: "ram:GlobalID", official: "[CII-SR-046] - schemeID must be present if GlobalID is present" },
+  { id: "CII-SR-090", section: "lines", kind: "exactly-if", subject: "ram:OriginTradeCountry/ram:ID", scope: "ram:SpecifiedTradeProduct", cond: "ram:OriginTradeCountry", official: "[CII-SR-090] - ID should exist maximum once." },
+  { id: "CII-SR-069", section: "lines", kind: "exactly", subject: "ram:Description", scope: "ram:ApplicableProductCharacteristic", official: "[CII-SR-069] - Description should exist maximum once." },
+  { id: "CII-SR-072", section: "lines", kind: "exactly", subject: "ram:Value", scope: "ram:ApplicableProductCharacteristic", official: "[CII-SR-072] - Value should exist maximum once." },
+  { id: "CII-SR-439", section: "lines", kind: "exactly", subject: "ram:NetPriceProductTradePrice/ram:ChargeAmount", scope: "ram:SpecifiedLineTradeAgreement", official: "[CII-SR-439] - ChargeAmount should exist maximum once" },
+  { id: "CII-SR-441", section: "lines", kind: "max", subject: "ram:NetPriceProductTradePrice/ram:ChargeAmount", scope: "ram:SpecifiedLineTradeAgreement", official: "[CII-SR-441] - ChargeAmount should exist maximum once" },
+  { id: "CII-SR-463", section: "document", kind: "required", subject: "ram:ChargeIndicator", scope: "ram:SpecifiedTradeAllowanceCharge", official: "[CII-SR-463]-Each Specified Trade Allowance Charge (BG-20)(BG-21) shall contain a Charge Indicator." },
+  { id: "CII-SR-471", section: "vat", kind: "max", subject: "ram:RateApplicablePercent", scope: "ram:SpecifiedTradeAllowanceCharge", cen: "1.3.16", official: "[CII-SR-471]-Each Specified Trade Allowance Charge (BG-20)(BG-21) shall contain a VAT category code (BT-95)." },
+  { id: "CII-SR-472", section: "vat", kind: "max", subject: "ram:CategoryTradeTax", scope: "ram:SpecifiedTradeAllowanceCharge", official: "[CII-SR-472] - CategoryTradeTax shall occur at most once in a Specified Trade Allowance Charge." },
+  { id: "CII-SR-473", section: "totals", kind: "max", subject: "ram:ActualAmount", scope: "ram:SpecifiedTradeAllowanceCharge", official: "[CII-SR-473] - ActualAmount should exist maximum once" },
+  { id: "CII-SR-440", section: "lines", kind: "max", subject: "ram:ActualAmount", scope: "ram:GrossPriceProductTradePrice/ram:AppliedTradeAllowanceCharge", official: "[CII-SR-440] - ActualAmount should exist maximum once" },
+  { id: "CII-SR-455", section: "parties", kind: "max", subject: "ram:SellerTradeParty/ram:DefinedTradeContact", scope: "ram:ApplicableHeaderTradeAgreement", official: "[CII-SR-455] - DefinedTradeContact of SellerTradeParty shall exist maximum once" },
+  { id: "CII-SR-456", section: "parties", kind: "max", subject: "ram:BuyerTradeParty/ram:DefinedTradeContact", scope: "ram:ApplicableHeaderTradeAgreement", official: "[CII-SR-456] - DefinedTradeContact of BuyerTradeParty shall exist maximum once" },
+  { id: "CII-SR-459", section: "parties", kind: "max", subject: "ram:SellerTradeParty/ram:URIUniversalCommunication", scope: "ram:ApplicableHeaderTradeAgreement", official: "[CII-SR-459] - SellerTradeParty URIUniversalCommunication should exist maximum once" },
+  { id: "CII-SR-460", section: "parties", kind: "max", subject: "ram:BuyerTradeParty/ram:URIUniversalCommunication", scope: "ram:ApplicableHeaderTradeAgreement", official: "[CII-SR-460] - BuyerTradeParty URIUniversalCommunication should exist maximum once" },
+  { id: "CII-SR-461", section: "vat", kind: "max", subject: "ram:ApplicableTradeTax/ram:TaxPointDate", scope: "ram:ApplicableHeaderTradeSettlement", official: "[CII-SR-461] - Only one TaxPointDate shall be present" },
+  { id: "CII-SR-462", section: "vat", kind: "same-value", subject: "ram:ApplicableTradeTax/ram:DueDateTypeCode", scope: "", official: "[CII-SR-462] - Only one DueDateTypeCode shall be present" },
+  { id: "CII-SR-470", section: "payment", kind: "custom", subject: "ram:PayeePartyCreditorFinancialAccount", scope: "ram:SpecifiedTradeSettlementPaymentMeans", official: "[CII-SR-470] - Either the IBAN or a Proprietary ID (BT-84) shall be used." },
+  { id: "CII-SR-497", section: "payment", kind: "max", subject: "ram:SpecifiedTradePaymentTerms/ram:DirectDebitMandateID", scope: "ram:ApplicableHeaderTradeSettlement", cen: "1.3.17", official: "[CII-SR-497] - Mandate reference identifier (BT-89) shall occur maximum once." },
+  { id: "CII-SR-477", section: "totals", kind: "max", subject: "ram:LineTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-477] - LineTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-478", section: "totals", kind: "max", subject: "ram:ChargeTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-478] - ChargeTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-479", section: "totals", kind: "max", subject: "ram:AllowanceTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-479] - AllowanceTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-480", section: "totals", kind: "max", subject: "ram:TaxBasisTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-480] - TaxBasisTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-481", section: "totals", kind: "max", subject: "ram:RoundingAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-481] - RoundingAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-482", section: "totals", kind: "max", subject: "ram:GrandTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-482] - GrandTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-483", section: "totals", kind: "max", subject: "ram:InformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-483] - InformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-484", section: "totals", kind: "max", subject: "ram:TotalPrepaidAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-484] - TotalPrepaidAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-485", section: "totals", kind: "max", subject: "ram:TotalDiscountAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-485] - TotalDiscountAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-486", section: "totals", kind: "max", subject: "ram:TotalAllowanceChargeAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-486] - TotalAllowanceChargeAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-487", section: "totals", kind: "max", subject: "ram:DuePayableAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-487] - DuePayableAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-488", section: "totals", kind: "max", subject: "ram:RetailValueExcludingTaxInformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-488] - RetailValueExcludingTaxInformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-489", section: "totals", kind: "max", subject: "ram:TotalDepositFeeInformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-489] - TotalDepositFeeInformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-490", section: "totals", kind: "max", subject: "ram:ProductValueExcludingTobaccoTaxInformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-490] - ProductValueExcludingTobaccoTaxInformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-491", section: "totals", kind: "max", subject: "ram:TotalRetailValueInformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-491] - TotalRetailValueInformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-492", section: "totals", kind: "max", subject: "ram:GrossLineTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-492] - GrossLineTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-493", section: "totals", kind: "max", subject: "ram:NetLineTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-493] - NetLineTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-494", section: "totals", kind: "max", subject: "ram:NetIncludingTaxesLineTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-494] - NetIncludingTaxesLineTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-DT-013", section: "document", kind: "not-allowed", subject: "@languageID", scope: "rsm:CrossIndustryInvoice", official: "[CII-DT-013] - languageID should not be present" },
+  { id: "CII-DT-014", section: "document", kind: "not-allowed", subject: "@languageLocaleID", scope: "rsm:CrossIndustryInvoice", official: "[CII-DT-014] - languageLocaleID should not be present" },
+  { id: "CII-SR-467", section: "payment", kind: "same-value", subject: "ram:SpecifiedTradeSettlementPaymentMeans/ram:TypeCode", scope: "", official: "[CII-SR-467] - All Payment means type codes (BT-81) shall have the same value across all SpecifiedTradeSettlementPaymentMeans." },
+  { id: "CII-SR-468", section: "payment", kind: "same-value", subject: "ram:SpecifiedTradeSettlementPaymentMeans/ram:Information", scope: "", official: "[CII-SR-468] - All Payment means texts (BT-82) shall have the same value across all SpecifiedTradeSettlementPaymentMeans." },
+  { id: "CII-SR-469", section: "payment", kind: "max", subject: "ram:ApplicableHeaderTradeSettlement/ram:PaymentReference", scope: "", official: "[CII-SR-469] - Payment reference (BT-83) shall occur at most once in the document." },
+  { id: "CII-SR-495", section: "payment", kind: "max", subject: "ram:SpecifiedTradeSettlementPaymentMeans/ram:ApplicableTradeSettlementFinancialCard", scope: "", cen: "1.3.17", official: "[CII-SR-495] - An Invoice shall contain maximum one Payment Card account (BG-18)." },
+  { id: "CII-SR-496", section: "payment", kind: "max", subject: "ram:SpecifiedTradeSettlementPaymentMeans/ram:PayerPartyDebtorFinancialAccount", scope: "", cen: "1.3.17", official: "[CII-SR-496] - An Invoice shall contain maximum one Payment Mandate (BG-19)." },
+  { id: "CII-DT-105", section: "document", kind: "required", subject: "@mimeCode", scope: "ram:AttachmentBinaryObject", cen: "1.3.17", official: "[CII-DT-105] - Attached document Mime code (BT-125-1) shall be provided." },
+  { id: "CII-DT-106", section: "document", kind: "required", subject: "@filename", scope: "ram:AttachmentBinaryObject", cen: "1.3.17", official: "[CII-DT-106] - Attached document Filename (BT-125-2) shall be provided." },
+  { id: "CII-DT-001", section: "document", kind: "not-allowed", subject: "@schemeName", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-001] - schemeName should not be present" },
+  { id: "CII-DT-002", section: "document", kind: "not-allowed", subject: "@schemeAgencyName", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-002] - schemeAgencyName should not be present" },
+  { id: "CII-DT-003", section: "document", kind: "not-allowed", subject: "@schemeDataURI", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-003] - schemeDataURI should not be present" },
+  { id: "CII-DT-004", section: "document", kind: "not-allowed", subject: "@schemeURI", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-004] - schemeURI should not be present" },
+  { id: "CII-DT-005", section: "document", kind: "not-allowed", subject: "@schemeID", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-005] - schemeID should not be present" },
+  { id: "CII-DT-006", section: "document", kind: "not-allowed", subject: "@schemeAgencyID", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-006] - schemeAgencyID should not be present" },
+  { id: "CII-DT-007", section: "document", kind: "not-allowed", subject: "@schemeVersionID", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-007] - schemeVersionID should not be present" },
+  { id: "CII-DT-101", section: "document", kind: "not-allowed", subject: "@schemeName", scope: "ram:\u2026ID", official: "[CII-DT-101] - schemeName should not be present" },
+  { id: "CII-DT-102", section: "document", kind: "not-allowed", subject: "@schemeAgencyName", scope: "ram:\u2026ID", official: "[CII-DT-102] - schemeAgencyName should not be present" },
+  { id: "CII-DT-103", section: "document", kind: "not-allowed", subject: "@schemeDataURI", scope: "ram:\u2026ID", official: "[CII-DT-103] - schemeDataURI should not be present" },
+  { id: "CII-DT-104", section: "document", kind: "not-allowed", subject: "@schemeURI", scope: "ram:\u2026ID", official: "[CII-DT-104] - schemeURI should not be present" },
+  { id: "CII-DT-008", section: "document", kind: "not-allowed", subject: "@name", scope: "ram:TypeCode", official: "[CII-DT-008] - name should not be present" },
+  { id: "CII-DT-009", section: "document", kind: "not-allowed", subject: "@listURI", scope: "ram:TypeCode", official: "[CII-DT-009] - listURI should not be present" },
+  { id: "CII-DT-015", section: "document", kind: "not-allowed-unless", subject: "ram:URIID", scope: "ram:\u2026ReferencedDocument", unless: "ard916", official: "[CII-DT-015] - URIID should not be present" },
+  { id: "CII-DT-016", section: "document", kind: "not-allowed", subject: "ram:StatusCode", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-016] - StatusCode should not be present" },
+  { id: "CII-DT-017", section: "document", kind: "not-allowed", subject: "ram:CopyIndicator", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-017] - CopyIndicator should not be present" },
+  { id: "CII-DT-018", section: "document", kind: "not-allowed-unless", subject: "ram:TypeCode", scope: "ram:\u2026ReferencedDocument", unless: "ard50", official: "[CII-DT-018] - TypeCode should not be present" },
+  { id: "CII-DT-019", section: "document", kind: "not-allowed", subject: "ram:GlobalID", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-019] - GlobalID should not be present" },
+  { id: "CII-DT-020", section: "document", kind: "not-allowed", subject: "ram:RevisionID", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-020] - RevisionID should not be present" },
+  { id: "CII-DT-021", section: "document", kind: "not-allowed-unless", subject: "ram:Name", scope: "ram:\u2026ReferencedDocument", unless: "ard916", official: "[CII-DT-021] - Name should not be present" },
+  { id: "CII-DT-022", section: "document", kind: "not-allowed-unless", subject: "ram:AttachmentBinaryObject", scope: "ram:\u2026ReferencedDocument", unless: "ard916", official: "[CII-DT-022] - AttachmentBinaryObject should not be present" },
+  { id: "CII-DT-023", section: "document", kind: "not-allowed", subject: "ram:Information", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-023] - Information should not be present" },
+  { id: "CII-DT-024", section: "document", kind: "not-allowed-unless", subject: "ram:ReferenceTypeCode", scope: "ram:\u2026ReferencedDocument", unless: "ard130", official: "[CII-DT-024] - ReferenceTypeCode should not be present" },
+  { id: "CII-DT-025", section: "document", kind: "not-allowed", subject: "ram:SectionName", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-025] - SectionName should not be present" },
+  { id: "CII-DT-026", section: "document", kind: "not-allowed", subject: "ram:PreviousRevisionID", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-026] - PreviousRevisionID should not be present" },
+  { id: "CII-DT-027", section: "document", kind: "not-allowed-unless", subject: "ram:FormattedIssueDateTime", scope: "ram:\u2026ReferencedDocument", unless: "ird", official: "[CII-DT-027] - FormattedIssueDateTime should not be present" },
+  { id: "CII-DT-028", section: "document", kind: "not-allowed", subject: "ram:EffectiveSpecifiedPeriod", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-028] - EffectiveSpecifiedPeriod should not be present" },
+  { id: "CII-DT-029", section: "parties", kind: "not-allowed", subject: "ram:IssuerTradeParty", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-029] - IssuerTradeParty should not be present" },
+  { id: "CII-DT-030", section: "document", kind: "not-allowed", subject: "ram:AttachedSpecifiedBinaryFile", scope: "ram:\u2026ReferencedDocument", official: "[CII-DT-030] - AttachedSpecifiedBinaryFile should not be present" },
+  { id: "CII-DT-031", section: "document", kind: "not-allowed", subject: "@currencyID", scope: "ram:\u2026Amount", official: "[CII-DT-031] - currencyID should not be present" },
+  { id: "CII-DT-032", section: "document", kind: "not-allowed", subject: "@currencyCodeListVersionID", scope: "ram:\u2026Amount", official: "[CII-DT-032] - currencyCodeListVersionID should not be present" },
+  { id: "CII-DT-033", section: "document", kind: "custom", subject: "@unitCode", scope: "ram:\u2026Quantity", official: "[CII-DT-033] - unitCode should not be present" },
+  { id: "CII-DT-034", section: "document", kind: "not-allowed", subject: "@unitCodeListID", scope: "ram:\u2026Quantity", official: "[CII-DT-034] - unitCodeListID should not be present" },
+  { id: "CII-DT-035", section: "document", kind: "not-allowed", subject: "@unitCodeListAgencyID", scope: "ram:\u2026Quantity", official: "[CII-DT-035] - unitCodeListAgencyID should not be present" },
+  { id: "CII-DT-036", section: "document", kind: "not-allowed", subject: "@unitCodeListAgencyName", scope: "ram:\u2026Quantity", official: "[CII-DT-036] - unitCodeListAgencyName should not be present" },
+  { id: "CII-DT-037", section: "vat", kind: "custom", subject: "ram:TypeCode", scope: "ram:\u2026TradeTax", official: "[CII-DT-037] - TypeCode shall be 'VAT'" },
+  { id: "CII-DT-068", section: "document", kind: "not-allowed", subject: "ram:StartDateTime/udt:DateTime", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-068] - DateTime shall not be used." },
+  { id: "CII-DT-069", section: "document", kind: "not-allowed", subject: "ram:DurationMeasure", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-069] - DurationMeasure shall not be used." },
+  { id: "CII-DT-070", section: "document", kind: "not-allowed", subject: "ram:InclusiveIndicator", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-070] - InclusiveIndicator shall not be used." },
+  { id: "CII-DT-071", section: "document", kind: "not-allowed", subject: "ram:Description", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-071] - Description shall not be used." },
+  { id: "CII-DT-072", section: "document", kind: "not-allowed", subject: "ram:EndDateTime/udt:DateTime", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-072] - DateTime shall not be used." },
+  { id: "CII-DT-073", section: "document", kind: "not-allowed", subject: "ram:CompleteDateTime", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-073] - CompleteDateTime shall not be used." },
+  { id: "CII-DT-074", section: "document", kind: "not-allowed", subject: "ram:OpenIndicator", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-074] - OpenIndicator shall not be used." },
+  { id: "CII-DT-075", section: "document", kind: "not-allowed", subject: "ram:SeasonCode", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-075] - SeasonCode shall not be used." },
+  { id: "CII-DT-076", section: "document", kind: "not-allowed", subject: "ram:ID", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-076] - ID shall not be used." },
+  { id: "CII-DT-077", section: "document", kind: "not-allowed", subject: "ram:Name", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-077] - Name shall not be used." },
+  { id: "CII-DT-078", section: "document", kind: "not-allowed", subject: "ram:SequenceNumeric", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-078] - SequenceNumeric shall not be used." },
+  { id: "CII-DT-079", section: "document", kind: "not-allowed", subject: "ram:StartDateFlexibilityCode", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-079] - StartDateFlexibilityCode shall not be used." },
+  { id: "CII-DT-080", section: "document", kind: "not-allowed", subject: "ram:ContinuousIndicator", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-080] - ContinuousIndicator shall not be used." },
+  { id: "CII-DT-081", section: "document", kind: "not-allowed", subject: "ram:PurposeCode", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-081] - PurposeCode shall not be used." },
+  { id: "CII-DT-082", section: "parties", kind: "not-allowed", subject: "ram:ID", scope: "ram:PostalTradeAddress", official: "[CII-DT-082] - ID shall not be used." },
+  { id: "CII-DT-083", section: "parties", kind: "not-allowed", subject: "ram:PostOfficeBox", scope: "ram:PostalTradeAddress", official: "[CII-DT-083] - PostOfficeBox shall not be used." },
+  { id: "CII-DT-084", section: "parties", kind: "not-allowed", subject: "ram:BuildingName", scope: "ram:PostalTradeAddress", official: "[CII-DT-084] - BuildingName shall not be used." },
+  { id: "CII-DT-086", section: "parties", kind: "not-allowed", subject: "ram:LineFour", scope: "ram:PostalTradeAddress", official: "[CII-DT-086] - LineFour shall not be used." },
+  { id: "CII-DT-087", section: "parties", kind: "not-allowed", subject: "ram:LineFive", scope: "ram:PostalTradeAddress", official: "[CII-DT-087] - LineFive shall not be used." },
+  { id: "CII-DT-088", section: "parties", kind: "not-allowed", subject: "ram:StreetName", scope: "ram:PostalTradeAddress", official: "[CII-DT-088] - StreetName shall not be used." },
+  { id: "CII-DT-089", section: "parties", kind: "not-allowed", subject: "ram:CitySubDivisionName", scope: "ram:PostalTradeAddress", official: "[CII-DT-089] - CitySubDivisionName shall not be used." },
+  { id: "CII-DT-090", section: "parties", kind: "not-allowed", subject: "ram:CountryName", scope: "ram:PostalTradeAddress", official: "[CII-DT-090] - CountryName shall not be used." },
+  { id: "CII-DT-091", section: "parties", kind: "not-allowed", subject: "ram:CountrySubDivisionID", scope: "ram:PostalTradeAddress", official: "[CII-DT-091] - CountrySubDivisionID shall not be used." },
+  { id: "CII-DT-092", section: "parties", kind: "not-allowed", subject: "ram:AttentionOf", scope: "ram:PostalTradeAddress", official: "[CII-DT-092] - AttentionOf shall not be used." },
+  { id: "CII-DT-093", section: "parties", kind: "not-allowed", subject: "ram:CareOf", scope: "ram:PostalTradeAddress", official: "[CII-DT-093] - CareOf shall not be used." },
+  { id: "CII-DT-094", section: "parties", kind: "not-allowed", subject: "ram:BuildingNumber", scope: "ram:PostalTradeAddress", official: "[CII-DT-094] - BuildingNumber shall not be used." },
+  { id: "CII-DT-095", section: "parties", kind: "not-allowed", subject: "ram:DepartmentName", scope: "ram:PostalTradeAddress", official: "[CII-DT-095] - DepartmentName shall not be used." },
+  { id: "CII-DT-096", section: "parties", kind: "not-allowed", subject: "ram:AdditionalStreetName", scope: "ram:PostalTradeAddress", official: "[CII-DT-096] - AdditionalStreetName shall not be used." },
+  { id: "CII-DT-097", section: "document", kind: "custom", subject: "udt:DateTimeString", scope: "udt:DateTimeString", official: "[CII-DT-097] - Date time string with format attribute 102 shall be YYYYMMDD." },
+  // CEN warnings that KoSIT's XRechnung configuration (release 2026-08-31) makes errors: warnings here, errors in XRechnung
+  { id: "UBL-CR-646", section: "lines", kind: "not-allowed", subject: "cac:SubInvoiceLine", scope: "cac:InvoiceLine", kosit: true, official: "[UBL-CR-646]-A UBL invoice should not include the InvoiceLine SubInvoiceLine" },
+  { id: "CII-SR-452", section: "payment", kind: "max", subject: "ram:SpecifiedTradePaymentTerms", scope: "ram:ApplicableHeaderTradeSettlement", kosit: true, official: "[CII-SR-452] - Only one SpecifiedTradePaymentTerms should be present" },
+  { id: "CII-SR-453", section: "payment", kind: "max", subject: "ram:SpecifiedTradePaymentTerms/ram:Description", scope: "ram:ApplicableHeaderTradeSettlement", kosit: true, official: "[CII-SR-453] - Only one SpecifiedTradePaymentTerms Description should be present" },
+  { id: "CII-SR-454", section: "lines", kind: "exactly", subject: "ram:ApplicableTradeTax", scope: "ram:SpecifiedLineTradeSettlement", kosit: true, official: "[CII-SR-454] - Only one ApplicableTradeTax should be present" },
+  { id: "CII-SR-465", section: "parties", kind: "custom", subject: "ram:SellerTradeParty/ram:DefinedTradeContact", scope: "ram:ApplicableHeaderTradeAgreement", kosit: true, official: "[CII-SR-465] - Only one BT-41 element is allowed on an invoice." },
+  { id: "CII-SR-466", section: "parties", kind: "custom", subject: "ram:BuyerTradeParty/ram:DefinedTradeContact", scope: "ram:ApplicableHeaderTradeAgreement", kosit: true, official: "[CII-SR-466] - Only one BT-56 element is allowed on an invoice." },
+];
+
+const syntaxOf = (id: string): "UBL" | "CII" => (id.startsWith("UBL-") ? "UBL" : "CII");
+/** "cac:ContractDocumentReference/cbc:ID" → "ContractDocumentReference/ID"; attributes keep their @ */
+export const syntaxBindingLeaf = (subject: string) => subject.replace(/\b(cac|cbc|ram|udt|rsm):/g, "");
+const subjectEn = (s: string) => (s.startsWith("@") ? `the ${s.slice(1)} attribute` : s.includes("/@") ? `the ${s.split("/@")[1]} attribute of ${s.split("/@")[0]}` : s);
+function scopeEn(scope: string, one = false): string {
+  if (scope === "") return "in the invoice";
+  if (scope === "rsm:CrossIndustryInvoice") return "on the root element rsm:CrossIndustryInvoice";
+  if (scope.startsWith("ram:…")) return `in every ram element whose name ends in "${scope.slice(5)}"`;
+  if (scope === "cac:AllowanceCharge (allowance)") return "in each allowance (cac:AllowanceCharge with ChargeIndicator false)";
+  if (scope === "cac:AllowanceCharge (charge)") return "in each charge (cac:AllowanceCharge with ChargeIndicator true)";
+  if (scope === "cac:PostalAddress") return "in each address (cac:PostalAddress or cac:Address)";
+  if (scope === "ram:ID / ram:LineID / ram:SellerAssignedID") return "on the specification identifier, invoice number, line ID and seller's item ID (ram:ID, ram:LineID, ram:SellerAssignedID)";
+  return one ? `in a ${scope}` : `in each ${scope}`;
+}
+const UNLESS_EN: Record<SyntaxBindingException, string> = {
+  ard916: "except in an additional referenced document with TypeCode 916 (an attached supporting document)",
+  ard50: "except in an additional referenced document with TypeCode 50, 130 or 916",
+  ard130: "except in an additional referenced document with TypeCode 130 (the invoiced object identifier)",
+  ird: "except in the InvoiceReferencedDocument (the preceding invoice)",
+};
+/** Hand-written English text of the rules that don't follow one of the patterns */
+const SYNTAX_BINDING_CUSTOM_EN: Record<string, [title: string, description: string, fix: string]> = {
+  "UBL-CR-646": [
+    "Sub-invoice line in an XRechnung invoice",
+    "An invoice line contains a cac:SubInvoiceLine. EN 16931 has no sub-lines. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Turn each sub-line into an invoice line of its own, or leave the detail out of the e-invoice.",
+  ],
+  "CII-SR-452": [
+    "More than one set of payment terms in an XRechnung invoice",
+    "The header settlement has more than one ram:SpecifiedTradePaymentTerms; EN 16931 has one set of payment terms per invoice. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Keep one ram:SpecifiedTradePaymentTerms and put the payment terms (BT-20) and the due date (BT-9) in it.",
+  ],
+  "CII-SR-453": [
+    "More than one payment terms text in an XRechnung invoice",
+    "The payment terms carry more than one ram:Description; the payment terms (BT-20) are one text. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Merge the texts into one ram:Description (BT-20).",
+  ],
+  "CII-SR-454": [
+    "Invoice line without exactly one VAT entry in an XRechnung invoice",
+    "Each line's ram:SpecifiedLineTradeSettlement needs exactly one ram:ApplicableTradeTax, with the line's VAT category and rate. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Give every invoice line exactly one ram:ApplicableTradeTax with its VAT category code and rate.",
+  ],
+  "CII-SR-465": [
+    "Seller contact with both a person and a department in an XRechnung invoice",
+    "The seller's contact point (BT-41) is one field, but the invoice gives both ram:PersonName and ram:DepartmentName in ram:SellerTradeParty/ram:DefinedTradeContact. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Keep either the person's name or the department name in the seller's ram:DefinedTradeContact.",
+  ],
+  "CII-SR-466": [
+    "Buyer contact with both a person and a department in an XRechnung invoice",
+    "The buyer's contact point (BT-56) is one field, but the invoice gives both ram:PersonName and ram:DepartmentName in ram:BuyerTradeParty/ram:DefinedTradeContact. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Keep either the person's name or the department name in the buyer's ram:DefinedTradeContact.",
+  ],
+  "UBL-SR-43": [
+    "Scheme ID on a document reference that isn't the invoiced object",
+    "A schemeID on cac:AdditionalDocumentReference/cbc:ID is allowed only for the invoiced object identifier (DocumentTypeCode 130, or 50 in a credit note); a reference with neither a schemeID nor a type code is also fine.",
+    "Remove the schemeID attribute from the reference's cbc:ID, or set DocumentTypeCode 130 when the reference is the invoiced object identifier (BT-18).",
+  ],
+  "UBL-SR-53": [
+    "Party tax scheme without tax scheme ID or CompanyID",
+    "Each cac:PartyTaxScheme needs both cac:TaxScheme/cbc:ID and cbc:CompanyID: a tax scheme on its own carries no VAT identifier.",
+    "Add the VAT or tax registration number in cbc:CompanyID and the scheme (VAT) in cac:TaxScheme/cbc:ID, or remove the cac:PartyTaxScheme.",
+  ],
+  "UBL-CR-666": [
+    "Invoiced object reference with an attachment",
+    "An AdditionalDocumentReference with DocumentTypeCode 130 is the invoiced object identifier (BT-18) and may not carry an attachment (cac:Attachment).",
+    "Put the attachment in a separate AdditionalDocumentReference without DocumentTypeCode 130, and keep only the identifier in the one with code 130.",
+  ],
+  "UBL-CR-673": [
+    "Invoiced object reference with a description",
+    "An AdditionalDocumentReference with DocumentTypeCode 130 is the invoiced object identifier (BT-18) and may not carry a document description (cbc:DocumentDescription).",
+    "Remove cbc:DocumentDescription from the reference with code 130, or move the description to a separate supporting document reference.",
+  ],
+  "UBL-SR-57": [
+    "More than one PartyLegalEntity in a party",
+    "The seller, buyer, payee and tax representative may each have at most one cac:PartyLegalEntity.",
+    "Merge the party's cac:PartyLegalEntity elements into one, with one registration name and one company ID.",
+  ],
+  "CII-SR-470": [
+    "Credit transfer without IBAN or proprietary account ID",
+    "A payment means with type code 30 or 58 (credit transfer, SEPA credit transfer) needs the payee's account: ram:PayeePartyCreditorFinancialAccount with ram:IBANID or ram:ProprietaryID.",
+    "Add ram:PayeePartyCreditorFinancialAccount/ram:IBANID (or ram:ProprietaryID for a non-IBAN account) to each credit-transfer payment means.",
+  ],
+  "CII-DT-033": [
+    "Unit code on a quantity while no billed quantity has one",
+    "A unitCode on a ram:…Quantity element is accepted only when some line's ram:BilledQuantity has a unitCode too.",
+    "Give each ram:BilledQuantity its unitCode (UN/ECE Recommendation 20 or 21), or remove unitCode from the other quantities.",
+  ],
+  "CII-DT-037": [
+    "Tax type code other than VAT",
+    "In every ram:ApplicableTradeTax and ram:CategoryTradeTax, ram:TypeCode must be VAT, written exactly (EN 16931 only covers VAT).",
+    "Write ram:TypeCode as VAT, in capitals and without spaces, in every tax element.",
+  ],
+  "CII-DT-097": [
+    "Date with format 102 isn't a valid YYYYMMDD date",
+    "A udt:DateTimeString with format=\"102\" must be written as YYYYMMDD: four digits for the year, a month 01–12 and a day 01–31.",
+    "Write the date as YYYYMMDD, for example 20250131, without separators.",
+  ],
+};
+function syntaxBindingMeta(r: SyntaxBindingRule): RuleMeta {
+  const syn = syntaxOf(r.id);
+  const s = subjectEn(r.subject);
+  const where = scopeEn(r.scope);
+  const leaf = syntaxBindingLeaf(r.subject);
+  const binding = `EN 16931's ${syn} syntax binding`;
+  const [title, description, fix] =
+    SYNTAX_BINDING_CUSTOM_EN[r.id] ??
+    ((): [string, string, string] => {
+      switch (r.kind) {
+        case "max": {
+          const n = r.max === 2 ? "twice" : "once";
+          return [`${leaf} given more than ${n}`, `${binding} allows ${s} at most ${n} ${where}. The ${syn} schema accepts more, so the official validator rejects the extra ones with this fatal rule.`, `Keep ${r.max === 2 ? "at most two" : "one"} ${s} ${where} and remove the others (merge their content if it is needed).`];
+        }
+        case "exactly":
+          return [`${leaf} must occur exactly once`, `${binding} needs exactly one ${s} ${where}; the official validator rejects the invoice when it is missing or repeated.`, `Give exactly one ${s} ${where}.`];
+        case "exactly-if":
+          return [`${leaf} must occur exactly once`, `When ${r.cond} is given ${scopeEn(r.scope, true)}, ${binding} needs exactly one ${s} in it.`, `Give exactly one ${s}, or leave ${r.cond} out.`];
+        case "required":
+          return [`${leaf} is missing`, `${binding} needs ${s} ${where}.`, `Add ${s} ${where}.`];
+        case "required-if":
+          return [`${leaf} is missing`, `When ${r.cond} is given ${scopeEn(r.scope, true)}, ${binding} needs ${s}.`, `Add ${s}, or leave ${r.cond} out.`];
+        case "not-allowed":
+          return [`${leaf} is not allowed here`, `EN 16931 has no field for ${s} ${where}, and ${binding} rejects it (fatal).`, `Remove ${s} ${where}; put the information in a field EN 16931 has, or leave it out.`];
+        case "not-allowed-unless":
+          return [`${leaf} is not allowed here`, `EN 16931 has no field for ${s} ${where}, ${UNLESS_EN[r.unless!]}; elsewhere ${binding} rejects it (fatal).`, `Remove ${s} from that element, or move the information to a field EN 16931 has.`];
+        case "same-value":
+          return [`${leaf} values differ`, `Every ${s} in the invoice must have the same value: EN 16931 has one such value per invoice, which ${syn} may repeat only as copies.`, `Use one value for every ${s}, or keep only one of them.`];
+        case "payee":
+          return [`Payee ${leaf} repeated, missing name or same as seller`, `In a payee (cac:PayeeParty) that differs from the seller, ${s} may occur at most once. The official rule also fails when the payee has no name or its name equals the seller's legal name (cac:PartyLegalEntity/cbc:RegistrationName), because it compares the two names.`, `Give the payee one name that differs from the seller's legal name and at most one ${s}; when the payee is the seller, leave cac:PayeeParty out.`];
+        default:
+          throw new Error(`no text for ${r.id}`);
+      }
+    })();
+  const version =
+    r.cen === "1.3.17"
+      ? " CEN added this rule in version 1.3.17 (Peppol BIS 3.1.0 ships it). Peppol BIS 3.0.22, KoSIT's XRechnung validator and the Dutch SI-UBL 2.0 files still run CEN 1.3.16, which doesn't have it, so only the EN 16931 and Peppol BIS 3.1.0 checks report it."
+      : r.cen === "1.3.16"
+        ? " Only CEN 1.3.16 has this rule (its official message speaks of a VAT category code, but the test counts RateApplicablePercent). Peppol BIS 3.0.22, KoSIT's XRechnung validator and the Dutch SI-UBL 2.0 files run 1.3.16, so those checks report it; CEN 1.3.17 (the EN 16931 check) and Peppol BIS 3.1.0 drop it."
+        : r.id === "UBL-SR-25"
+          ? " In CEN 1.3.16 (Peppol BIS 3.0.22, XRechnung, SI-UBL 2.0) the rule only fails on a second name; CEN 1.3.17 (EN 16931, Peppol BIS 3.1.0) also fails a deliver-to party without one."
+          : "";
+  return { id: r.id, source: "EN16931", severity: r.kosit ? "warning" : "error", section: r.section, title, description: description + version, fix, syntax: syn, ...(r.cen ? { cen: r.cen } : {}) };
+}
+
 /**
  * Rules the official artefacts define for one syntax only. Counts of the rules that apply to a document
  * (validation reports, the Factur-X checker's "rules checked") leave out the other syntax's rules.
@@ -3429,7 +3813,13 @@ const ONE_SYNTAX: Record<string, "UBL" | "CII"> = {
   "PEPPOL-EN16931-P0112": "UBL",
 };
 
-export const RULES: RuleMeta[] = CATALOG.map((r) => (ONE_SYNTAX[r.id] ? { ...r, syntax: ONE_SYNTAX[r.id] } : r));
+export const RULES: RuleMeta[] = [...CATALOG.map((r) => (ONE_SYNTAX[r.id] ? { ...r, syntax: ONE_SYNTAX[r.id] } : r)), ...SYNTAX_BINDING_RULES.map(syntaxBindingMeta)];
+/** The fatal syntax-binding rules of syntax-binding.ts; counts of EN 16931 business rules leave them out */
+export const SYNTAX_BINDING_IDS: ReadonlySet<string> = new Set(SYNTAX_BINDING_RULES.map((r) => r.id));
+/** An EN 16931 rule as the pages count them: the business, code-list and data-type rules, not the syntax-binding ones */
+export const isEn16931RuleCounted = (r: RuleMeta) => r.source === "EN16931" && !SYNTAX_BINDING_IDS.has(r.id);
+/** A CEN syntax-binding rule (UBL-SR, UBL-CR, UBL-DT, CII-SR, CII-DT), as opposed to the EN 16931 business rules. */
+export const isSyntaxBindingRule = (id: string) => /^(UBL|CII)-/.test(id);
 
 export const RULE_INDEX: Record<string, RuleMeta> = Object.fromEntries(RULES.map((r) => [r.id, r]));
 

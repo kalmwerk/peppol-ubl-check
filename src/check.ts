@@ -2,7 +2,7 @@
 // Pure apart from reading the files: no network, no environment.
 import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import { RULE_INDEX, RULES, ruleSlug, type RuleSource, type Section, type Severity } from "./engine/rules-catalog";
+import { RULE_INDEX, RULES, ruleSlug, SYNTAX_BINDING_IDS, type RuleSource, type Section, type Severity } from "./engine/rules-catalog";
 import { validateInvoiceXml, type ValidationProfile, type ValidationReport } from "./engine/validate";
 import { MAX_XML_BYTES } from "./engine/xml";
 import { SITE_URL, TOOL_NAME, VERSION } from "./version";
@@ -17,10 +17,16 @@ export type NonInvoice = (typeof NON_INVOICE)[number];
 /** Root elements of the documents this tool checks; any other XML is "not an invoice". */
 export const INVOICE_ROOTS = ["Invoice", "CreditNote", "CrossIndustryInvoice"] as const;
 
-/** Rules in the engine, by source; the README and website quote these numbers. */
-export function ruleCounts(): { total: number } & Record<RuleSource, number> {
-  const counts = { total: RULES.length, EN16931: 0, Peppol: 0, XRechnung: 0, NLCIUS: 0, InvoiceVerify: 0 };
-  for (const r of RULES) counts[r.source]++;
+/**
+ * Rules in the engine, by source, with CEN's syntax-binding rules (UBL-SR, UBL-CR, CII-SR, CII-DT) counted apart from
+ * the EN 16931 business rules; the README and website quote these numbers.
+ */
+export function ruleCounts(): { total: number; syntax: number } & Record<RuleSource, number> {
+  const counts = { total: RULES.length, EN16931: 0, syntax: 0, Peppol: 0, XRechnung: 0, NLCIUS: 0, InvoiceVerify: 0 };
+  for (const r of RULES) {
+    if (SYNTAX_BINDING_IDS.has(r.id)) counts.syntax++;
+    else counts[r.source]++;
+  }
   return counts;
 }
 

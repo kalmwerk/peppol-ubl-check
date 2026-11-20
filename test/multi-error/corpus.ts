@@ -425,3 +425,112 @@ export function asPeppolCii(facturX: string): string {
   xml = swap(xml, "<ram:ID>urn:cen.eu:en16931:2017</ram:ID>", "<ram:ID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</ram:ID>");
   return swap(xml, "      <ram:SubjectCode>PMT</ram:SubjectCode>\n", "");
 }
+
+/* ------------------------------------------------------------------ repeated groups, one copy broken */
+
+/**
+ * The repeated-group corpus: deterministic, not random. Every element of a base is repeated in place (the copy right
+ * after the original); `repeatedGroups` gives those invoices for a schema check, and `repeatedGroupFaults` then breaks
+ * one thing inside either copy of each repetition the schema allows: an element removed, emptied or hollowed, a code
+ * set to another code, a number moved by 1. The official rules read every copy of a repeated group (or stop on
+ * several), so a checker that reads only the first copy shows up here, where random draws rarely hit it.
+ * Cases whose structure an earlier base already gave (same syntax, paths without positions, copy and fault) are
+ * left out after `perKey` of them, so many similar bases don't multiply one case.
+ */
+export interface RepeatOptions {
+  /** Keep at most this many cases per structural key (default 2) */
+  perKey?: number;
+}
+const plainPath = (e: MEl) => pathOf(e).replace(/\[\d+\]/g, "");
+/** The element and everything below it (attachments and extensions skipped), document order */
+const subtree = (e: MEl): MEl[] => [e, ...elements(e)];
+const syntaxKey = (xml: string) => (/CrossIndustryInvoice/.test(xml.slice(0, 2000)) ? "cii" : "ubl");
+
+/** Every element of every base repeated once: `<base>--r<n>`, n = the element's place in document order. */
+export function repeatedGroups(bases: readonly CorpusBase[]): CorpusCase[] {
+  const out: CorpusCase[] = [];
+  for (const b of bases) {
+    const count = elements(parse(b.xml)).length;
+    for (let n = 0; n < count; n++) {
+      const root = parse(b.xml);
+      const e = elements(root)[n]!;
+      const p = e.parent!;
+      p.children.splice(p.children.indexOf(e) + 1, 0, { kind: "text", text: "\n" }, clone(e, p));
+      out.push({ id: `${b.name}--r${n}`, base: b.name, faults: [`${pathOf(e)} repeated`], xml: serialize(root) });
+    }
+  }
+  return out;
+}
+
+/**
+ * One fault inside either copy of each repetition in `allowed` (ids from `repeatedGroups` the schema accepts):
+ * `<base>--r<n>-<copy>-<m>-<fault>`, copy 1 = the original, 2 = the copy, m = the element's place inside that copy.
+ */
+export function repeatedGroupFaults(bases: readonly CorpusBase[], allowed: ReadonlySet<string>, options: RepeatOptions = {}): CorpusCase[] {
+  const perKey = options.perKey ?? 2;
+  const seen = new Map<string, number>();
+  const out: CorpusCase[] = [];
+  for (const b of bases) {
+    const syntax = syntaxKey(b.xml);
+    const count = elements(parse(b.xml)).length;
+    for (let n = 0; n < count; n++) {
+      if (!allowed.has(`${b.name}--r${n}`)) continue;
+      const repeat = (): { root: MEl; copies: [MEl, MEl]; label: string } => {
+        const root = parse(b.xml);
+        const e = elements(root)[n]!;
+        const p = e.parent!;
+        const c = clone(e, p);
+        p.children.splice(p.children.indexOf(e) + 1, 0, { kind: "text", text: "\n" }, c);
+        return { root, copies: [e, c], label: `${pathOf(e)} repeated` };
+      };
+      const probe = repeat();
+      for (const copy of [0, 1] as const) {
+        const inside = subtree(probe.copies[copy]);
+        for (let m = 0; m < inside.length; m++) {
+          const d = inside[m]!;
+          const faults: [string, (x: MEl) => string | undefined][] = [];
+          if (m > 0) faults.push(["removed", (x) => ((x.parent!.children = x.parent!.children.filter((k) => k !== x)), "removed")]);
+          if (!isLeaf(d)) faults.push(["hollow", (x) => ((x.children = []), "hollow")]);
+          else {
+            const t = textOf(d);
+            if (t !== "") faults.push(["empty", (x) => (setText(x, ""), "empty")]);
+            const codes = codesFor(d)?.filter((c) => c !== t);
+            if (codes?.length) {
+              const v = codes[codes.length - 1]!;
+              faults.push(["code", (x) => (setText(x, v), `= ${JSON.stringify(v)} (was ${JSON.stringify(t)})`)]);
+            } else if (NUMBER.test(t)) {
+              const decimals = (t.split(".")[1] ?? "").length;
+              const v = (Math.round((Number(t) + 1) * 10 ** decimals) / 10 ** decimals).toFixed(decimals);
+              faults.push(["number", (x) => (setText(x, v), `= ${v} (was ${t})`)]);
+              const flipped = t.startsWith("-") ? t.slice(1) : `-${t}`;
+              if (Number(t) !== 0) faults.push(["sign", (x) => (setText(x, flipped), `= ${flipped} (was ${t})`)]);
+            } else if (/^[A-Z][A-Z0-9]{0,5}$/.test(t)) faults.push(["code", (x) => (setText(x, "XX9"), `= "XX9" (was ${JSON.stringify(t)})`)]);
+            const moved = moveDate(t, -400);
+            if (moved) faults.push(["date", (x) => (setText(x, moved), `= ${moved} (was ${t})`)]);
+          }
+          const attr = d.attrs.find(([k]) => !k.startsWith("xmlns"));
+          if (attr) {
+            const [name, value] = attr;
+            const other = ATTR_CODES[name]?.filter((c) => c !== value);
+            const v = other?.length ? other[other.length - 1]! : "";
+            faults.push(["attr", (x) => ((x.attrs = x.attrs.map(([k, old]) => [k, k === name ? v : old])), `@${name} = ${JSON.stringify(v)} (was ${JSON.stringify(value)})`)]);
+            faults.push(["attr-removed", (x) => ((x.attrs = x.attrs.filter(([k]) => k !== name)), `@${name} removed`)]);
+          }
+          for (const [name, apply] of faults) {
+            const key = `${syntax}|${plainPath(probe.copies[0])}|${copy}|${plainPath(d).slice(plainPath(probe.copies[copy]).length)}|${name}`;
+            const k = seen.get(key) ?? 0;
+            if (k >= perKey) continue;
+            seen.set(key, k + 1);
+            const fresh = repeat();
+            const target = subtree(fresh.copies[copy])[m]!;
+            const where = pathOf(target);
+            const label = apply(target);
+            if (!label) continue;
+            out.push({ id: `${b.name}--r${n}-${copy + 1}-${m}-${name}`, base: b.name, faults: [fresh.label, `${where} ${label}`], xml: serialize(fresh.root) });
+          }
+        }
+      }
+    }
+  }
+  return out;
+}

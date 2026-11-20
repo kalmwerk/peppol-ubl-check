@@ -4,6 +4,9 @@ import { readCii } from "./read-cii";
 import { readUbl } from "./read-ubl";
 import { RULES, type Section } from "./rules-catalog";
 import { runRules, type Finding } from "./rules";
+import type { CenVersion } from "./syntax-binding";
+import { kositExactScenario, kositLevel, kositScenario } from "./kosit-levels";
+import { facturXSubset } from "./facturx-profile";
 import { KOSIT_PEPPOL_RULES } from "./rules-national";
 import { parseXml, XmlSyntaxError } from "./xml";
 
@@ -110,15 +113,20 @@ function computeTotals(m: InvoiceModel): ComputedTotals {
   };
 }
 
-function rulesApplicable(peppol: boolean, en16931: boolean, xrechnung: boolean, nlcius: boolean, syntax: "UBL" | "CII") {
+function rulesApplicable(peppol: boolean, en16931: boolean, xrechnung: boolean, nlcius: boolean, syntax: "UBL" | "CII", cen: CenVersion, subset?: ReadonlySet<string>) {
   return RULES.filter((r) => {
     if (r.syntax && r.syntax !== syntax) return false;
+    if (subset && r.source !== "InvoiceVerify" && !subset.has(r.id)) return false;
     // XRechnung also runs the Peppol rules KoSIT's Schematron copies
     if (r.source === "Peppol") return peppol || (xrechnung && KOSIT_PEPPOL_RULES.has(r.id));
     if (r.source === "NLCIUS") return nlcius;
     // IV-DE-* (Leitweg-ID) are our own checks but only run with the XRechnung rules
     if (r.source === "XRechnung" || r.id.startsWith("IV-DE-")) return xrechnung;
     if (!en16931 && (r.section === "lines" || r.section === "vat")) return false;
+    // the fatal syntax-binding rules run with the EN 16931 rule set only (UBL-DT-01/06/07 always did), in the CEN
+    // version of the profile's official files: 1.3.16 for Peppol BIS 3.0.22, 1.3.17 otherwise
+    if (!en16931 && /^(UBL-SR|UBL-CR|CII-SR|CII-DT)-/.test(r.id)) return false;
+    if (r.cen && r.cen !== cen) return false;
     return true;
   }).length;
 }
@@ -128,9 +136,19 @@ const CII_WITH_OWN_RULES: ReadonlySet<string> = new Set(["factur-x", "xrechnung-
 
 const now = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
 
+/** Options the site's own rule sets use; the profiles themselves never need them. */
+export interface ValidateOptions {
+  /**
+   * The CEN version to run instead of the profile's own (1.3.16 for Peppol BIS 3.0.22, 1.3.17 otherwise): the Peppol
+   * BIS 3.1.0 overlay runs today's Peppol rules on CEN 1.3.17, the version 3.1.0 ships.
+   */
+  cen?: CenVersion;
+}
+
 export function validateInvoiceXml(
   xml: string,
   profile: ValidationProfile = "auto",
+  options: ValidateOptions = {},
 ): ValidationReport {
   const started = now();
   const sourceLines = xml.split(/\r\n|\r|\n/).length;
@@ -222,8 +240,26 @@ export function validateInvoiceXml(
     (profile === "auto" && (format.id === "xrechnung-ubl" || format.id === "xrechnung-cii"));
   const nlcius =
     profile === "nlcius" || (profile === "auto" && (format.id === "si-ubl-2" || format.id === "nlcius-cii"));
-  const en16931 = format.en16931;
-  const findings = runRules(model, format, { peppol, en16931, xrechnung, nlcius });
+  // Factur-X MINIMUM / BASIC WL (not EN 16931 compliant) with their own rule set: the EN 16931 rules FeRD's official
+  // Schematron runs for the profile, header and VAT breakdown included. Choosing EN 16931, XRechnung or SI-UBL / NLCIUS
+  // runs every EN 16931 rule on any invoice, lines and VAT included, as those official files do on a MINIMUM file too
+  const explicitEn16931 = profile === "en16931" || profile === "xrechnung" || profile === "nlcius";
+  const subset = format.id === "factur-x" && !explicitEn16931 ? facturXSubset(format.customizationId) : undefined;
+  const en16931 = format.en16931 || !!subset || explicitEn16931;
+  // The CEN version each rule set's official files run: Peppol BIS 3.0.22, KoSIT's XRechnung configuration and the
+  // Dutch SI-UBL 2.0 / NLCIUS files all build on CEN 1.3.16; plain EN 16931 is CEN's current release, 1.3.17
+  const cen: CenVersion = options.cen ?? (peppol || xrechnung || nlcius ? "1.3.16" : "1.3.17");
+  const ruled = runRules(model, format, { peppol, en16931, xrechnung, nlcius, cen, ...(subset ? { subset } : {}) });
+  // XRechnung: the levels KoSIT's validator configuration sets per scenario (kosit-levels.ts); with no scenario
+  // matching exactly (IV-DE-02, rules.ts) the plain CIUS levels of the syntax
+  const exact = xrechnung ? kositExactScenario(model.syntax, format.document, model.xrechnung?.specIds?.values ?? []) : null;
+  const scenario = xrechnung ? (exact ?? kositScenario(format)) : null;
+  const findings = scenario
+    ? ruled.map((f) => {
+        const level = kositLevel(f.ruleId, scenario);
+        return level && level !== f.severity ? { ...f, severity: level } : f;
+      })
+    : ruled;
   const order = { error: 0, warning: 1, info: 2 } as const;
   findings.sort((a, b) => order[a.severity] - order[b.severity] || (a.line ?? 0) - (b.line ?? 0));
   const { counts, sections } = summarize(findings);
@@ -236,6 +272,6 @@ export function validateInvoiceXml(
     findings,
     counts,
     sections,
-    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius, model.syntax),
+    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius, model.syntax, cen, subset),
   });
 }

@@ -89,6 +89,7 @@ export function ruleSetFamily(id) {
  */
 export function ruleSetCoverage(files, isChecked) {
   const tests = new Map();
+  const fatal = new Set();
   for (const xml of files)
     for (const m of xml.replace(/<!--[\s\S]*?-->/g, "").matchAll(/<(?:\w+:)?assert\b([^>]*)>/g)) {
       const id = /\bid="([^"]+)"/.exec(m[1])?.[1];
@@ -97,6 +98,7 @@ export function ruleSetCoverage(files, isChecked) {
       const all = tests.get(id) ?? new Set();
       if (test !== undefined) all.add(test.trim());
       tests.set(id, all);
+      if (/\bflag="fatal"/.test(m[1])) fatal.add(id);
     }
   const out = {};
   for (const family of ["business", "peppol", "syntax", "national"]) {
@@ -106,6 +108,11 @@ export function ruleSetCoverage(files, isChecked) {
     out[family] = { official: ids.length, checked: ids.length - missing.length };
     if (family === "business" || family === "peppol")
       Object.assign(out[family], { alwaysTrue, notChecked: missing.filter((id) => !alwaysTrue.includes(id)) });
+    // the syntax rules that block an invoice (flag="fatal"), apart from the warning-level notes
+    if (family === "syntax") {
+      const blocking = ids.filter((id) => fatal.has(id));
+      Object.assign(out[family], { fatal: blocking.length, fatalChecked: blocking.filter((id) => isChecked(id)).length, fatalNotChecked: blocking.filter((id) => !isChecked(id)) });
+    }
     // the countries whose rules aren't checked, by ID prefix (DE-R-001 → DE), and every national
     // rule that isn't, tested or not (Peppol's identifier formats have no country prefix)
     if (family === "national")

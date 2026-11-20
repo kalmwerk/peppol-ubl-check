@@ -1700,9 +1700,9 @@ var require_saxes = __commonJS({
       pushAttribNS(name, value) {
         var _a;
         const { prefix, local } = this.qname(name);
-        const attr = { name, prefix, local, value };
-        this.attribList.push(attr);
-        (_a = this.attributeHandler) === null || _a === void 0 ? void 0 : _a.call(this, attr);
+        const attr2 = { name, prefix, local, value };
+        this.attribList.push(attr2);
+        (_a = this.attributeHandler) === null || _a === void 0 ? void 0 : _a.call(this, attr2);
         if (prefix === "xmlns") {
           const trimmed = value.trim();
           if (this.currentXMLVersion === "1.0" && trimmed === "") {
@@ -1718,9 +1718,9 @@ var require_saxes = __commonJS({
       }
       pushAttribPlain(name, value) {
         var _a;
-        const attr = { name, value };
-        this.attribList.push(attr);
-        (_a = this.attributeHandler) === null || _a === void 0 ? void 0 : _a.call(this, attr);
+        const attr2 = { name, value };
+        this.attribList.push(attr2);
+        (_a = this.attributeHandler) === null || _a === void 0 ? void 0 : _a.call(this, attr2);
       }
       /**
        * End parsing. This performs final well-formedness checks and resets the
@@ -1820,8 +1820,8 @@ var require_saxes = __commonJS({
         }
         const { attributes } = tag;
         const seen = /* @__PURE__ */ new Set();
-        for (const attr of attribList) {
-          const { name, prefix, local } = attr;
+        for (const attr2 of attribList) {
+          const { name, prefix, local } = attr2;
           let uri;
           let eqname;
           if (prefix === "") {
@@ -1839,8 +1839,8 @@ var require_saxes = __commonJS({
             this.fail(`duplicate attribute: ${eqname}.`);
           }
           seen.add(eqname);
-          attr.uri = uri;
-          attributes[name] = attr;
+          attr2.uri = uri;
+          attributes[name] = attr2;
         }
         this.attribList = [];
       }
@@ -4317,6 +4317,16 @@ var CATALOG = [
     "A Leitweg-ID has a coarse address (2–12 digits, starting 01–16 or 99), an optional fine address (up to 30 letters or digits) and two check digits (ISO/IEC 7064 MOD 97-10), separated by hyphens. This check follows the KoSIT Leitweg-ID format specification 2.0.2; it does not tell whether the authority uses the ID.",
     "Copy the Leitweg-ID exactly from the order or the authority's letter; a single wrong digit makes the check digits fail."
   ),
+  R(
+    "IV-DE-02",
+    "InvoiceVerify",
+    "error",
+    "header",
+    ["BT-24"],
+    "XRechnung identifier KoSIT's validator has no scenario for",
+    "KoSIT's XRechnung validator, which German recipients run, picks its checks by the exact specification identifier (BT-24): urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0, or its Extension or CVD form (the Extension only on invoices). Any other value, such as an older XRechnung version, a typo or a space before or after it, matches none of its scenarios, and it rejects the invoice without checking further. BR-DE-21 names the identifier; this check stands for that rejection.",
+    "Set the specification identifier (UBL cbc:CustomizationID, CII ram:GuidelineSpecifiedDocumentContextParameter/ram:ID) to exactly urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0, with no spaces around it."
+  ),
   // ---------- Added 17 Nov 2026: the remaining EN 16931 and Peppol BIS rules with official test cases ----------
   // (CEN validation artefacts 1.3.17, Peppol BIS Billing 3.0.22; written per syntax as the official Schematron tests them)
   R(
@@ -5310,6 +5320,319 @@ var CATALOG = [
     "Use 3 (invoice date), 35 (delivery date) or 432 (payment date) in cac:InvoicePeriod/cbc:DescriptionCode, or leave it out."
   )
 ];
+var SYNTAX_BINDING_RULES = [
+  { id: "UBL-SR-51", section: "parties", kind: "max", subject: "cac:AddressLine", scope: "cac:PostalAddress", official: "[UBL-SR-51]-An address can only have one third line." },
+  { id: "UBL-SR-42", section: "parties", kind: "max", subject: "cac:PartyTaxScheme", scope: "cac:AccountingSupplierParty/cac:Party", max: 2, official: "[UBL-SR-42]-Party tax scheme shall occur maximum twice in accounting supplier party" },
+  { id: "UBL-SR-33", section: "document", kind: "max", subject: "cbc:DocumentDescription", scope: "cac:AdditionalDocumentReference", official: "[UBL-SR-33]-Supporting document description shall occur maximum once" },
+  { id: "UBL-SR-43", section: "document", kind: "custom", subject: "cbc:ID/@schemeID", scope: "cac:AdditionalDocumentReference", official: "[UBL-SR-43]-Scheme identifier shall only be used for invoiced object (document type code with value 130 or 50)" },
+  { id: "UBL-SR-25", section: "parties", kind: "exactly-if", subject: "cac:DeliveryParty/cac:PartyName/cbc:Name", scope: "cac:Delivery", cond: "cac:DeliveryParty", official: "[UBL-SR-25]-Deliver to party name shall occur maximum once" },
+  { id: "UBL-SR-30", section: "document", kind: "max", subject: "cbc:AllowanceChargeReason", scope: "cac:AllowanceCharge (allowance)", official: "[UBL-SR-30]-Document level allowance reason shall occur maximum once" },
+  { id: "UBL-SR-31", section: "document", kind: "max", subject: "cbc:AllowanceChargeReason", scope: "cac:AllowanceCharge (charge)", official: "[UBL-SR-31]-Document level charge reason shall occur maximum once" },
+  { id: "UBL-SR-53", section: "parties", kind: "custom", subject: "cbc:CompanyID", scope: "cac:PartyTaxScheme", official: "[UBL-SR-53]- CompanyID (VAT Identifier) must be stated when providing the PartyTaxScheme/TaxScheme/ID." },
+  { id: "UBL-CR-666", section: "document", kind: "custom", subject: "cac:Attachment", scope: "", official: "[UBL-CR-666]-A UBL invoice shall not include an AdditionalDocumentReference simultaneously referring an Invoice Object Identifier and an Attachment" },
+  { id: "UBL-CR-673", section: "document", kind: "custom", subject: "cbc:DocumentDescription", scope: "", official: "[UBL-CR-673]-A UBL invoice shall not include an AdditionalDocumentReference simultaneously referring an Invoice Object Identifier and an Document Description" },
+  { id: "UBL-SR-01", section: "document", kind: "max", subject: "cac:ContractDocumentReference/cbc:ID", scope: "", official: "[UBL-SR-01]-Contract identifier shall occur maximum once." },
+  { id: "UBL-SR-02", section: "document", kind: "max", subject: "cac:ReceiptDocumentReference/cbc:ID", scope: "", official: "[UBL-SR-02]-Receive advice identifier shall occur maximum once" },
+  { id: "UBL-SR-03", section: "document", kind: "max", subject: "cac:DespatchDocumentReference/cbc:ID", scope: "", official: "[UBL-SR-03]-Despatch advice identifier shall occur maximum once" },
+  { id: "UBL-SR-04", section: "document", kind: "max", subject: "cac:AdditionalDocumentReference/cbc:ID (DocumentTypeCode 130)", scope: "", official: "[UBL-SR-04]-Invoice object identifier shall occur maximum once" },
+  { id: "UBL-SR-05", section: "payment", kind: "max", subject: "cac:PaymentTerms/cbc:Note", scope: "", official: "[UBL-SR-05]-Payment terms shall occur maximum once" },
+  { id: "UBL-SR-08", section: "document", kind: "max", subject: "cac:InvoicePeriod", scope: "", official: "[UBL-SR-08]-Invoice period shall occur maximum once" },
+  { id: "UBL-SR-09", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName", scope: "", official: "[UBL-SR-09]-Seller name shall occur maximum once" },
+  { id: "UBL-SR-10", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name", scope: "", official: "[UBL-SR-10]-Seller trader name shall occur maximum once" },
+  { id: "UBL-SR-11", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID", scope: "", official: "[UBL-SR-11]-Seller legal registration identifier shall occur maximum once" },
+  { id: "UBL-SR-12", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID (VAT)", scope: "", official: "[UBL-SR-12]-Seller VAT identifier shall occur maximum once" },
+  { id: "UBL-SR-13", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID (not VAT)", scope: "", official: "[UBL-SR-13]-Seller tax registration shall occur maximum once" },
+  { id: "UBL-SR-14", section: "parties", kind: "max", subject: "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyLegalForm", scope: "", official: "[UBL-SR-14]-Seller additional legal information shall occur maximum once" },
+  { id: "UBL-SR-15", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName", scope: "", official: "[UBL-SR-15]-Buyer name shall occur maximum once" },
+  { id: "UBL-SR-16", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyIdentification/cbc:ID", scope: "", official: "[UBL-SR-16]-Buyer identifier shall occur maximum once" },
+  { id: "UBL-SR-17", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID", scope: "", official: "[UBL-SR-17]-Buyer legal registration identifier shall occur maximum once" },
+  { id: "UBL-SR-18", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyTaxScheme/cbc:CompanyID (VAT)", scope: "", official: "[UBL-SR-18]-Buyer VAT identifier shall occur maximum once" },
+  { id: "UBL-SR-24", section: "parties", kind: "max", subject: "cac:Delivery", scope: "", official: "[UBL-SR-24]-Deliver to information shall occur maximum once" },
+  { id: "UBL-SR-29", section: "parties", kind: "max", subject: "cac:PartyIdentification/cbc:ID (schemeID SEPA)", scope: "", official: "[UBL-SR-29]-Bank creditor reference shall occur maximum once" },
+  { id: "UBL-SR-39", section: "document", kind: "max", subject: "cac:ProjectReference/cbc:ID", scope: "", official: "[UBL-SR-39]-Project reference shall occur maximum once." },
+  { id: "UBL-SR-40", section: "parties", kind: "max", subject: "cac:AccountingCustomerParty/cac:Party/cac:PartyName/cbc:Name", scope: "", official: "[UBL-SR-40]-Buyer trade name shall occur maximum once" },
+  { id: "UBL-SR-44", section: "payment", kind: "same-value", subject: "cbc:PaymentID", scope: "", official: "[UBL-SR-44]-An Invoice may only have one unique PaymentID, but the PaymentID may be used for multiple PaymentMeans" },
+  { id: "UBL-SR-45", section: "payment", kind: "max", subject: "cac:PaymentMeans/cbc:PaymentDueDate", scope: "", official: "[UBL-SR-45]-Due Date shall occur maximum once" },
+  { id: "UBL-SR-46", section: "payment", kind: "max", subject: "cac:PaymentMeans/cbc:PaymentMeansCode/@name", scope: "", official: "[UBL-SR-46]-Payment means text shall occur maximum once" },
+  { id: "UBL-SR-47", section: "payment", kind: "same-value", subject: "cbc:PaymentMeansCode", scope: "", official: "[UBL-SR-47]-When there are more than one payment means code, they shall be equal" },
+  { id: "UBL-SR-49", section: "document", kind: "max", subject: "cac:InvoicePeriod/cbc:DescriptionCode", scope: "", official: "[UBL-SR-49]-Value tax point date shall occur maximum once" },
+  { id: "UBL-SR-54", section: "payment", kind: "max", subject: "cac:PaymentMeans/cac:CardAccount", scope: "", official: "[UBL-SR-54]-An Invoice shall contain maximum one Payment Card account (BG-18)." },
+  { id: "UBL-SR-55", section: "payment", kind: "max", subject: "cac:PaymentMeans/cac:PaymentMandate", scope: "", official: "[UBL-SR-55]-An Invoice shall contain maximum one Payment Mandate (BG-19)." },
+  { id: "UBL-SR-56", section: "document", kind: "max", subject: "cac:OriginatorDocumentReference/cbc:ID", scope: "", official: "[UBL-SR-56]-An Invoice shall contain maximum one Originator document reference identifier (BT-17)." },
+  { id: "UBL-SR-57", section: "parties", kind: "custom", subject: "cac:PartyLegalEntity", scope: "", cen: "1.3.17", official: "[UBL-SR-57]-PartyLegalEntity shall occur maximum once within a Party." },
+  { id: "UBL-SR-34", section: "lines", kind: "max", subject: "cbc:Note", scope: "cac:InvoiceLine", official: "[UBL-SR-34]-Invoice line note shall occur maximum once" },
+  { id: "UBL-SR-35", section: "lines", kind: "max", subject: "cac:OrderLineReference/cbc:LineID", scope: "cac:InvoiceLine", official: "[UBL-SR-35]-Referenced purchase order line identifier shall occur maximum once" },
+  { id: "UBL-SR-36", section: "lines", kind: "max", subject: "cac:InvoicePeriod", scope: "cac:InvoiceLine", official: "[UBL-SR-36]-Invoice line period shall occur maximum once" },
+  { id: "UBL-SR-37", section: "lines", kind: "max", subject: "cac:Price/cac:AllowanceCharge/cbc:Amount", scope: "cac:InvoiceLine", official: "[UBL-SR-37]-Item price discount shall occur maximum once" },
+  { id: "UBL-SR-48", section: "lines", kind: "exactly", subject: "cac:Item/cac:ClassifiedTaxCategory", scope: "cac:InvoiceLine", official: "[UBL-SR-48]-Invoice lines shall have one and only one classified tax category." },
+  { id: "UBL-SR-50", section: "lines", kind: "max", subject: "cac:Item/cbc:Description", scope: "cac:InvoiceLine", official: "[UBL-SR-50]-Item description shall occur maximum once" },
+  { id: "UBL-SR-52", section: "lines", kind: "max", subject: "cac:DocumentReference", scope: "cac:InvoiceLine", official: "[UBL-SR-52]-Document reference shall occur maximum once" },
+  { id: "UBL-SR-19", section: "payment", kind: "payee", subject: "cac:PartyName/cbc:Name", scope: "cac:PayeeParty", official: "[UBL-SR-19]-Payee name shall occur maximum once, if the Payee is different from the Seller" },
+  { id: "UBL-SR-20", section: "payment", kind: "payee", subject: "cac:PartyIdentification/cbc:ID (not SEPA)", scope: "cac:PayeeParty", official: "[UBL-SR-20]-Payee identifier shall occur maximum once, if the Payee is different from the Seller" },
+  { id: "UBL-SR-21", section: "payment", kind: "payee", subject: "cac:PartyLegalEntity/cbc:CompanyID", scope: "cac:PayeeParty", official: "[UBL-SR-21]-Payee legal registration identifier shall occur maximum once, if the Payee is different from the Seller" },
+  { id: "UBL-SR-26", section: "payment", kind: "max", subject: "cbc:PaymentID", scope: "cac:PaymentMeans", official: "[UBL-SR-26]-Payment reference shall occur maximum once" },
+  { id: "UBL-SR-27", section: "payment", kind: "max", subject: "cbc:PaymentMeansCode", scope: "cac:PaymentMeans", official: "[UBL-SR-27]-Payment means text shall occur maximum once" },
+  { id: "UBL-SR-28", section: "payment", kind: "max", subject: "cac:PaymentMandate/cbc:ID", scope: "cac:PaymentMeans", official: "[UBL-SR-28]-Mandate reference identifier shall occur maximum once" },
+  { id: "UBL-SR-58", section: "payment", kind: "exactly-if", subject: "cac:PayeeFinancialAccount/cac:FinancialInstitutionBranch/cbc:ID", scope: "cac:PaymentMeans", cond: "cac:PayeeFinancialAccount/cac:FinancialInstitutionBranch", cen: "1.3.17", official: "[UBL-SR-58]-A Financial Institution Branch shall contain exactly one Payment service provider identifier (BT-86)." },
+  { id: "UBL-SR-59", section: "payment", kind: "exactly-if", subject: "cac:PayeeFinancialAccount/cbc:ID", scope: "cac:PaymentMeans", cond: "cac:PayeeFinancialAccount", cen: "1.3.17", official: "[UBL-SR-59]-A Financial Institution Branch shall contain exactly one Payment account identifier (BT-84)." },
+  { id: "UBL-SR-06", section: "document", kind: "max", subject: "cac:InvoiceDocumentReference", scope: "cac:BillingReference", official: "[UBL-SR-06]-Preceding invoice reference shall occur maximum once" },
+  { id: "UBL-SR-07", section: "document", kind: "required", subject: "cac:InvoiceDocumentReference/cbc:ID", scope: "cac:BillingReference", official: "[UBL-SR-07]-If there is a preceding invoice reference, the preceding invoice number shall be present" },
+  { id: "UBL-SR-22", section: "parties", kind: "max", subject: "cac:PartyName/cbc:Name", scope: "cac:TaxRepresentativeParty", official: "[UBL-SR-22]-Seller tax representative name shall occur maximum once, if the Seller has a tax representative" },
+  { id: "UBL-SR-23", section: "parties", kind: "max", subject: "cac:PartyTaxScheme/cbc:CompanyID", scope: "cac:TaxRepresentativeParty", official: "[UBL-SR-23]-Seller tax representative VAT identifier shall occur maximum once, if the Seller has a tax representative" },
+  { id: "UBL-SR-32", section: "vat", kind: "max", subject: "cac:TaxCategory/cbc:TaxExemptionReason", scope: "cac:TaxSubtotal", official: "[UBL-SR-32]-VAT exemption reason text shall occur maximum once" },
+  { id: "CII-SR-009", section: "document", kind: "exactly", subject: "ram:GuidelineSpecifiedDocumentContextParameter", scope: "rsm:ExchangedDocumentContext", official: "[CII-SR-009] - GuidelineSpecifiedDocumentContextParameter must exist exactly once" },
+  { id: "CII-SR-010", section: "document", kind: "exactly", subject: "ram:GuidelineSpecifiedDocumentContextParameter/ram:ID", scope: "rsm:ExchangedDocumentContext", official: "[CII-SR-010] - ID must exist exactly once" },
+  { id: "CII-SR-014", section: "document", kind: "exactly", subject: "ram:TypeCode", scope: "rsm:ExchangedDocument", official: "[CII-SR-014] - TypeCode must exist exactly once" },
+  { id: "CII-SR-046", section: "lines", kind: "required-if", subject: "ram:GlobalID/@schemeID", scope: "ram:SpecifiedTradeProduct", cond: "ram:GlobalID", official: "[CII-SR-046] - schemeID must be present if GlobalID is present" },
+  { id: "CII-SR-090", section: "lines", kind: "exactly-if", subject: "ram:OriginTradeCountry/ram:ID", scope: "ram:SpecifiedTradeProduct", cond: "ram:OriginTradeCountry", official: "[CII-SR-090] - ID should exist maximum once." },
+  { id: "CII-SR-069", section: "lines", kind: "exactly", subject: "ram:Description", scope: "ram:ApplicableProductCharacteristic", official: "[CII-SR-069] - Description should exist maximum once." },
+  { id: "CII-SR-072", section: "lines", kind: "exactly", subject: "ram:Value", scope: "ram:ApplicableProductCharacteristic", official: "[CII-SR-072] - Value should exist maximum once." },
+  { id: "CII-SR-439", section: "lines", kind: "exactly", subject: "ram:NetPriceProductTradePrice/ram:ChargeAmount", scope: "ram:SpecifiedLineTradeAgreement", official: "[CII-SR-439] - ChargeAmount should exist maximum once" },
+  { id: "CII-SR-441", section: "lines", kind: "max", subject: "ram:NetPriceProductTradePrice/ram:ChargeAmount", scope: "ram:SpecifiedLineTradeAgreement", official: "[CII-SR-441] - ChargeAmount should exist maximum once" },
+  { id: "CII-SR-463", section: "document", kind: "required", subject: "ram:ChargeIndicator", scope: "ram:SpecifiedTradeAllowanceCharge", official: "[CII-SR-463]-Each Specified Trade Allowance Charge (BG-20)(BG-21) shall contain a Charge Indicator." },
+  { id: "CII-SR-471", section: "vat", kind: "max", subject: "ram:RateApplicablePercent", scope: "ram:SpecifiedTradeAllowanceCharge", cen: "1.3.16", official: "[CII-SR-471]-Each Specified Trade Allowance Charge (BG-20)(BG-21) shall contain a VAT category code (BT-95)." },
+  { id: "CII-SR-472", section: "vat", kind: "max", subject: "ram:CategoryTradeTax", scope: "ram:SpecifiedTradeAllowanceCharge", official: "[CII-SR-472] - CategoryTradeTax shall occur at most once in a Specified Trade Allowance Charge." },
+  { id: "CII-SR-473", section: "totals", kind: "max", subject: "ram:ActualAmount", scope: "ram:SpecifiedTradeAllowanceCharge", official: "[CII-SR-473] - ActualAmount should exist maximum once" },
+  { id: "CII-SR-440", section: "lines", kind: "max", subject: "ram:ActualAmount", scope: "ram:GrossPriceProductTradePrice/ram:AppliedTradeAllowanceCharge", official: "[CII-SR-440] - ActualAmount should exist maximum once" },
+  { id: "CII-SR-455", section: "parties", kind: "max", subject: "ram:SellerTradeParty/ram:DefinedTradeContact", scope: "ram:ApplicableHeaderTradeAgreement", official: "[CII-SR-455] - DefinedTradeContact of SellerTradeParty shall exist maximum once" },
+  { id: "CII-SR-456", section: "parties", kind: "max", subject: "ram:BuyerTradeParty/ram:DefinedTradeContact", scope: "ram:ApplicableHeaderTradeAgreement", official: "[CII-SR-456] - DefinedTradeContact of BuyerTradeParty shall exist maximum once" },
+  { id: "CII-SR-459", section: "parties", kind: "max", subject: "ram:SellerTradeParty/ram:URIUniversalCommunication", scope: "ram:ApplicableHeaderTradeAgreement", official: "[CII-SR-459] - SellerTradeParty URIUniversalCommunication should exist maximum once" },
+  { id: "CII-SR-460", section: "parties", kind: "max", subject: "ram:BuyerTradeParty/ram:URIUniversalCommunication", scope: "ram:ApplicableHeaderTradeAgreement", official: "[CII-SR-460] - BuyerTradeParty URIUniversalCommunication should exist maximum once" },
+  { id: "CII-SR-461", section: "vat", kind: "max", subject: "ram:ApplicableTradeTax/ram:TaxPointDate", scope: "ram:ApplicableHeaderTradeSettlement", official: "[CII-SR-461] - Only one TaxPointDate shall be present" },
+  { id: "CII-SR-462", section: "vat", kind: "same-value", subject: "ram:ApplicableTradeTax/ram:DueDateTypeCode", scope: "", official: "[CII-SR-462] - Only one DueDateTypeCode shall be present" },
+  { id: "CII-SR-470", section: "payment", kind: "custom", subject: "ram:PayeePartyCreditorFinancialAccount", scope: "ram:SpecifiedTradeSettlementPaymentMeans", official: "[CII-SR-470] - Either the IBAN or a Proprietary ID (BT-84) shall be used." },
+  { id: "CII-SR-497", section: "payment", kind: "max", subject: "ram:SpecifiedTradePaymentTerms/ram:DirectDebitMandateID", scope: "ram:ApplicableHeaderTradeSettlement", cen: "1.3.17", official: "[CII-SR-497] - Mandate reference identifier (BT-89) shall occur maximum once." },
+  { id: "CII-SR-477", section: "totals", kind: "max", subject: "ram:LineTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-477] - LineTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-478", section: "totals", kind: "max", subject: "ram:ChargeTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-478] - ChargeTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-479", section: "totals", kind: "max", subject: "ram:AllowanceTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-479] - AllowanceTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-480", section: "totals", kind: "max", subject: "ram:TaxBasisTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-480] - TaxBasisTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-481", section: "totals", kind: "max", subject: "ram:RoundingAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-481] - RoundingAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-482", section: "totals", kind: "max", subject: "ram:GrandTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-482] - GrandTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-483", section: "totals", kind: "max", subject: "ram:InformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-483] - InformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-484", section: "totals", kind: "max", subject: "ram:TotalPrepaidAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-484] - TotalPrepaidAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-485", section: "totals", kind: "max", subject: "ram:TotalDiscountAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-485] - TotalDiscountAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-486", section: "totals", kind: "max", subject: "ram:TotalAllowanceChargeAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-486] - TotalAllowanceChargeAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-487", section: "totals", kind: "max", subject: "ram:DuePayableAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-487] - DuePayableAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-488", section: "totals", kind: "max", subject: "ram:RetailValueExcludingTaxInformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-488] - RetailValueExcludingTaxInformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-489", section: "totals", kind: "max", subject: "ram:TotalDepositFeeInformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-489] - TotalDepositFeeInformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-490", section: "totals", kind: "max", subject: "ram:ProductValueExcludingTobaccoTaxInformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-490] - ProductValueExcludingTobaccoTaxInformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-491", section: "totals", kind: "max", subject: "ram:TotalRetailValueInformationAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-491] - TotalRetailValueInformationAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-492", section: "totals", kind: "max", subject: "ram:GrossLineTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-492] - GrossLineTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-493", section: "totals", kind: "max", subject: "ram:NetLineTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-493] - NetLineTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-SR-494", section: "totals", kind: "max", subject: "ram:NetIncludingTaxesLineTotalAmount", scope: "ram:SpecifiedTradeSettlementHeaderMonetarySummation", official: "[CII-SR-494] - NetIncludingTaxesLineTotalAmount shall occur at most once in SpecifiedTradeSettlementHeaderMonetarySummation." },
+  { id: "CII-DT-013", section: "document", kind: "not-allowed", subject: "@languageID", scope: "rsm:CrossIndustryInvoice", official: "[CII-DT-013] - languageID should not be present" },
+  { id: "CII-DT-014", section: "document", kind: "not-allowed", subject: "@languageLocaleID", scope: "rsm:CrossIndustryInvoice", official: "[CII-DT-014] - languageLocaleID should not be present" },
+  { id: "CII-SR-467", section: "payment", kind: "same-value", subject: "ram:SpecifiedTradeSettlementPaymentMeans/ram:TypeCode", scope: "", official: "[CII-SR-467] - All Payment means type codes (BT-81) shall have the same value across all SpecifiedTradeSettlementPaymentMeans." },
+  { id: "CII-SR-468", section: "payment", kind: "same-value", subject: "ram:SpecifiedTradeSettlementPaymentMeans/ram:Information", scope: "", official: "[CII-SR-468] - All Payment means texts (BT-82) shall have the same value across all SpecifiedTradeSettlementPaymentMeans." },
+  { id: "CII-SR-469", section: "payment", kind: "max", subject: "ram:ApplicableHeaderTradeSettlement/ram:PaymentReference", scope: "", official: "[CII-SR-469] - Payment reference (BT-83) shall occur at most once in the document." },
+  { id: "CII-SR-495", section: "payment", kind: "max", subject: "ram:SpecifiedTradeSettlementPaymentMeans/ram:ApplicableTradeSettlementFinancialCard", scope: "", cen: "1.3.17", official: "[CII-SR-495] - An Invoice shall contain maximum one Payment Card account (BG-18)." },
+  { id: "CII-SR-496", section: "payment", kind: "max", subject: "ram:SpecifiedTradeSettlementPaymentMeans/ram:PayerPartyDebtorFinancialAccount", scope: "", cen: "1.3.17", official: "[CII-SR-496] - An Invoice shall contain maximum one Payment Mandate (BG-19)." },
+  { id: "CII-DT-105", section: "document", kind: "required", subject: "@mimeCode", scope: "ram:AttachmentBinaryObject", cen: "1.3.17", official: "[CII-DT-105] - Attached document Mime code (BT-125-1) shall be provided." },
+  { id: "CII-DT-106", section: "document", kind: "required", subject: "@filename", scope: "ram:AttachmentBinaryObject", cen: "1.3.17", official: "[CII-DT-106] - Attached document Filename (BT-125-2) shall be provided." },
+  { id: "CII-DT-001", section: "document", kind: "not-allowed", subject: "@schemeName", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-001] - schemeName should not be present" },
+  { id: "CII-DT-002", section: "document", kind: "not-allowed", subject: "@schemeAgencyName", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-002] - schemeAgencyName should not be present" },
+  { id: "CII-DT-003", section: "document", kind: "not-allowed", subject: "@schemeDataURI", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-003] - schemeDataURI should not be present" },
+  { id: "CII-DT-004", section: "document", kind: "not-allowed", subject: "@schemeURI", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-004] - schemeURI should not be present" },
+  { id: "CII-DT-005", section: "document", kind: "not-allowed", subject: "@schemeID", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-005] - schemeID should not be present" },
+  { id: "CII-DT-006", section: "document", kind: "not-allowed", subject: "@schemeAgencyID", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-006] - schemeAgencyID should not be present" },
+  { id: "CII-DT-007", section: "document", kind: "not-allowed", subject: "@schemeVersionID", scope: "ram:ID / ram:LineID / ram:SellerAssignedID", official: "[CII-DT-007] - schemeVersionID should not be present" },
+  { id: "CII-DT-101", section: "document", kind: "not-allowed", subject: "@schemeName", scope: "ram:…ID", official: "[CII-DT-101] - schemeName should not be present" },
+  { id: "CII-DT-102", section: "document", kind: "not-allowed", subject: "@schemeAgencyName", scope: "ram:…ID", official: "[CII-DT-102] - schemeAgencyName should not be present" },
+  { id: "CII-DT-103", section: "document", kind: "not-allowed", subject: "@schemeDataURI", scope: "ram:…ID", official: "[CII-DT-103] - schemeDataURI should not be present" },
+  { id: "CII-DT-104", section: "document", kind: "not-allowed", subject: "@schemeURI", scope: "ram:…ID", official: "[CII-DT-104] - schemeURI should not be present" },
+  { id: "CII-DT-008", section: "document", kind: "not-allowed", subject: "@name", scope: "ram:TypeCode", official: "[CII-DT-008] - name should not be present" },
+  { id: "CII-DT-009", section: "document", kind: "not-allowed", subject: "@listURI", scope: "ram:TypeCode", official: "[CII-DT-009] - listURI should not be present" },
+  { id: "CII-DT-015", section: "document", kind: "not-allowed-unless", subject: "ram:URIID", scope: "ram:…ReferencedDocument", unless: "ard916", official: "[CII-DT-015] - URIID should not be present" },
+  { id: "CII-DT-016", section: "document", kind: "not-allowed", subject: "ram:StatusCode", scope: "ram:…ReferencedDocument", official: "[CII-DT-016] - StatusCode should not be present" },
+  { id: "CII-DT-017", section: "document", kind: "not-allowed", subject: "ram:CopyIndicator", scope: "ram:…ReferencedDocument", official: "[CII-DT-017] - CopyIndicator should not be present" },
+  { id: "CII-DT-018", section: "document", kind: "not-allowed-unless", subject: "ram:TypeCode", scope: "ram:…ReferencedDocument", unless: "ard50", official: "[CII-DT-018] - TypeCode should not be present" },
+  { id: "CII-DT-019", section: "document", kind: "not-allowed", subject: "ram:GlobalID", scope: "ram:…ReferencedDocument", official: "[CII-DT-019] - GlobalID should not be present" },
+  { id: "CII-DT-020", section: "document", kind: "not-allowed", subject: "ram:RevisionID", scope: "ram:…ReferencedDocument", official: "[CII-DT-020] - RevisionID should not be present" },
+  { id: "CII-DT-021", section: "document", kind: "not-allowed-unless", subject: "ram:Name", scope: "ram:…ReferencedDocument", unless: "ard916", official: "[CII-DT-021] - Name should not be present" },
+  { id: "CII-DT-022", section: "document", kind: "not-allowed-unless", subject: "ram:AttachmentBinaryObject", scope: "ram:…ReferencedDocument", unless: "ard916", official: "[CII-DT-022] - AttachmentBinaryObject should not be present" },
+  { id: "CII-DT-023", section: "document", kind: "not-allowed", subject: "ram:Information", scope: "ram:…ReferencedDocument", official: "[CII-DT-023] - Information should not be present" },
+  { id: "CII-DT-024", section: "document", kind: "not-allowed-unless", subject: "ram:ReferenceTypeCode", scope: "ram:…ReferencedDocument", unless: "ard130", official: "[CII-DT-024] - ReferenceTypeCode should not be present" },
+  { id: "CII-DT-025", section: "document", kind: "not-allowed", subject: "ram:SectionName", scope: "ram:…ReferencedDocument", official: "[CII-DT-025] - SectionName should not be present" },
+  { id: "CII-DT-026", section: "document", kind: "not-allowed", subject: "ram:PreviousRevisionID", scope: "ram:…ReferencedDocument", official: "[CII-DT-026] - PreviousRevisionID should not be present" },
+  { id: "CII-DT-027", section: "document", kind: "not-allowed-unless", subject: "ram:FormattedIssueDateTime", scope: "ram:…ReferencedDocument", unless: "ird", official: "[CII-DT-027] - FormattedIssueDateTime should not be present" },
+  { id: "CII-DT-028", section: "document", kind: "not-allowed", subject: "ram:EffectiveSpecifiedPeriod", scope: "ram:…ReferencedDocument", official: "[CII-DT-028] - EffectiveSpecifiedPeriod should not be present" },
+  { id: "CII-DT-029", section: "parties", kind: "not-allowed", subject: "ram:IssuerTradeParty", scope: "ram:…ReferencedDocument", official: "[CII-DT-029] - IssuerTradeParty should not be present" },
+  { id: "CII-DT-030", section: "document", kind: "not-allowed", subject: "ram:AttachedSpecifiedBinaryFile", scope: "ram:…ReferencedDocument", official: "[CII-DT-030] - AttachedSpecifiedBinaryFile should not be present" },
+  { id: "CII-DT-031", section: "document", kind: "not-allowed", subject: "@currencyID", scope: "ram:…Amount", official: "[CII-DT-031] - currencyID should not be present" },
+  { id: "CII-DT-032", section: "document", kind: "not-allowed", subject: "@currencyCodeListVersionID", scope: "ram:…Amount", official: "[CII-DT-032] - currencyCodeListVersionID should not be present" },
+  { id: "CII-DT-033", section: "document", kind: "custom", subject: "@unitCode", scope: "ram:…Quantity", official: "[CII-DT-033] - unitCode should not be present" },
+  { id: "CII-DT-034", section: "document", kind: "not-allowed", subject: "@unitCodeListID", scope: "ram:…Quantity", official: "[CII-DT-034] - unitCodeListID should not be present" },
+  { id: "CII-DT-035", section: "document", kind: "not-allowed", subject: "@unitCodeListAgencyID", scope: "ram:…Quantity", official: "[CII-DT-035] - unitCodeListAgencyID should not be present" },
+  { id: "CII-DT-036", section: "document", kind: "not-allowed", subject: "@unitCodeListAgencyName", scope: "ram:…Quantity", official: "[CII-DT-036] - unitCodeListAgencyName should not be present" },
+  { id: "CII-DT-037", section: "vat", kind: "custom", subject: "ram:TypeCode", scope: "ram:…TradeTax", official: "[CII-DT-037] - TypeCode shall be 'VAT'" },
+  { id: "CII-DT-068", section: "document", kind: "not-allowed", subject: "ram:StartDateTime/udt:DateTime", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-068] - DateTime shall not be used." },
+  { id: "CII-DT-069", section: "document", kind: "not-allowed", subject: "ram:DurationMeasure", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-069] - DurationMeasure shall not be used." },
+  { id: "CII-DT-070", section: "document", kind: "not-allowed", subject: "ram:InclusiveIndicator", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-070] - InclusiveIndicator shall not be used." },
+  { id: "CII-DT-071", section: "document", kind: "not-allowed", subject: "ram:Description", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-071] - Description shall not be used." },
+  { id: "CII-DT-072", section: "document", kind: "not-allowed", subject: "ram:EndDateTime/udt:DateTime", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-072] - DateTime shall not be used." },
+  { id: "CII-DT-073", section: "document", kind: "not-allowed", subject: "ram:CompleteDateTime", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-073] - CompleteDateTime shall not be used." },
+  { id: "CII-DT-074", section: "document", kind: "not-allowed", subject: "ram:OpenIndicator", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-074] - OpenIndicator shall not be used." },
+  { id: "CII-DT-075", section: "document", kind: "not-allowed", subject: "ram:SeasonCode", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-075] - SeasonCode shall not be used." },
+  { id: "CII-DT-076", section: "document", kind: "not-allowed", subject: "ram:ID", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-076] - ID shall not be used." },
+  { id: "CII-DT-077", section: "document", kind: "not-allowed", subject: "ram:Name", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-077] - Name shall not be used." },
+  { id: "CII-DT-078", section: "document", kind: "not-allowed", subject: "ram:SequenceNumeric", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-078] - SequenceNumeric shall not be used." },
+  { id: "CII-DT-079", section: "document", kind: "not-allowed", subject: "ram:StartDateFlexibilityCode", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-079] - StartDateFlexibilityCode shall not be used." },
+  { id: "CII-DT-080", section: "document", kind: "not-allowed", subject: "ram:ContinuousIndicator", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-080] - ContinuousIndicator shall not be used." },
+  { id: "CII-DT-081", section: "document", kind: "not-allowed", subject: "ram:PurposeCode", scope: "ram:BillingSpecifiedPeriod", official: "[CII-DT-081] - PurposeCode shall not be used." },
+  { id: "CII-DT-082", section: "parties", kind: "not-allowed", subject: "ram:ID", scope: "ram:PostalTradeAddress", official: "[CII-DT-082] - ID shall not be used." },
+  { id: "CII-DT-083", section: "parties", kind: "not-allowed", subject: "ram:PostOfficeBox", scope: "ram:PostalTradeAddress", official: "[CII-DT-083] - PostOfficeBox shall not be used." },
+  { id: "CII-DT-084", section: "parties", kind: "not-allowed", subject: "ram:BuildingName", scope: "ram:PostalTradeAddress", official: "[CII-DT-084] - BuildingName shall not be used." },
+  { id: "CII-DT-086", section: "parties", kind: "not-allowed", subject: "ram:LineFour", scope: "ram:PostalTradeAddress", official: "[CII-DT-086] - LineFour shall not be used." },
+  { id: "CII-DT-087", section: "parties", kind: "not-allowed", subject: "ram:LineFive", scope: "ram:PostalTradeAddress", official: "[CII-DT-087] - LineFive shall not be used." },
+  { id: "CII-DT-088", section: "parties", kind: "not-allowed", subject: "ram:StreetName", scope: "ram:PostalTradeAddress", official: "[CII-DT-088] - StreetName shall not be used." },
+  { id: "CII-DT-089", section: "parties", kind: "not-allowed", subject: "ram:CitySubDivisionName", scope: "ram:PostalTradeAddress", official: "[CII-DT-089] - CitySubDivisionName shall not be used." },
+  { id: "CII-DT-090", section: "parties", kind: "not-allowed", subject: "ram:CountryName", scope: "ram:PostalTradeAddress", official: "[CII-DT-090] - CountryName shall not be used." },
+  { id: "CII-DT-091", section: "parties", kind: "not-allowed", subject: "ram:CountrySubDivisionID", scope: "ram:PostalTradeAddress", official: "[CII-DT-091] - CountrySubDivisionID shall not be used." },
+  { id: "CII-DT-092", section: "parties", kind: "not-allowed", subject: "ram:AttentionOf", scope: "ram:PostalTradeAddress", official: "[CII-DT-092] - AttentionOf shall not be used." },
+  { id: "CII-DT-093", section: "parties", kind: "not-allowed", subject: "ram:CareOf", scope: "ram:PostalTradeAddress", official: "[CII-DT-093] - CareOf shall not be used." },
+  { id: "CII-DT-094", section: "parties", kind: "not-allowed", subject: "ram:BuildingNumber", scope: "ram:PostalTradeAddress", official: "[CII-DT-094] - BuildingNumber shall not be used." },
+  { id: "CII-DT-095", section: "parties", kind: "not-allowed", subject: "ram:DepartmentName", scope: "ram:PostalTradeAddress", official: "[CII-DT-095] - DepartmentName shall not be used." },
+  { id: "CII-DT-096", section: "parties", kind: "not-allowed", subject: "ram:AdditionalStreetName", scope: "ram:PostalTradeAddress", official: "[CII-DT-096] - AdditionalStreetName shall not be used." },
+  { id: "CII-DT-097", section: "document", kind: "custom", subject: "udt:DateTimeString", scope: "udt:DateTimeString", official: "[CII-DT-097] - Date time string with format attribute 102 shall be YYYYMMDD." },
+  // CEN warnings that KoSIT's XRechnung configuration (release 2026-08-31) makes errors: warnings here, errors in XRechnung
+  { id: "UBL-CR-646", section: "lines", kind: "not-allowed", subject: "cac:SubInvoiceLine", scope: "cac:InvoiceLine", kosit: true, official: "[UBL-CR-646]-A UBL invoice should not include the InvoiceLine SubInvoiceLine" },
+  { id: "CII-SR-452", section: "payment", kind: "max", subject: "ram:SpecifiedTradePaymentTerms", scope: "ram:ApplicableHeaderTradeSettlement", kosit: true, official: "[CII-SR-452] - Only one SpecifiedTradePaymentTerms should be present" },
+  { id: "CII-SR-453", section: "payment", kind: "max", subject: "ram:SpecifiedTradePaymentTerms/ram:Description", scope: "ram:ApplicableHeaderTradeSettlement", kosit: true, official: "[CII-SR-453] - Only one SpecifiedTradePaymentTerms Description should be present" },
+  { id: "CII-SR-454", section: "lines", kind: "exactly", subject: "ram:ApplicableTradeTax", scope: "ram:SpecifiedLineTradeSettlement", kosit: true, official: "[CII-SR-454] - Only one ApplicableTradeTax should be present" },
+  { id: "CII-SR-465", section: "parties", kind: "custom", subject: "ram:SellerTradeParty/ram:DefinedTradeContact", scope: "ram:ApplicableHeaderTradeAgreement", kosit: true, official: "[CII-SR-465] - Only one BT-41 element is allowed on an invoice." },
+  { id: "CII-SR-466", section: "parties", kind: "custom", subject: "ram:BuyerTradeParty/ram:DefinedTradeContact", scope: "ram:ApplicableHeaderTradeAgreement", kosit: true, official: "[CII-SR-466] - Only one BT-56 element is allowed on an invoice." }
+];
+var syntaxOf = (id) => id.startsWith("UBL-") ? "UBL" : "CII";
+var syntaxBindingLeaf = (subject) => subject.replace(/\b(cac|cbc|ram|udt|rsm):/g, "");
+var subjectEn = (s) => s.startsWith("@") ? `the ${s.slice(1)} attribute` : s.includes("/@") ? `the ${s.split("/@")[1]} attribute of ${s.split("/@")[0]}` : s;
+function scopeEn(scope, one = false) {
+  if (scope === "") return "in the invoice";
+  if (scope === "rsm:CrossIndustryInvoice") return "on the root element rsm:CrossIndustryInvoice";
+  if (scope.startsWith("ram:…")) return `in every ram element whose name ends in "${scope.slice(5)}"`;
+  if (scope === "cac:AllowanceCharge (allowance)") return "in each allowance (cac:AllowanceCharge with ChargeIndicator false)";
+  if (scope === "cac:AllowanceCharge (charge)") return "in each charge (cac:AllowanceCharge with ChargeIndicator true)";
+  if (scope === "cac:PostalAddress") return "in each address (cac:PostalAddress or cac:Address)";
+  if (scope === "ram:ID / ram:LineID / ram:SellerAssignedID") return "on the specification identifier, invoice number, line ID and seller's item ID (ram:ID, ram:LineID, ram:SellerAssignedID)";
+  return one ? `in a ${scope}` : `in each ${scope}`;
+}
+var UNLESS_EN = {
+  ard916: "except in an additional referenced document with TypeCode 916 (an attached supporting document)",
+  ard50: "except in an additional referenced document with TypeCode 50, 130 or 916",
+  ard130: "except in an additional referenced document with TypeCode 130 (the invoiced object identifier)",
+  ird: "except in the InvoiceReferencedDocument (the preceding invoice)"
+};
+var SYNTAX_BINDING_CUSTOM_EN = {
+  "UBL-CR-646": [
+    "Sub-invoice line in an XRechnung invoice",
+    "An invoice line contains a cac:SubInvoiceLine. EN 16931 has no sub-lines. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Turn each sub-line into an invoice line of its own, or leave the detail out of the e-invoice."
+  ],
+  "CII-SR-452": [
+    "More than one set of payment terms in an XRechnung invoice",
+    "The header settlement has more than one ram:SpecifiedTradePaymentTerms; EN 16931 has one set of payment terms per invoice. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Keep one ram:SpecifiedTradePaymentTerms and put the payment terms (BT-20) and the due date (BT-9) in it."
+  ],
+  "CII-SR-453": [
+    "More than one payment terms text in an XRechnung invoice",
+    "The payment terms carry more than one ram:Description; the payment terms (BT-20) are one text. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Merge the texts into one ram:Description (BT-20)."
+  ],
+  "CII-SR-454": [
+    "Invoice line without exactly one VAT entry in an XRechnung invoice",
+    "Each line's ram:SpecifiedLineTradeSettlement needs exactly one ram:ApplicableTradeTax, with the line's VAT category and rate. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Give every invoice line exactly one ram:ApplicableTradeTax with its VAT category code and rate."
+  ],
+  "CII-SR-465": [
+    "Seller contact with both a person and a department in an XRechnung invoice",
+    "The seller's contact point (BT-41) is one field, but the invoice gives both ram:PersonName and ram:DepartmentName in ram:SellerTradeParty/ram:DefinedTradeContact. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Keep either the person's name or the department name in the seller's ram:DefinedTradeContact."
+  ],
+  "CII-SR-466": [
+    "Buyer contact with both a person and a department in an XRechnung invoice",
+    "The buyer's contact point (BT-56) is one field, but the invoice gives both ram:PersonName and ram:DepartmentName in ram:BuyerTradeParty/ram:DefinedTradeContact. CEN marks this rule a warning, and InvoiceVerify reports it as one; KoSIT's XRechnung validator makes it an error, so in an XRechnung invoice it is an error here too.",
+    "Keep either the person's name or the department name in the buyer's ram:DefinedTradeContact."
+  ],
+  "UBL-SR-43": [
+    "Scheme ID on a document reference that isn't the invoiced object",
+    "A schemeID on cac:AdditionalDocumentReference/cbc:ID is allowed only for the invoiced object identifier (DocumentTypeCode 130, or 50 in a credit note); a reference with neither a schemeID nor a type code is also fine.",
+    "Remove the schemeID attribute from the reference's cbc:ID, or set DocumentTypeCode 130 when the reference is the invoiced object identifier (BT-18)."
+  ],
+  "UBL-SR-53": [
+    "Party tax scheme without tax scheme ID or CompanyID",
+    "Each cac:PartyTaxScheme needs both cac:TaxScheme/cbc:ID and cbc:CompanyID: a tax scheme on its own carries no VAT identifier.",
+    "Add the VAT or tax registration number in cbc:CompanyID and the scheme (VAT) in cac:TaxScheme/cbc:ID, or remove the cac:PartyTaxScheme."
+  ],
+  "UBL-CR-666": [
+    "Invoiced object reference with an attachment",
+    "An AdditionalDocumentReference with DocumentTypeCode 130 is the invoiced object identifier (BT-18) and may not carry an attachment (cac:Attachment).",
+    "Put the attachment in a separate AdditionalDocumentReference without DocumentTypeCode 130, and keep only the identifier in the one with code 130."
+  ],
+  "UBL-CR-673": [
+    "Invoiced object reference with a description",
+    "An AdditionalDocumentReference with DocumentTypeCode 130 is the invoiced object identifier (BT-18) and may not carry a document description (cbc:DocumentDescription).",
+    "Remove cbc:DocumentDescription from the reference with code 130, or move the description to a separate supporting document reference."
+  ],
+  "UBL-SR-57": [
+    "More than one PartyLegalEntity in a party",
+    "The seller, buyer, payee and tax representative may each have at most one cac:PartyLegalEntity.",
+    "Merge the party's cac:PartyLegalEntity elements into one, with one registration name and one company ID."
+  ],
+  "CII-SR-470": [
+    "Credit transfer without IBAN or proprietary account ID",
+    "A payment means with type code 30 or 58 (credit transfer, SEPA credit transfer) needs the payee's account: ram:PayeePartyCreditorFinancialAccount with ram:IBANID or ram:ProprietaryID.",
+    "Add ram:PayeePartyCreditorFinancialAccount/ram:IBANID (or ram:ProprietaryID for a non-IBAN account) to each credit-transfer payment means."
+  ],
+  "CII-DT-033": [
+    "Unit code on a quantity while no billed quantity has one",
+    "A unitCode on a ram:…Quantity element is accepted only when some line's ram:BilledQuantity has a unitCode too.",
+    "Give each ram:BilledQuantity its unitCode (UN/ECE Recommendation 20 or 21), or remove unitCode from the other quantities."
+  ],
+  "CII-DT-037": [
+    "Tax type code other than VAT",
+    "In every ram:ApplicableTradeTax and ram:CategoryTradeTax, ram:TypeCode must be VAT, written exactly (EN 16931 only covers VAT).",
+    "Write ram:TypeCode as VAT, in capitals and without spaces, in every tax element."
+  ],
+  "CII-DT-097": [
+    "Date with format 102 isn't a valid YYYYMMDD date",
+    'A udt:DateTimeString with format="102" must be written as YYYYMMDD: four digits for the year, a month 01–12 and a day 01–31.',
+    "Write the date as YYYYMMDD, for example 20250131, without separators."
+  ]
+};
+function syntaxBindingMeta(r) {
+  const syn = syntaxOf(r.id);
+  const s = subjectEn(r.subject);
+  const where = scopeEn(r.scope);
+  const leaf = syntaxBindingLeaf(r.subject);
+  const binding = `EN 16931's ${syn} syntax binding`;
+  const [title, description, fix] = SYNTAX_BINDING_CUSTOM_EN[r.id] ?? (() => {
+    switch (r.kind) {
+      case "max": {
+        const n = r.max === 2 ? "twice" : "once";
+        return [`${leaf} given more than ${n}`, `${binding} allows ${s} at most ${n} ${where}. The ${syn} schema accepts more, so the official validator rejects the extra ones with this fatal rule.`, `Keep ${r.max === 2 ? "at most two" : "one"} ${s} ${where} and remove the others (merge their content if it is needed).`];
+      }
+      case "exactly":
+        return [`${leaf} must occur exactly once`, `${binding} needs exactly one ${s} ${where}; the official validator rejects the invoice when it is missing or repeated.`, `Give exactly one ${s} ${where}.`];
+      case "exactly-if":
+        return [`${leaf} must occur exactly once`, `When ${r.cond} is given ${scopeEn(r.scope, true)}, ${binding} needs exactly one ${s} in it.`, `Give exactly one ${s}, or leave ${r.cond} out.`];
+      case "required":
+        return [`${leaf} is missing`, `${binding} needs ${s} ${where}.`, `Add ${s} ${where}.`];
+      case "required-if":
+        return [`${leaf} is missing`, `When ${r.cond} is given ${scopeEn(r.scope, true)}, ${binding} needs ${s}.`, `Add ${s}, or leave ${r.cond} out.`];
+      case "not-allowed":
+        return [`${leaf} is not allowed here`, `EN 16931 has no field for ${s} ${where}, and ${binding} rejects it (fatal).`, `Remove ${s} ${where}; put the information in a field EN 16931 has, or leave it out.`];
+      case "not-allowed-unless":
+        return [`${leaf} is not allowed here`, `EN 16931 has no field for ${s} ${where}, ${UNLESS_EN[r.unless]}; elsewhere ${binding} rejects it (fatal).`, `Remove ${s} from that element, or move the information to a field EN 16931 has.`];
+      case "same-value":
+        return [`${leaf} values differ`, `Every ${s} in the invoice must have the same value: EN 16931 has one such value per invoice, which ${syn} may repeat only as copies.`, `Use one value for every ${s}, or keep only one of them.`];
+      case "payee":
+        return [`Payee ${leaf} repeated, missing name or same as seller`, `In a payee (cac:PayeeParty) that differs from the seller, ${s} may occur at most once. The official rule also fails when the payee has no name or its name equals the seller's legal name (cac:PartyLegalEntity/cbc:RegistrationName), because it compares the two names.`, `Give the payee one name that differs from the seller's legal name and at most one ${s}; when the payee is the seller, leave cac:PayeeParty out.`];
+      default:
+        throw new Error(`no text for ${r.id}`);
+    }
+  })();
+  const version = r.cen === "1.3.17" ? " CEN added this rule in version 1.3.17 (Peppol BIS 3.1.0 ships it). Peppol BIS 3.0.22, KoSIT's XRechnung validator and the Dutch SI-UBL 2.0 files still run CEN 1.3.16, which doesn't have it, so only the EN 16931 and Peppol BIS 3.1.0 checks report it." : r.cen === "1.3.16" ? " Only CEN 1.3.16 has this rule (its official message speaks of a VAT category code, but the test counts RateApplicablePercent). Peppol BIS 3.0.22, KoSIT's XRechnung validator and the Dutch SI-UBL 2.0 files run 1.3.16, so those checks report it; CEN 1.3.17 (the EN 16931 check) and Peppol BIS 3.1.0 drop it." : r.id === "UBL-SR-25" ? " In CEN 1.3.16 (Peppol BIS 3.0.22, XRechnung, SI-UBL 2.0) the rule only fails on a second name; CEN 1.3.17 (EN 16931, Peppol BIS 3.1.0) also fails a deliver-to party without one." : "";
+  return { id: r.id, source: "EN16931", severity: r.kosit ? "warning" : "error", section: r.section, title, description: description + version, fix, syntax: syn, ...r.cen ? { cen: r.cen } : {} };
+}
 var ONE_SYNTAX = {
   "UBL-DT-01": "UBL",
   "UBL-DT-06": "UBL",
@@ -5331,7 +5654,8 @@ var ONE_SYNTAX = {
   "PEPPOL-EN16931-P0101": "UBL",
   "PEPPOL-EN16931-P0112": "UBL"
 };
-var RULES = CATALOG.map((r) => ONE_SYNTAX[r.id] ? { ...r, syntax: ONE_SYNTAX[r.id] } : r);
+var RULES = [...CATALOG.map((r) => ONE_SYNTAX[r.id] ? { ...r, syntax: ONE_SYNTAX[r.id] } : r), ...SYNTAX_BINDING_RULES.map(syntaxBindingMeta)];
+var SYNTAX_BINDING_IDS = new Set(SYNTAX_BINDING_RULES.map((r) => r.id));
 var RULE_INDEX = Object.fromEntries(RULES.map((r) => [r.id, r]));
 function ruleSlug(id) {
   return id.toLowerCase();
@@ -6051,6 +6375,16 @@ var CEN_VATEX_CODES = new Set(
 );
 var UBL_VAT_DATE_CODES = /* @__PURE__ */ new Set(["3", "35", "432"]);
 var CII_DUE_DATE_TYPE_CODES = /* @__PURE__ */ new Set(["5", "29", "72"]);
+var without = (list, drop) => list.filter((c) => !drop.includes(c));
+var IGIC_IPSI_VATEX = "VATEX-ES-N1 VATEX-ES-N2 VATEX-ES-IVA20 VATEX-ES-IVA21 VATEX-ES-IVA22 VATEX-ES-IVA23/24 VATEX-ES-IVA25 VATEX-ES-IVA140BIS VATEX-ES-OTROS VATEX-ES-IGIC1TR VATEX-ES-IGIC11 VATEX-ES-IGIC12 VATEX-ES-IGIC13 VATEX-ES-IGIC25 VATEX-ES-IGIC47 VATEX-ES-IGIC90 VATEX-ES-IPSI7 VATEX-ES-IPSI8".split(" ");
+var CEN_1316_ISO_4217 = /* @__PURE__ */ new Set([...without([...ISO_4217], ["STN"]), "STD"]);
+var CEN_1316_ICD_CODES = new Set(without([...ICD_CODES], ["0249", "0250", "0251"]));
+var CEN_1316_EAS_CODES = /* @__PURE__ */ new Set([...without(Object.keys(EAS_CODES), ["9960"]), "0219", "0220"]);
+var CEN_1316_VATEX_CODES = new Set(without([...CEN_VATEX_CODES], IGIC_IPSI_VATEX));
+var UNTDID_4451_1317_ONLY = "BAT BAU BAV BAW BAX BAY BAZ BBA BBB BMF BMG BMH CCJ CCK CCL CCM CCN CCO".split(" ");
+var CEN_1316_UBL_UNTDID_4451_CODES = new Set(without(UNTDID_4451_LIST, UNTDID_4451_1317_ONLY));
+var CEN_1316_UBL_UNTDID_4451_TEXT = ` ${without(UNTDID_4451_LIST, UNTDID_4451_1317_ONLY).join(" ")} `;
+var CEN_1316_CII_COUNTRY_CODES = /* @__PURE__ */ new Set([...without([...CEN_COUNTRY_CODES], ["SS"]), "AN"]);
 
 // src/engine/model.ts
 function emptyParty() {
@@ -6103,8 +6437,8 @@ function parseXml(input) {
   parser.on("opentag", (tag) => {
     const pos = starts.pop() ?? { line: parser.line, col: parser.column };
     const attrs = {};
-    for (const [key, attr] of Object.entries(tag.attributes)) {
-      const a = attr;
+    for (const [key, attr2] of Object.entries(tag.attributes)) {
+      const a = attr2;
       attrs[key] = a.value;
       if (a.local && !(a.local in attrs)) attrs[a.local] = a.value;
     }
@@ -6166,22 +6500,22 @@ function kid(node, local) {
   for (const c of node.children) if (c.local === local) return c;
   return null;
 }
-function at(node, path2) {
+function at(node, path3) {
   let cur = node;
-  for (const part of path2.split("/")) {
+  for (const part of path3.split("/")) {
     if (!cur) return null;
     cur = kid(cur, part);
   }
   return cur ?? null;
 }
-function all(node, path2) {
-  const parts = path2.split("/");
+function all(node, path3) {
+  const parts = path3.split("/");
   const last = parts.pop();
   const parent = parts.length ? at(node, parts.join("/")) : node;
   return kids(parent, last);
 }
-function text(node, path2) {
-  const n = path2 ? at(node, path2) : node;
+function text(node, path3) {
+  const n = path3 ? at(node, path3) : node;
   if (!n) return void 0;
   return n.text === "" ? void 0 : n.text;
 }
@@ -6229,12 +6563,12 @@ function readTaxGroups(parent, local, syntax) {
   const ctx = new ReadCtx();
   return kids(parent, local).map((g) => {
     const locs = {};
-    const ubl = syntax === "UBL";
+    const ubl2 = syntax === "UBL";
     return {
-      category: ctx.str(g, ubl ? "ID" : "CategoryCode", locs, "category"),
-      rate: ctx.num(g, ubl ? "Percent" : "RateApplicablePercent", locs, "rate", "BT-152"),
-      scheme: ctx.str(g, ubl ? "TaxScheme/ID" : "TypeCode", locs, "scheme"),
-      exemptionCode: ubl ? ctx.str(g, "TaxExemptionReasonCode", locs, "exemptionCode") : void 0,
+      category: ctx.str(g, ubl2 ? "ID" : "CategoryCode", locs, "category"),
+      rate: ctx.num(g, ubl2 ? "Percent" : "RateApplicablePercent", locs, "rate", "BT-152"),
+      scheme: ctx.str(g, ubl2 ? "TaxScheme/ID" : "TypeCode", locs, "scheme"),
+      exemptionCode: ubl2 ? ctx.str(g, "TaxExemptionReasonCode", locs, "exemptionCode") : void 0,
       locs,
       loc: ctx.loc(g)
     };
@@ -6250,21 +6584,21 @@ var ReadCtx = class {
     return loc;
   }
   /** Read a string and remember its location under `key` */
-  str(node, path2, locs, key) {
-    const n = path2 ? at(node, path2) : node;
+  str(node, path3, locs, key) {
+    const n = path3 ? at(node, path3) : node;
     if (!n) return void 0;
     const v = text(n);
     locs[key] = this.loc(n);
     return v;
   }
-  attr(node, path2, name) {
-    const n = path2 ? at(node, path2) : node;
+  attr(node, path3, name) {
+    const n = path3 ? at(node, path3) : node;
     const raw = n?.attrs[name];
     const v = raw === void 0 ? void 0 : xmlTrim(raw);
     return v ? v : void 0;
   }
-  num(node, path2, locs, key, bt, opts = {}) {
-    const n = path2 ? at(node, path2) : node;
+  num(node, path3, locs, key, bt, opts = {}) {
+    const n = path3 ? at(node, path3) : node;
     if (!n) return void 0;
     const loc = this.loc(n);
     locs[key] = loc;
@@ -6282,8 +6616,8 @@ var ReadCtx = class {
     return Number(raw);
   }
   /** ISO dates (UBL) */
-  isoDate(node, path2, locs, key, bt) {
-    const n = path2 ? at(node, path2) : node;
+  isoDate(node, path3, locs, key, bt) {
+    const n = path3 ? at(node, path3) : node;
     if (!n) return void 0;
     const loc = this.loc(n);
     locs[key] = loc;
@@ -6297,8 +6631,8 @@ var ReadCtx = class {
     return `${m[1]}-${m[2]}-${m[3]}`;
   }
   /** CII udt:DateTimeString (YYYYMMDD) */
-  ciiDate(node, path2, locs, key, bt) {
-    const holder = path2 ? at(node, path2) : node;
+  ciiDate(node, path3, locs, key, bt) {
+    const holder = path3 ? at(node, path3) : node;
     if (!holder) return void 0;
     const n = holder.children.find((c) => c.local === "DateTimeString" || c.local === "DateString") ?? holder;
     const loc = this.loc(n);
@@ -6769,16 +7103,16 @@ var CII_S_CONTEXTS = [
   ...CII_DISCOURAGED.flatMap(([, p]) => p)
 ];
 function readNlcius(root, ctx, syntax, els) {
-  const ubl = syntax === "UBL";
+  const ubl2 = syntax === "UBL";
   const loc = (n) => ctx.loc(n);
   const where = (pattern) => els.filter((n) => matches(n, pattern));
-  const spec = ubl ? norm(kids2(root, "CustomizationID")[0]) : norm(path(root, "ExchangedDocumentContext/GuidelineSpecifiedDocumentContextParameter/ID")[0]);
-  const declared = ubl ? spec.includes(NLCIUS_MARK) || spec.includes(GACCOUNT_MARK) : spec === NLCIUS_ID || spec === NLCIUS_GACCOUNT_ID;
-  const sellerCountry = ubl ? path(root, "AccountingSupplierParty/Party/PostalAddress/Country/IdentificationCode")[0] : els.some((n) => matches(n, "ApplicableHeaderTradeAgreement/SellerTradeParty/PostalTradeAddress/CountryID")) ? els.find((n) => matches(n, "SellerTradeParty/PostalTradeAddress/CountryID")) : void 0;
+  const spec = ubl2 ? norm(kids2(root, "CustomizationID")[0]) : norm(path(root, "ExchangedDocumentContext/GuidelineSpecifiedDocumentContextParameter/ID")[0]);
+  const declared = ubl2 ? spec.includes(NLCIUS_MARK) || spec.includes(GACCOUNT_MARK) : spec === NLCIUS_ID || spec === NLCIUS_GACCOUNT_ID;
+  const sellerCountry = ubl2 ? path(root, "AccountingSupplierParty/Party/PostalAddress/Country/IdentificationCode")[0] : els.some((n) => matches(n, "ApplicableHeaderTradeAgreement/SellerTradeParty/PostalTradeAddress/CountryID")) ? els.find((n) => matches(n, "SellerTradeParty/PostalTradeAddress/CountryID")) : void 0;
   const dutchSupplier = declared && !!sellerCountry && norm(sellerCountry).toUpperCase() === "NL";
-  const customizationIds = ubl ? els.filter((n) => is(n, "CustomizationID")).map((n) => ({ value: norm(n), loc: loc(n) })) : [];
-  const sellerLegal = (ubl ? where("AccountingSupplierParty/Party") : where("SellerTradeParty/SpecifiedLegalOrganization")).map((c) => {
-    const ids = ubl ? path(c, "PartyLegalEntity/CompanyID") : kids2(c, "ID");
+  const customizationIds = ubl2 ? els.filter((n) => is(n, "CustomizationID")).map((n) => ({ value: norm(n), loc: loc(n) })) : [];
+  const sellerLegal = (ubl2 ? where("AccountingSupplierParty/Party") : where("SellerTradeParty/SpecifiedLegalOrganization")).map((c) => {
+    const ids = ubl2 ? path(c, "PartyLegalEntity/CompanyID") : kids2(c, "ID");
     const first = ids[0];
     return {
       loc: loc(first ?? c),
@@ -6789,19 +7123,19 @@ function readNlcius(root, ctx, syntax, els) {
       scheme: first?.attrs["schemeID"]
     };
   });
-  const references = (ubl ? [root] : where("ApplicableHeaderTradeAgreement")).map((c) => ({
+  const references = (ubl2 ? [root] : where("ApplicableHeaderTradeAgreement")).map((c) => ({
     loc: loc(c),
-    given: ubl ? kids2(c, "BuyerReference").length > 0 || path(c, "OrderReference/ID").length > 0 : kids2(c, "BuyerReference").length > 0 || path(c, "BuyerOrderReferencedDocument/IssuerAssignedID").length > 0
+    given: ubl2 ? kids2(c, "BuyerReference").length > 0 || path(c, "OrderReference/ID").length > 0 : kids2(c, "BuyerReference").length > 0 || path(c, "BuyerOrderReferencedDocument/IssuerAssignedID").length > 0
   }));
-  const parts = ubl ? ["StreetName", "CityName", "PostalZone"] : ["LineOne", "CityName", "PostcodeCode"];
+  const parts = ubl2 ? ["StreetName", "CityName", "PostalZone"] : ["LineOne", "CityName", "PostcodeCode"];
   const partNames = ["street name", "city", "post code"];
   const addressOf = (party, pattern) => where(pattern).map((a) => ({
     party,
     loc: loc(a),
-    countryNotNl: path(a, ubl ? "Country/IdentificationCode" : "CountryID").some((c) => exact(c) !== "NL"),
+    countryNotNl: path(a, ubl2 ? "Country/IdentificationCode" : "CountryID").some((c) => exact(c) !== "NL"),
     missing: parts.flatMap((p, i) => kids2(a, p).length ? [] : [partNames[i]])
   }));
-  const addresses = ubl ? [
+  const addresses = ubl2 ? [
     ...addressOf("seller", "AccountingSupplierParty/Party/PostalAddress"),
     ...addressOf("buyer", "AccountingCustomerParty/Party/PostalAddress"),
     ...addressOf("taxRepresentative", "TaxRepresentativeParty/PostalAddress")
@@ -6810,10 +7144,10 @@ function readNlcius(root, ctx, syntax, els) {
     ...addressOf("buyer", "BuyerTradeParty/PostalTradeAddress"),
     ...addressOf("taxRepresentative", "SellerTaxRepresentativeTradeParty/PostalTradeAddress")
   ];
-  const typeCodes = (ubl ? els.filter((n) => is(n, "InvoiceTypeCode") || is(n, "CreditNoteTypeCode")) : path(root, "ExchangedDocument/TypeCode")).map((n) => ({ text: stringValue2(n), loc: loc(n) }));
-  const invoiceReferenceGiven = ubl && path(root, "BillingReference/InvoiceDocumentReference/ID").length > 0;
+  const typeCodes = (ubl2 ? els.filter((n) => is(n, "InvoiceTypeCode") || is(n, "CreditNoteTypeCode")) : path(root, "ExchangedDocument/TypeCode")).map((n) => ({ text: stringValue2(n), loc: loc(n) }));
+  const invoiceReferenceGiven = ubl2 && path(root, "BillingReference/InvoiceDocumentReference/ID").length > 0;
   const customerCountryNl = (nodes) => nodes.some((c) => exact(c) === "NL");
-  const buyerLegal = ubl ? where("AccountingCustomerParty/Party/PartyLegalEntity").map((ple) => {
+  const buyerLegal = ubl2 ? where("AccountingCustomerParty/Party/PartyLegalEntity").map((ple) => {
     const ids = kids2(ple, "CompanyID");
     return {
       loc: loc(ple),
@@ -6834,7 +7168,7 @@ function readNlcius(root, ctx, syntax, els) {
       idRequired: true
     };
   });
-  const totals = ubl ? root.local === "Invoice" ? kids2(root, "LegalMonetaryTotal").map((t) => ({
+  const totals = ubl2 ? root.local === "Invoice" ? kids2(root, "LegalMonetaryTotal").map((t) => ({
     loc: loc(kids2(t, "PayableAmount")[0] ?? t),
     payable: kids2(t, "PayableAmount")[0] ? exact(kids2(t, "PayableAmount")[0]) : void 0,
     paymentGiven: els.some((n) => is(n, "PaymentMeans"))
@@ -6843,15 +7177,15 @@ function readNlcius(root, ctx, syntax, els) {
     payable: kids2(t, "DuePayableAmount")[0] ? exact(kids2(t, "DuePayableAmount")[0]) : void 0,
     paymentGiven: path(t.parent, "SpecifiedTradeSettlementPaymentMeans/TypeCode").length > 0
   }));
-  const creditNoteType = !ubl && declared && path(root, "ExchangedDocument/TypeCode").some((n) => xsDouble(stringValue2(n)) === 381);
-  const paymentMeans = els.filter((n) => is(n, ubl ? "PaymentMeans" : "SpecifiedTradeSettlementPaymentMeans")).map((pm) => {
-    const codes = kids2(pm, ubl ? "PaymentMeansCode" : "TypeCode");
-    const branch = ubl ? path(pm, "PayeeFinancialAccount/FinancialInstitutionBranch/ID")[0] : void 0;
+  const creditNoteType = !ubl2 && declared && path(root, "ExchangedDocument/TypeCode").some((n) => xsDouble(stringValue2(n)) === 381);
+  const paymentMeans = els.filter((n) => is(n, ubl2 ? "PaymentMeans" : "SpecifiedTradeSettlementPaymentMeans")).map((pm) => {
+    const codes = kids2(pm, ubl2 ? "PaymentMeansCode" : "TypeCode");
+    const branch = ubl2 ? path(pm, "PayeeFinancialAccount/FinancialInstitutionBranch/ID")[0] : void 0;
     return { loc: loc(pm), codes: codes.map(stringValue2), codeLoc: codes[0] ? loc(codes[0]) : void 0, branchIdGiven: !!branch, branchLoc: branch ? loc(branch) : void 0 };
   });
-  const orderLineRefs = where(ubl ? "OrderLineReference/LineID" : "BuyerOrderReferencedDocument/LineID").map((n) => ({ loc: loc(n), text: exact(n) }));
-  const orderReferenceGiven = ubl ? path(root, "OrderReference/ID").length > 0 : els.some((n) => matches(n, "ApplicableHeaderTradeAgreement/BuyerOrderReferencedDocument/IssuerAssignedID"));
-  const sellerTaxSchemes = ubl ? where("AccountingSupplierParty/Party/PartyTaxScheme").map((pts) => ({
+  const orderLineRefs = where(ubl2 ? "OrderLineReference/LineID" : "BuyerOrderReferencedDocument/LineID").map((n) => ({ loc: loc(n), text: exact(n) }));
+  const orderReferenceGiven = ubl2 ? path(root, "OrderReference/ID").length > 0 : els.some((n) => matches(n, "ApplicableHeaderTradeAgreement/BuyerOrderReferencedDocument/IssuerAssignedID"));
+  const sellerTaxSchemes = ubl2 ? where("AccountingSupplierParty/Party/PartyTaxScheme").map((pts) => ({
     loc: loc(kids2(pts, "CompanyID")[0] ?? pts),
     hasId: kids2(pts, "CompanyID").length > 0,
     vat: path(pts, "TaxScheme/ID").some((i) => exact(i) === "VAT"),
@@ -6863,29 +7197,29 @@ function readNlcius(root, ctx, syntax, els) {
     id: kids2(reg, "ID")[0] ? exact(kids2(reg, "ID")[0]) : void 0
   }));
   const documentCurrencies = els.filter((n) => is(n, "DocumentCurrencyCode")).map(stringValue2);
-  const taxTotalCurrencies = ubl ? where("TaxTotal/TaxAmount").map((a) => ({ loc: loc(a), currency: a.attrs["currencyID"], documentCurrencies })) : where("SpecifiedTradeSettlementHeaderMonetarySummation/TaxTotalAmount").map((a) => ({
+  const taxTotalCurrencies = ubl2 ? where("TaxTotal/TaxAmount").map((a) => ({ loc: loc(a), currency: a.attrs["currencyID"], documentCurrencies })) : where("SpecifiedTradeSettlementHeaderMonetarySummation/TaxTotalAmount").map((a) => ({
     loc: loc(a),
     currency: a.attrs["currencyID"],
     documentCurrencies: kids2(a.parent?.parent, "InvoiceCurrencyCode").map(stringValue2)
   }));
   const discouraged = [];
   for (const n of els) {
-    for (const [rule, patterns] of ubl ? UBL_DISCOURAGED : CII_DISCOURAGED) {
+    for (const [rule, patterns] of ubl2 ? UBL_DISCOURAGED : CII_DISCOURAGED) {
       if (!patterns.some((p) => matches(n, p))) continue;
       discouraged.push({
         rule,
         loc: loc(n),
         value: exact(n),
-        charge: !ubl && rule === "BR-NL-32" ? normalizeSpace(exact(path(n.parent, "ChargeIndicator/Indicator")[0])).toLowerCase() === "true" : void 0
+        charge: !ubl2 && rule === "BR-NL-32" ? normalizeSpace(exact(path(n.parent, "ChargeIndicator/Indicator")[0])).toLowerCase() === "true" : void 0
       });
       break;
     }
-    if (ubl && matches(n, "PaymentMeans/PaymentMeansCode") && n.attrs["name"] !== void 0)
+    if (ubl2 && matches(n, "PaymentMeans/PaymentMeansCode") && n.attrs["name"] !== void 0)
       discouraged.push({ rule: "BR-NL-29", loc: loc(n), value: n.attrs["name"] });
   }
-  const sContexts = ubl ? UBL_S_CONTEXTS : CII_S_CONTEXTS;
-  const legalTotals = (n) => ubl && root.local === "Invoice" && is(n, "LegalMonetaryTotal") && n.parent === root;
-  const siContext = (n) => ubl ? matches(n, "OrderLineReference/LineID") : matches(n, "BuyerOrderReferencedDocument/LineID") || matchesFromRoot(n, "ExchangedDocument/TypeCode", root);
+  const sContexts = ubl2 ? UBL_S_CONTEXTS : CII_S_CONTEXTS;
+  const legalTotals = (n) => ubl2 && root.local === "Invoice" && is(n, "LegalMonetaryTotal") && n.parent === root;
+  const siContext = (n) => ubl2 ? matches(n, "OrderLineReference/LineID") : matches(n, "BuyerOrderReferencedDocument/LineID") || matchesFromRoot(n, "ExchangedDocument/TypeCode", root);
   const emptyElements = els.filter((n) => n !== root && isEmptyLeaf(n)).map((n) => ({
     loc: loc(n),
     shadowedBy: sContexts.some((p) => matches(n, p)) || legalTotals(n) ? "s" : siContext(n) ? "si" : void 0
@@ -6933,15 +7267,15 @@ var XS_DATE = new RegExp("^\\p{Nd}{4}-\\p{Nd}{2}-\\p{Nd}{2}$", "u");
 var CII_DATE = new RegExp("^\\p{Nd}{8}$", "u");
 var directText = (n) => n.children.length ? n.text : exact(n);
 function readXrechnung(root, ctx, syntax, els) {
-  const ubl = syntax === "UBL";
+  const ubl2 = syntax === "UBL";
   const loc = (n) => ctx.loc(n);
   const fromRoot = (pattern) => els.filter((n) => matchesFromRoot(n, pattern, root));
-  const tx = ubl ? [root] : kids2(root, "SupplyChainTradeTransaction");
+  const tx = ubl2 ? [root] : kids2(root, "SupplyChainTradeTransaction");
   const settlement = path(tx, "ApplicableHeaderTradeSettlement");
   const agreement = path(tx, "ApplicableHeaderTradeAgreement");
   let vatCodeUsed;
   let sellerTaxIdGiven;
-  if (ubl) {
+  if (ubl2) {
     const docAc = kids2(root, "AllowanceCharge");
     const indicator = (ac) => kids2(ac, "ChargeIndicator").map(stringValue2);
     const acIds = (want) => docAc.filter((ac) => indicator(ac).includes(want)).flatMap((ac) => path(ac, "TaxCategory/ID"));
@@ -6961,15 +7295,15 @@ function readXrechnung(root, ctx, syntax, els) {
       return (s === "VA" || s === "FC") && filled(n);
     });
   }
-  const typeCodes = (ubl ? [...kids2(root, "InvoiceTypeCode"), ...kids2(root, "CreditNoteTypeCode")] : path(root, "ExchangedDocument/TypeCode")).map(norm);
-  const invoiceReferenceGiven = ubl ? path(root, "BillingReference/InvoiceDocumentReference").length > 0 : path(settlement, "InvoiceReferencedDocument").length > 0;
-  const notes = ubl ? kids2(root, "PaymentTerms").flatMap((t) => kids2(t, "Note").slice(0, 1)) : path(settlement, "SpecifiedTradePaymentTerms").flatMap((t) => kids2(t, "Description").slice(0, 1));
+  const typeCodes = (ubl2 ? [...kids2(root, "InvoiceTypeCode"), ...kids2(root, "CreditNoteTypeCode")] : path(root, "ExchangedDocument/TypeCode")).map(norm);
+  const invoiceReferenceGiven = ubl2 ? path(root, "BillingReference/InvoiceDocumentReference").length > 0 : path(settlement, "InvoiceReferencedDocument").length > 0;
+  const notes = ubl2 ? kids2(root, "PaymentTerms").flatMap((t) => kids2(t, "Note").slice(0, 1)) : path(settlement, "SpecifiedTradePaymentTerms").flatMap((t) => kids2(t, "Description").slice(0, 1));
   const paymentTermsNote = notes[0] ? { text: stringValue2(notes[0]), loc: loc(notes[0]) } : void 0;
-  const specContext = ubl ? root : kids2(root, "ExchangedDocumentContext")[0];
-  const specIds = specContext ? { values: (ubl ? kids2(root, "CustomizationID") : path(specContext, "GuidelineSpecifiedDocumentContextParameter/ID")).map(stringValue2), loc: loc((ubl ? kids2(root, "CustomizationID")[0] : path(specContext, "GuidelineSpecifiedDocumentContextParameter/ID")[0]) ?? specContext) } : void 0;
+  const specContext = ubl2 ? root : kids2(root, "ExchangedDocumentContext")[0];
+  const specIds = specContext ? { values: (ubl2 ? kids2(root, "CustomizationID") : path(specContext, "GuidelineSpecifiedDocumentContextParameter/ID")).map(stringValue2), loc: loc((ubl2 ? kids2(root, "CustomizationID")[0] : path(specContext, "GuidelineSpecifiedDocumentContextParameter/ID")[0]) ?? specContext) } : void 0;
   let duplicateFilename;
-  const docs = ubl ? kids2(root, "AdditionalDocumentReference") : els.filter((n) => is(n, "AdditionalReferencedDocument"));
-  const fileNames = (d) => path(d, ubl ? "Attachment/EmbeddedDocumentBinaryObject" : "AttachmentBinaryObject").map((b) => b.attrs["filename"]).filter((f) => f !== void 0);
+  const docs = ubl2 ? kids2(root, "AdditionalDocumentReference") : els.filter((n) => is(n, "AdditionalReferencedDocument"));
+  const fileNames = (d) => path(d, ubl2 ? "Attachment/EmbeddedDocumentBinaryObject" : "AttachmentBinaryObject").map((b) => b.attrs["filename"]).filter((f) => f !== void 0);
   for (const d of docs) {
     const before = (d.parent?.children ?? []).slice(0, d.parent.children.indexOf(d)).filter((s) => s.local === d.local && s.ns === d.ns).flatMap(fileNames);
     const dup = fileNames(d).find((f) => before.includes(f));
@@ -6978,23 +7312,23 @@ function readXrechnung(root, ctx, syntax, els) {
       break;
     }
   }
-  const pmNodes = ubl ? kids2(root, "PaymentMeans") : path(settlement, "SpecifiedTradeSettlementPaymentMeans");
+  const pmNodes = ubl2 ? kids2(root, "PaymentMeans") : path(settlement, "SpecifiedTradeSettlementPaymentMeans");
   const bt89 = path(settlement, "SpecifiedTradePaymentTerms/DirectDebitMandateID").length > 0;
   const bt90 = path(settlement, "CreditorReferenceID").length > 0;
-  const directDebit = ubl ? {
+  const directDebit = ubl2 ? {
     mandate: path(pmNodes, "PaymentMandate").length > 0,
     creditorId: [...path(root, "AccountingSupplierParty/Party/PartyIdentification/ID"), ...path(root, "PayeeParty/PartyIdentification/ID")].some(
       (i) => i.attrs["schemeID"] === "SEPA"
     ),
     debitedAccount: path(pmNodes, "PaymentMandate/PayerFinancialAccount/ID").length > 0
   } : { mandate: bt89, creditorId: bt90, debitedAccount: path(pmNodes, "PayerPartyDebtorFinancialAccount/IBANID").length > 0 };
-  const sellers = (ubl ? fromRoot("AccountingSupplierParty") : fromRoot("SupplyChainTradeTransaction/ApplicableHeaderTradeAgreement/SellerTradeParty")).map((s) => ({
+  const sellers = (ubl2 ? fromRoot("AccountingSupplierParty") : fromRoot("SupplyChainTradeTransaction/ApplicableHeaderTradeAgreement/SellerTradeParty")).map((s) => ({
     loc: loc(s),
-    contactGiven: (ubl ? path(s, "Party/Contact") : kids2(s, "DefinedTradeContact")).length > 0
+    contactGiven: (ubl2 ? path(s, "Party/Contact") : kids2(s, "DefinedTradeContact")).length > 0
   }));
-  const cityPost = ubl ? ["CityName", "PostalZone"] : ["CityName", "PostcodeCode"];
+  const cityPost = ubl2 ? ["CityName", "PostalZone"] : ["CityName", "PostcodeCode"];
   const addressOf = (party, pattern) => fromRoot(pattern).map((a) => ({ party, loc: loc(a), cityFilled: kids2(a, cityPost[0]).some(filled), postcodeFilled: kids2(a, cityPost[1]).some(filled) }));
-  const addresses = ubl ? [
+  const addresses = ubl2 ? [
     ...addressOf("seller", "AccountingSupplierParty/Party/PostalAddress"),
     ...addressOf("buyer", "AccountingCustomerParty/Party/PostalAddress"),
     ...addressOf("delivery", "Delivery/DeliveryLocation/Address")
@@ -7003,10 +7337,10 @@ function readXrechnung(root, ctx, syntax, els) {
     ...addressOf("buyer", "SupplyChainTradeTransaction/ApplicableHeaderTradeAgreement/BuyerTradeParty/PostalTradeAddress"),
     ...addressOf("delivery", "SupplyChainTradeTransaction/ApplicableHeaderTradeDelivery/ShipToTradeParty/PostalTradeAddress")
   ];
-  const contacts = (ubl ? fromRoot("AccountingSupplierParty/Party/Contact") : fromRoot("SupplyChainTradeTransaction/ApplicableHeaderTradeAgreement/SellerTradeParty/DefinedTradeContact")).map((c) => {
-    const names = ubl ? kids2(c, "Name") : [...kids2(c, "PersonName"), ...kids2(c, "DepartmentName")];
-    const phones = ubl ? kids2(c, "Telephone") : path(c, "TelephoneUniversalCommunication/CompleteNumber");
-    const emails = ubl ? kids2(c, "ElectronicMail") : path(c, "EmailURIUniversalCommunication/URIID");
+  const contacts = (ubl2 ? fromRoot("AccountingSupplierParty/Party/Contact") : fromRoot("SupplyChainTradeTransaction/ApplicableHeaderTradeAgreement/SellerTradeParty/DefinedTradeContact")).map((c) => {
+    const names = ubl2 ? kids2(c, "Name") : [...kids2(c, "PersonName"), ...kids2(c, "DepartmentName")];
+    const phones = ubl2 ? kids2(c, "Telephone") : path(c, "TelephoneUniversalCommunication/CompleteNumber");
+    const emails = ubl2 ? kids2(c, "ElectronicMail") : path(c, "EmailURIUniversalCommunication/URIID");
     return {
       loc: loc(c),
       nameFilled: names.some(filled),
@@ -7019,35 +7353,35 @@ function readXrechnung(root, ctx, syntax, els) {
     };
   });
   const paymentMeans = pmNodes.map((pm) => {
-    const payee = ubl ? path(pm, "PayeeFinancialAccount/ID")[0] : path(pm, "PayeePartyCreditorFinancialAccount/IBANID")[0];
-    const payer = ubl ? path(pm, "PaymentMandate/PayerFinancialAccount/ID")[0] : path(pm, "PayerPartyDebtorFinancialAccount/IBANID")[0];
+    const payee = ubl2 ? path(pm, "PayeeFinancialAccount/ID")[0] : path(pm, "PayeePartyCreditorFinancialAccount/IBANID")[0];
+    const payer = ubl2 ? path(pm, "PaymentMandate/PayerFinancialAccount/ID")[0] : path(pm, "PayerPartyDebtorFinancialAccount/IBANID")[0];
     return {
       loc: loc(pm),
-      code: norm(kids2(pm, ubl ? "PaymentMeansCode" : "TypeCode")[0]),
-      creditTransfer: kids2(pm, ubl ? "PayeeFinancialAccount" : "PayeePartyCreditorFinancialAccount").length > 0,
-      card: kids2(pm, ubl ? "CardAccount" : "ApplicableTradeSettlementFinancialCard").length > 0,
-      directDebit: ubl ? kids2(pm, "PaymentMandate").length > 0 : bt89 || bt90 || !!payer,
-      institutions: !ubl && (kids2(pm, "PayeeSpecifiedCreditorFinancialInstitution").length > 0 || kids2(pm, "PayerSpecifiedDebtorFinancialInstitution").length > 0),
+      code: norm(kids2(pm, ubl2 ? "PaymentMeansCode" : "TypeCode")[0]),
+      creditTransfer: kids2(pm, ubl2 ? "PayeeFinancialAccount" : "PayeePartyCreditorFinancialAccount").length > 0,
+      card: kids2(pm, ubl2 ? "CardAccount" : "ApplicableTradeSettlementFinancialCard").length > 0,
+      directDebit: ubl2 ? kids2(pm, "PaymentMandate").length > 0 : bt89 || bt90 || !!payer,
+      institutions: !ubl2 && (kids2(pm, "PayeeSpecifiedCreditorFinancialInstitution").length > 0 || kids2(pm, "PayerSpecifiedDebtorFinancialInstitution").length > 0),
       payeeAccount: payee ? stringValue2(payee) : "",
       payerAccount: payer ? stringValue2(payer) : "",
       payeeLoc: payee ? loc(payee) : void 0,
       payerLoc: payer ? loc(payer) : void 0
     };
   });
-  const vatRates = (ubl ? fromRoot("TaxTotal/TaxSubtotal") : fromRoot("SupplyChainTradeTransaction/ApplicableHeaderTradeSettlement/ApplicableTradeTax")).map((t) => ({
+  const vatRates = (ubl2 ? fromRoot("TaxTotal/TaxSubtotal") : fromRoot("SupplyChainTradeTransaction/ApplicableHeaderTradeSettlement/ApplicableTradeTax")).map((t) => ({
     loc: loc(t),
-    filled: path(t, ubl ? "TaxCategory/Percent" : "RateApplicablePercent").some(filled),
-    category: norm(path(t, ubl ? "TaxCategory/ID" : "CategoryCode")[0]) || void 0
+    filled: path(t, ubl2 ? "TaxCategory/Percent" : "RateApplicablePercent").some(filled),
+    category: norm(path(t, ubl2 ? "TaxCategory/ID" : "CategoryCode")[0]) || void 0
   }));
-  const lines = ubl ? root.children.filter((c) => is(c, "InvoiceLine") || is(c, "CreditNoteLine")) : path(tx, "IncludedSupplyChainTradeLineItem");
-  const deliveryDateOrPeriod = ubl ? path(root, "Delivery/ActualDeliveryDate").length > 0 || kids2(root, "InvoicePeriod").length > 0 || lines.every((l) => kids2(l, "InvoicePeriod").length > 0) : path(tx, "ApplicableHeaderTradeDelivery/ActualDeliverySupplyChainEvent/OccurrenceDateTime").length > 0 || path(settlement, "BillingSpecifiedPeriod").length > 0 || lines.every((l) => path(l, "SpecifiedLineTradeSettlement/BillingSpecifiedPeriod").length > 0);
+  const lines = ubl2 ? root.children.filter((c) => is(c, "InvoiceLine") || is(c, "CreditNoteLine")) : path(tx, "IncludedSupplyChainTradeLineItem");
+  const deliveryDateOrPeriod = ubl2 ? path(root, "Delivery/ActualDeliveryDate").length > 0 || kids2(root, "InvoicePeriod").length > 0 || lines.every((l) => kids2(l, "InvoicePeriod").length > 0) : path(tx, "ApplicableHeaderTradeDelivery/ActualDeliverySupplyChainEvent/OccurrenceDateTime").length > 0 || path(settlement, "BillingSpecifiedPeriod").length > 0 || lines.every((l) => path(l, "SpecifiedLineTradeSettlement/BillingSpecifiedPeriod").length > 0);
   const decimals = (nodes) => nodes.map((n) => xsDecimal(stringValue2(n)) ?? null);
   const kosit = {
     emptyElements: els.filter((n) => isEmptyLeaf(n)).filter(
-      (n) => ubl ? !(is(n, "ID") && n.ns === UBL_CBC_NS && n.parent?.local === "OrderReference" && n.parent.ns === UBL_CAC_NS) : n.name !== "ram:ApplicableHeaderTradeDelivery"
+      (n) => ubl2 ? !(is(n, "ID") && n.ns === UBL_CBC_NS && n.parent?.local === "OrderReference" && n.parent.ns === UBL_CAC_NS) : n.name !== "ram:ApplicableHeaderTradeDelivery"
     ).map(loc),
-    huf: (ubl ? kids2(root, "DocumentCurrencyCode") : path(settlement, "InvoiceCurrencyCode")).some((c) => stringValue2(c) === "HUF"),
-    grossPrices: ubl ? [] : path(tx, "IncludedSupplyChainTradeLineItem/SpecifiedLineTradeAgreement/GrossPriceProductTradePrice").map((g) => ({
+    huf: (ubl2 ? kids2(root, "DocumentCurrencyCode") : path(settlement, "InvoiceCurrencyCode")).some((c) => stringValue2(c) === "HUF"),
+    grossPrices: ubl2 ? [] : path(tx, "IncludedSupplyChainTradeLineItem/SpecifiedLineTradeAgreement/GrossPriceProductTradePrice").map((g) => ({
       loc: loc(g),
       actualGiven: path(g, "AppliedTradeAllowanceCharge/ActualAmount").length > 0,
       indicatorFalse: path(g, "AppliedTradeAllowanceCharge/ChargeIndicator/Indicator").some((i) => stringValue2(i) === "false"),
@@ -7057,7 +7391,7 @@ function readXrechnung(root, ctx, syntax, els) {
     }))
   };
   const tmp = { externalUris: [], supportingDocs: [], baseQuantityMismatch: [], badDates: [] };
-  if (ubl) {
+  if (ubl2) {
     for (const ext of path(root, "AdditionalDocumentReference/Attachment/ExternalReference"))
       tmp.externalUris.push({ loc: loc(ext), uri: kids2(ext, "URI")[0] ? stringValue2(kids2(ext, "URI")[0]) : null });
     for (const d of els)
@@ -7086,8 +7420,8 @@ function readXrechnung(root, ctx, syntax, els) {
   return {
     kosit,
     tmp,
-    paymentMeansGiven: ubl ? kids2(root, "PaymentMeans").length > 0 : pmNodes.length > 0,
-    buyerReferenceFilled: (ubl ? kids2(root, "BuyerReference") : path(agreement, "BuyerReference")).some(filled),
+    paymentMeansGiven: ubl2 ? kids2(root, "PaymentMeans").length > 0 : pmNodes.length > 0,
+    buyerReferenceFilled: (ubl2 ? kids2(root, "BuyerReference") : path(agreement, "BuyerReference")).some(filled),
     vatCodeUsed,
     sellerTaxIdGiven,
     typeCodes: typeCodes.length ? typeCodes : [""],
@@ -7108,6 +7442,430 @@ function readNationalFacts(root, ctx, syntax) {
   const els = everyElement(root);
   return { nlcius: readNlcius(root, ctx, syntax, els), xrechnung: readXrechnung(root, ctx, syntax, els) };
 }
+
+// src/engine/syntax-binding.ts
+var CEN_1317_ONLY = ["UBL-SR-57", "UBL-SR-58", "UBL-SR-59", "CII-DT-105", "CII-DT-106", "CII-SR-495", "CII-SR-496", "CII-SR-497"];
+var CEN_1316_ONLY = ["CII-SR-471"];
+var NS = {
+  cac: "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2",
+  cbc: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2",
+  rsm: "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100",
+  ram: "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
+  udt: "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100"
+};
+var is2 = (n, qname) => {
+  if (!n) return false;
+  const i = qname.indexOf(":");
+  return n.ns === NS[qname.slice(0, i)] && n.local === qname.slice(i + 1);
+};
+function path2(from, p) {
+  let cur = Array.isArray(from) ? from : [from];
+  for (const step of p.split("/")) cur = cur.flatMap((n) => n.children.filter((c) => is2(c, step)));
+  return cur;
+}
+var count = (n, p) => path2(n, p).length;
+var has = (n, p) => path2(n, p).length > 0;
+function descendants(root) {
+  const out = [];
+  const walk2 = (n) => {
+    for (const c of n.children) {
+      out.push(c);
+      walk2(c);
+    }
+  };
+  walk2(root);
+  return out;
+}
+var anywhere = (all2, qname) => all2.filter((n) => is2(n, qname));
+var sv = (n) => n.raw ?? n.text;
+var attr = (n, name) => Object.prototype.hasOwnProperty.call(n.attrs, name) ? n.attrs[name] : void 0;
+var hasAttr = (n, name) => attr(n, name) !== void 0;
+var normalizeSpace2 = (s) => s.replace(/[ \t\r\n]+/g, " ").replace(/^ | $/g, "");
+function indicatorMatches(n, want) {
+  const values = path2(n, "cbc:ChargeIndicator").map((c) => normalizeSpace2(sv(c)));
+  const cast = values.map((v) => v === "true" || v === "1" ? true : v === "false" || v === "0" ? false : void 0);
+  if (cast.some((v) => v === void 0)) return false;
+  return cast.some((v) => v === want);
+}
+function absolute(n, qnames) {
+  let cur = n;
+  for (let i = qnames.length - 1; i >= 0; i--) {
+    if (!is2(cur, qnames[i])) return false;
+    cur = cur.parent;
+  }
+  return cur === null;
+}
+var CII = "rsm:CrossIndustryInvoice";
+var SCTT = [CII, "rsm:SupplyChainTradeTransaction"];
+var LINE = [...SCTT, "ram:IncludedSupplyChainTradeLineItem"];
+var AGREEMENT = [...SCTT, "ram:ApplicableHeaderTradeAgreement"];
+var SETTLEMENT = [...SCTT, "ram:ApplicableHeaderTradeSettlement"];
+function ubl(root) {
+  const out = [];
+  const fail = (id, node, detail, cen) => out.push({ id, node, detail, ...cen ?? ONLY_IN[id] ? { cen: cen ?? ONLY_IN[id] } : {} });
+  const atMost = (id, node, p, max = 1) => {
+    const k = count(node, p);
+    if (k > max) fail(id, node, `${k}× ${p}`);
+  };
+  const all2 = descendants(root);
+  const objectRefs = path2(root, "cac:AdditionalDocumentReference").filter((d) => path2(d, "cbc:DocumentTypeCode").some((c) => sv(c) === "130"));
+  const anyObjectRefs = anywhere(all2, "cac:AdditionalDocumentReference").filter((d) => path2(d, "cbc:DocumentTypeCode").some((c) => sv(c) === "130"));
+  if (anyObjectRefs.some((d) => has(d, "cac:Attachment"))) fail("UBL-CR-666", root);
+  if (anyObjectRefs.some((d) => has(d, "cbc:DocumentDescription"))) fail("UBL-CR-673", root);
+  if (path2(root, "cac:InvoiceLine/cac:SubInvoiceLine").length + path2(root, "cac:CreditNoteLine/cac:SubInvoiceLine").length) fail("UBL-CR-646", root);
+  atMost("UBL-SR-01", root, "cac:ContractDocumentReference/cbc:ID");
+  atMost("UBL-SR-02", root, "cac:ReceiptDocumentReference/cbc:ID");
+  atMost("UBL-SR-03", root, "cac:DespatchDocumentReference/cbc:ID");
+  if (path2(objectRefs, "cbc:ID").length > 1) fail("UBL-SR-04", root, `${path2(objectRefs, "cbc:ID").length}× invoiced object identifier`);
+  atMost("UBL-SR-05", root, "cac:PaymentTerms/cbc:Note");
+  atMost("UBL-SR-08", root, "cac:InvoicePeriod");
+  atMost("UBL-SR-09", root, "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName");
+  atMost("UBL-SR-10", root, "cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name");
+  atMost("UBL-SR-11", root, "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID");
+  const schemeIds = (pts) => path2(pts, "cac:TaxScheme/cbc:ID").map((c) => sv(c).toUpperCase());
+  const vatIds = (party, vat) => path2(path2(root, `${party}/cac:Party/cac:PartyTaxScheme`).filter((pts) => schemeIds(pts).some((s) => s === "VAT" === vat)), "cbc:CompanyID").length;
+  if (vatIds("cac:AccountingSupplierParty", true) > 1) fail("UBL-SR-12", root, `${vatIds("cac:AccountingSupplierParty", true)}× seller VAT identifier`);
+  if (vatIds("cac:AccountingSupplierParty", false) > 1) fail("UBL-SR-13", root, `${vatIds("cac:AccountingSupplierParty", false)}× seller tax registration`);
+  atMost("UBL-SR-14", root, "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyLegalForm");
+  atMost("UBL-SR-15", root, "cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName");
+  atMost("UBL-SR-16", root, "cac:AccountingCustomerParty/cac:Party/cac:PartyIdentification/cbc:ID");
+  atMost("UBL-SR-17", root, "cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:CompanyID");
+  if (vatIds("cac:AccountingCustomerParty", true) > 1) fail("UBL-SR-18", root, `${vatIds("cac:AccountingCustomerParty", true)}× buyer VAT identifier`);
+  atMost("UBL-SR-24", root, "cac:Delivery");
+  const sepa = path2(anywhere(all2, "cac:PartyIdentification"), "cbc:ID").filter((c) => (attr(c, "schemeID") ?? "").toUpperCase() === "SEPA");
+  if (sepa.length > 1) fail("UBL-SR-29", root, `${sepa.length}× SEPA creditor identifier`);
+  atMost("UBL-SR-39", root, "cac:ProjectReference/cbc:ID");
+  atMost("UBL-SR-40", root, "cac:AccountingCustomerParty/cac:Party/cac:PartyName/cbc:Name");
+  const paymentIds = new Set(anywhere(all2, "cbc:PaymentID").map(sv));
+  if (paymentIds.size > 1) fail("UBL-SR-44", root, [...paymentIds].map((v) => JSON.stringify(v)).join(", "));
+  atMost("UBL-SR-45", root, "cac:PaymentMeans/cbc:PaymentDueDate");
+  const meansNames = path2(root, "cac:PaymentMeans/cbc:PaymentMeansCode").filter((c) => hasAttr(c, "name")).length;
+  if (meansNames > 1) fail("UBL-SR-46", root, `${meansNames}× payment means text`);
+  const meansCodes = new Set(anywhere(all2, "cbc:PaymentMeansCode").map(sv));
+  if (meansCodes.size > 1) fail("UBL-SR-47", root, [...meansCodes].map((v) => JSON.stringify(v)).join(", "));
+  atMost("UBL-SR-49", root, "cac:InvoicePeriod/cbc:DescriptionCode");
+  atMost("UBL-SR-54", root, "cac:PaymentMeans/cac:CardAccount");
+  atMost("UBL-SR-55", root, "cac:PaymentMeans/cac:PaymentMandate");
+  atMost("UBL-SR-56", root, "cac:OriginatorDocumentReference/cbc:ID");
+  const legal = ["cac:AccountingSupplierParty/cac:Party", "cac:AccountingCustomerParty/cac:Party", "cac:PayeeParty", "cac:TaxRepresentativeParty"].map((p) => [p, count(root, `${p}/cac:PartyLegalEntity`)]).filter(([, k]) => k > 1);
+  if (legal.length) fail("UBL-SR-57", root, legal.map(([p, k]) => `${k}× cac:PartyLegalEntity in ${p.split("/")[0]}`).join(", "));
+  const supplierName = path2(root, "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName").map(sv);
+  for (const n of all2) {
+    if (is2(n, "cac:PostalAddress") || is2(n, "cac:Address")) {
+      atMost("UBL-SR-51", n, "cac:AddressLine");
+    } else if (is2(n, "cac:Party") && is2(n.parent, "cac:AccountingSupplierParty")) atMost("UBL-SR-42", n, "cac:PartyTaxScheme", 2);
+    else if (is2(n, "cac:AdditionalDocumentReference")) {
+      atMost("UBL-SR-33", n, "cbc:DocumentDescription");
+      const codes = path2(n, "cbc:DocumentTypeCode").map(sv);
+      const ok = codes.includes("130") || root.local === "CreditNote" && codes.includes("50") || !path2(n, "cbc:ID").some((c) => hasAttr(c, "schemeID")) && codes.length === 0;
+      if (!ok) fail("UBL-SR-43", n);
+    } else if (is2(n, "cac:Delivery")) {
+      const names = count(n, "cac:DeliveryParty/cac:PartyName/cbc:Name");
+      if (names > 1) fail("UBL-SR-25", n, `${names}× deliver-to party name`);
+      else if (names === 0 && has(n, "cac:DeliveryParty")) fail("UBL-SR-25", n, "0× deliver-to party name", "1.3.17");
+    } else if (is2(n, "cac:AllowanceCharge")) {
+      if (indicatorMatches(n, false)) atMost("UBL-SR-30", n, "cbc:AllowanceChargeReason");
+      else if (indicatorMatches(n, true)) atMost("UBL-SR-31", n, "cbc:AllowanceChargeReason");
+    } else if (is2(n, "cac:PartyTaxScheme")) {
+      if (!has(n, "cac:TaxScheme/cbc:ID") || !has(n, "cbc:CompanyID")) fail("UBL-SR-53", n);
+    } else if (is2(n, "cac:InvoiceLine") || is2(n, "cac:CreditNoteLine")) {
+      atMost("UBL-SR-34", n, "cbc:Note");
+      atMost("UBL-SR-35", n, "cac:OrderLineReference/cbc:LineID");
+      atMost("UBL-SR-36", n, "cac:InvoicePeriod");
+      atMost("UBL-SR-37", n, "cac:Price/cac:AllowanceCharge/cbc:Amount");
+      const cats = count(n, "cac:Item/cac:ClassifiedTaxCategory");
+      if (cats !== 1) fail("UBL-SR-48", n, `${cats}× cac:ClassifiedTaxCategory`);
+      atMost("UBL-SR-50", n, "cac:Item/cbc:Description");
+      atMost("UBL-SR-52", n, "cac:DocumentReference");
+    } else if (is2(n, "cac:PayeeParty")) {
+      const names = path2(n, "cac:PartyName/cbc:Name").map(sv);
+      const seller = n.parent ? path2(n.parent, "cac:AccountingSupplierParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName").map(sv) : supplierName;
+      const differs = names.some((a) => seller.some((b) => a !== b));
+      const ids = path2(n, "cac:PartyIdentification/cbc:ID").filter((c) => (attr(c, "schemeID") ?? "").toUpperCase() !== "SEPA").length;
+      if (!(names.length <= 1 && differs)) fail("UBL-SR-19", n, differs ? `${names.length}× payee name` : "payee name missing or equal to the seller name");
+      if (!(ids <= 1 && differs)) fail("UBL-SR-20", n, differs ? `${ids}× payee identifier` : "payee name missing or equal to the seller name");
+      const legalIds = count(n, "cac:PartyLegalEntity/cbc:CompanyID");
+      if (!(legalIds <= 1 && differs)) fail("UBL-SR-21", n, differs ? `${legalIds}× payee legal registration identifier` : "payee name missing or equal to the seller name");
+    } else if (is2(n, "cac:PaymentMeans")) {
+      atMost("UBL-SR-26", n, "cbc:PaymentID");
+      atMost("UBL-SR-27", n, "cbc:PaymentMeansCode");
+      atMost("UBL-SR-28", n, "cac:PaymentMandate/cbc:ID");
+      if (has(n, "cac:PayeeFinancialAccount/cac:FinancialInstitutionBranch") && count(n, "cac:PayeeFinancialAccount/cac:FinancialInstitutionBranch/cbc:ID") !== 1)
+        fail("UBL-SR-58", n, `${count(n, "cac:PayeeFinancialAccount/cac:FinancialInstitutionBranch/cbc:ID")}× branch identifier`);
+      if (has(n, "cac:PayeeFinancialAccount") && count(n, "cac:PayeeFinancialAccount/cbc:ID") !== 1) fail("UBL-SR-59", n, `${count(n, "cac:PayeeFinancialAccount/cbc:ID")}× account identifier`);
+    } else if (is2(n, "cac:BillingReference")) {
+      atMost("UBL-SR-06", n, "cac:InvoiceDocumentReference");
+      if (!has(n, "cac:InvoiceDocumentReference/cbc:ID")) fail("UBL-SR-07", n);
+    } else if (is2(n, "cac:TaxRepresentativeParty")) {
+      atMost("UBL-SR-22", n, "cac:PartyName/cbc:Name");
+      atMost("UBL-SR-23", n, "cac:PartyTaxScheme/cbc:CompanyID");
+    } else if (is2(n, "cac:TaxSubtotal")) atMost("UBL-SR-32", n, "cac:TaxCategory/cbc:TaxExemptionReason");
+  }
+  return out;
+}
+var REFERENCED_DOCUMENT_ELEMENTS = /* @__PURE__ */ (() => {
+  const ard = (n, ...codes) => is2(n, "ram:AdditionalReferencedDocument") && path2(n, "ram:TypeCode").some((c) => codes.includes(sv(c)));
+  return [
+    ["CII-DT-015", "ram:URIID", (n) => ard(n, "916")],
+    ["CII-DT-016", "ram:StatusCode"],
+    ["CII-DT-017", "ram:CopyIndicator"],
+    ["CII-DT-018", "ram:TypeCode", (n) => ard(n, "50", "130", "916")],
+    ["CII-DT-019", "ram:GlobalID"],
+    ["CII-DT-020", "ram:RevisionID"],
+    ["CII-DT-021", "ram:Name", (n) => ard(n, "916")],
+    ["CII-DT-022", "ram:AttachmentBinaryObject", (n) => ard(n, "916")],
+    ["CII-DT-023", "ram:Information"],
+    ["CII-DT-024", "ram:ReferenceTypeCode", (n) => ard(n, "130")],
+    ["CII-DT-025", "ram:SectionName"],
+    ["CII-DT-026", "ram:PreviousRevisionID"],
+    ["CII-DT-027", "ram:FormattedIssueDateTime", (n) => is2(n, "ram:InvoiceReferencedDocument")],
+    ["CII-DT-028", "ram:EffectiveSpecifiedPeriod"],
+    ["CII-DT-029", "ram:IssuerTradeParty"],
+    ["CII-DT-030", "ram:AttachedSpecifiedBinaryFile"]
+  ];
+})();
+var BILLING_PERIOD_ELEMENTS = [
+  ["CII-DT-068", "ram:StartDateTime/udt:DateTime"],
+  ["CII-DT-069", "ram:DurationMeasure"],
+  ["CII-DT-070", "ram:InclusiveIndicator"],
+  ["CII-DT-071", "ram:Description"],
+  ["CII-DT-072", "ram:EndDateTime/udt:DateTime"],
+  ["CII-DT-073", "ram:CompleteDateTime"],
+  ["CII-DT-074", "ram:OpenIndicator"],
+  ["CII-DT-075", "ram:SeasonCode"],
+  ["CII-DT-076", "ram:ID"],
+  ["CII-DT-077", "ram:Name"],
+  ["CII-DT-078", "ram:SequenceNumeric"],
+  ["CII-DT-079", "ram:StartDateFlexibilityCode"],
+  ["CII-DT-080", "ram:ContinuousIndicator"],
+  ["CII-DT-081", "ram:PurposeCode"]
+];
+var POSTAL_ADDRESS_ELEMENTS = [
+  ["CII-DT-082", "ram:ID"],
+  ["CII-DT-083", "ram:PostOfficeBox"],
+  ["CII-DT-084", "ram:BuildingName"],
+  ["CII-DT-086", "ram:LineFour"],
+  ["CII-DT-087", "ram:LineFive"],
+  ["CII-DT-088", "ram:StreetName"],
+  ["CII-DT-089", "ram:CitySubDivisionName"],
+  ["CII-DT-090", "ram:CountryName"],
+  ["CII-DT-091", "ram:CountrySubDivisionID"],
+  ["CII-DT-092", "ram:AttentionOf"],
+  ["CII-DT-093", "ram:CareOf"],
+  ["CII-DT-094", "ram:BuildingNumber"],
+  ["CII-DT-095", "ram:DepartmentName"],
+  ["CII-DT-096", "ram:AdditionalStreetName"]
+];
+var MONETARY_SUMMATION_ELEMENTS = [
+  ["CII-SR-477", "ram:LineTotalAmount"],
+  ["CII-SR-478", "ram:ChargeTotalAmount"],
+  ["CII-SR-479", "ram:AllowanceTotalAmount"],
+  ["CII-SR-480", "ram:TaxBasisTotalAmount"],
+  ["CII-SR-481", "ram:RoundingAmount"],
+  ["CII-SR-482", "ram:GrandTotalAmount"],
+  ["CII-SR-483", "ram:InformationAmount"],
+  ["CII-SR-484", "ram:TotalPrepaidAmount"],
+  ["CII-SR-485", "ram:TotalDiscountAmount"],
+  ["CII-SR-486", "ram:TotalAllowanceChargeAmount"],
+  ["CII-SR-487", "ram:DuePayableAmount"],
+  ["CII-SR-488", "ram:RetailValueExcludingTaxInformationAmount"],
+  ["CII-SR-489", "ram:TotalDepositFeeInformationAmount"],
+  ["CII-SR-490", "ram:ProductValueExcludingTobaccoTaxInformationAmount"],
+  ["CII-SR-491", "ram:TotalRetailValueInformationAmount"],
+  ["CII-SR-492", "ram:GrossLineTotalAmount"],
+  ["CII-SR-493", "ram:NetLineTotalAmount"],
+  ["CII-SR-494", "ram:NetIncludingTaxesLineTotalAmount"]
+];
+var SCHEME_ATTRIBUTES = [
+  ["CII-DT-001", "schemeName"],
+  ["CII-DT-002", "schemeAgencyName"],
+  ["CII-DT-003", "schemeDataURI"],
+  ["CII-DT-004", "schemeURI"],
+  ["CII-DT-005", "schemeID"],
+  ["CII-DT-006", "schemeAgencyID"],
+  ["CII-DT-007", "schemeVersionID"]
+];
+var ID_ATTRIBUTES = [
+  ["CII-DT-101", "schemeName"],
+  ["CII-DT-102", "schemeAgencyName"],
+  ["CII-DT-103", "schemeDataURI"],
+  ["CII-DT-104", "schemeURI"]
+];
+var DATE_102 = new RegExp("^[ \\t\\r\\n]*(\\p{Nd}{4})(1[0-2]|0[1-9])(3[01]|[12][0-9]|0[1-9])[ \\t\\r\\n]*$", "u");
+function cii(root) {
+  const out = [];
+  const fail = (id, node, detail, cen) => out.push({ id, node, detail, ...cen ?? ONLY_IN[id] ? { cen: cen ?? ONLY_IN[id] } : {} });
+  const atMost = (id, node, p, max = 1) => {
+    const k = count(node, p);
+    if (k > max) fail(id, node, `${k}× ${p}`);
+  };
+  const exactly = (id, node, p) => {
+    const k = count(node, p);
+    if (k !== 1) fail(id, node, `${k}× ${p}`);
+  };
+  const notAllowed = (id, node, p) => {
+    if (has(node, p)) fail(id, node, p);
+  };
+  const noAttr = (id, node, a) => {
+    if (hasAttr(node, a)) fail(id, node, `@${a}="${attr(node, a)}"`);
+  };
+  if (!is2(root, CII)) return out;
+  const all2 = descendants(root);
+  const billedUnit = path2(root, "rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem/ram:SpecifiedLineTradeDelivery/ram:BilledQuantity").some((q) => hasAttr(q, "unitCode"));
+  const endsWith = (n, suffix) => n.name.endsWith(suffix);
+  const ram = (n) => n.ns === NS.ram;
+  noAttr("CII-DT-013", root, "languageID");
+  noAttr("CII-DT-014", root, "languageLocaleID");
+  const sameAsFirst = (id, child) => {
+    const values = path2(anywhere(all2, "ram:SpecifiedTradeSettlementPaymentMeans"), child).map((c) => normalizeSpace2(sv(c)));
+    if (values.some((v) => v !== values[0])) fail(id, root, [...new Set(values)].map((v) => JSON.stringify(v)).join(", "));
+  };
+  sameAsFirst("CII-SR-467", "ram:TypeCode");
+  sameAsFirst("CII-SR-468", "ram:Information");
+  const refs = path2(anywhere(all2, "ram:ApplicableHeaderTradeSettlement"), "ram:PaymentReference").length;
+  if (refs > 1) fail("CII-SR-469", root, `${refs}× ram:PaymentReference`);
+  const cards = path2(anywhere(all2, "ram:SpecifiedTradeSettlementPaymentMeans"), "ram:ApplicableTradeSettlementFinancialCard").length;
+  if (cards > 1) fail("CII-SR-495", root, `${cards}× ram:ApplicableTradeSettlementFinancialCard`);
+  const debtors = path2(anywhere(all2, "ram:SpecifiedTradeSettlementPaymentMeans"), "ram:PayerPartyDebtorFinancialAccount").length;
+  if (debtors > 1) fail("CII-SR-496", root, `${debtors}× ram:PayerPartyDebtorFinancialAccount`);
+  for (const s of path2(root, "rsm:SupplyChainTradeTransaction/ram:IncludedSupplyChainTradeLineItem/ram:SpecifiedLineTradeSettlement"))
+    exactly("CII-SR-454", s, "ram:ApplicableTradeTax");
+  for (const a of path2(root, "rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeAgreement"))
+    for (const [id, party] of [["CII-SR-465", "ram:SellerTradeParty"], ["CII-SR-466", "ram:BuyerTradeParty"]])
+      if (has(a, `${party}/ram:DefinedTradeContact/ram:PersonName`) && has(a, `${party}/ram:DefinedTradeContact/ram:DepartmentName`)) fail(id, a);
+  for (const s of path2(root, "rsm:SupplyChainTradeTransaction/ram:ApplicableHeaderTradeSettlement")) {
+    atMost("CII-SR-452", s, "ram:SpecifiedTradePaymentTerms");
+    atMost("CII-SR-453", s, "ram:SpecifiedTradePaymentTerms/ram:Description");
+  }
+  for (const n of all2) {
+    if (is2(n, "ram:SpecifiedTradeSettlementPaymentMeans")) continue;
+    if (absolute(n, [CII, "rsm:ExchangedDocumentContext"])) {
+      exactly("CII-SR-009", n, "ram:GuidelineSpecifiedDocumentContextParameter");
+      exactly("CII-SR-010", n, "ram:GuidelineSpecifiedDocumentContextParameter/ram:ID");
+      continue;
+    }
+    if (absolute(n, [CII, "rsm:ExchangedDocument"])) {
+      exactly("CII-SR-014", n, "ram:TypeCode");
+      continue;
+    }
+    if (absolute(n, [CII, "rsm:ExchangedDocument", "ram:IncludedNote"]) || absolute(n, [...LINE, "ram:AssociatedDocumentLineDocument"])) continue;
+    if (absolute(n, [...LINE, "ram:SpecifiedTradeProduct"])) {
+      if (has(n, "ram:GlobalID") && !path2(n, "ram:GlobalID").some((g) => hasAttr(g, "schemeID"))) fail("CII-SR-046", n);
+      if (has(n, "ram:OriginTradeCountry") && count(n, "ram:OriginTradeCountry/ram:ID") !== 1) fail("CII-SR-090", n, `${count(n, "ram:OriginTradeCountry/ram:ID")}× ram:OriginTradeCountry/ram:ID`);
+      continue;
+    }
+    if (absolute(n, [...LINE, "ram:SpecifiedTradeProduct", "ram:ApplicableProductCharacteristic"])) {
+      exactly("CII-SR-069", n, "ram:Description");
+      exactly("CII-SR-072", n, "ram:Value");
+      continue;
+    }
+    if (absolute(n, [...LINE, "ram:SpecifiedLineTradeAgreement"])) {
+      exactly("CII-SR-439", n, "ram:NetPriceProductTradePrice/ram:ChargeAmount");
+      atMost("CII-SR-441", n, "ram:NetPriceProductTradePrice/ram:ChargeAmount");
+      continue;
+    }
+    if (is2(n, "ram:SpecifiedTradeAllowanceCharge")) {
+      if (!has(n, "ram:ChargeIndicator")) fail("CII-SR-463", n);
+      atMost("CII-SR-471", n, "ram:RateApplicablePercent");
+      atMost("CII-SR-472", n, "ram:CategoryTradeTax");
+      atMost("CII-SR-473", n, "ram:ActualAmount");
+      continue;
+    }
+    if (is2(n, "ram:AppliedTradeAllowanceCharge") && is2(n.parent, "ram:GrossPriceProductTradePrice")) {
+      atMost("CII-SR-440", n, "ram:ActualAmount");
+      continue;
+    }
+    if (absolute(n, [...AGREEMENT, "ram:AdditionalReferencedDocument"])) {
+      for (const [id, child, allowed] of REFERENCED_DOCUMENT_ELEMENTS) if (has(n, child) && !allowed?.(n)) fail(id, n, child, "1.3.16");
+      continue;
+    }
+    if (absolute(n, [...LINE, "ram:SpecifiedLineTradeDelivery"]) || absolute(n, [...LINE, "ram:SpecifiedLineTradeSettlement"]) || absolute(n, [...SCTT, "ram:ApplicableHeaderTradeDelivery"]))
+      continue;
+    if (absolute(n, AGREEMENT)) {
+      atMost("CII-SR-455", n, "ram:SellerTradeParty/ram:DefinedTradeContact");
+      atMost("CII-SR-456", n, "ram:BuyerTradeParty/ram:DefinedTradeContact");
+      atMost("CII-SR-459", n, "ram:SellerTradeParty/ram:URIUniversalCommunication");
+      atMost("CII-SR-460", n, "ram:BuyerTradeParty/ram:URIUniversalCommunication");
+      continue;
+    }
+    if (absolute(n, SETTLEMENT)) {
+      atMost("CII-SR-461", n, "ram:ApplicableTradeTax/ram:TaxPointDate");
+      const dueCodes = path2(anywhere(all2, "ram:ApplicableTradeTax"), "ram:DueDateTypeCode").map(sv);
+      if (dueCodes.length && new Set(dueCodes).size !== 1) fail("CII-SR-462", n, [...new Set(dueCodes)].map((v) => JSON.stringify(v)).join(", "));
+      const bad = path2(n, "ram:SpecifiedTradeSettlementPaymentMeans").filter((pm) => {
+        const types = path2(pm, "ram:TypeCode").map((c) => normalizeSpace2(sv(c)));
+        const code2 = types[0] ?? "";
+        return (code2 === "30" || code2 === "58") && !has(pm, "ram:PayeePartyCreditorFinancialAccount/ram:IBANID") && !has(pm, "ram:PayeePartyCreditorFinancialAccount/ram:ProprietaryID");
+      });
+      if (bad.length) fail("CII-SR-470", n, `${bad.length}× credit transfer without IBAN or proprietary account ID`);
+      atMost("CII-SR-497", n, "ram:SpecifiedTradePaymentTerms/ram:DirectDebitMandateID");
+      continue;
+    }
+    if (absolute(n, [...SETTLEMENT, "ram:SpecifiedTradeSettlementHeaderMonetarySummation"])) {
+      for (const [id, child] of MONETARY_SUMMATION_ELEMENTS) atMost(id, n, child);
+      continue;
+    }
+    if (endsWith(n, "DocumentContextParameter")) continue;
+    if (absolute(n, [...AGREEMENT, "ram:AdditionalReferencedDocument", "ram:AttachmentBinaryObject"])) {
+      if (!hasAttr(n, "mimeCode")) fail("CII-DT-105", n);
+      if (!hasAttr(n, "filename")) fail("CII-DT-106", n);
+      continue;
+    }
+    if (absolute(n, [CII, "rsm:ExchangedDocumentContext", "ram:GuidelineSpecifiedDocumentContextParameter", "ram:ID"]) || absolute(n, [CII, "rsm:ExchangedDocument", "ram:ID"]) || absolute(n, [...LINE, "ram:AssociatedDocumentLineDocument", "ram:LineID"]) || absolute(n, [...LINE, "ram:SpecifiedTradeProduct", "ram:SellerAssignedID"])) {
+      for (const [id, a] of SCHEME_ATTRIBUTES) noAttr(id, n, a);
+      continue;
+    }
+    if (!ram(n)) {
+      if (is2(n, "udt:DateTimeString") && attr(n, "format") === "102" && !DATE_102.test(sv(n))) fail("CII-DT-097", n, JSON.stringify(sv(n)));
+      continue;
+    }
+    if (endsWith(n, "ID")) {
+      for (const [id, a] of ID_ATTRIBUTES) noAttr(id, n, a);
+      continue;
+    }
+    if (n.local === "TypeCode") {
+      noAttr("CII-DT-008", n, "name");
+      noAttr("CII-DT-009", n, "listURI");
+      continue;
+    }
+    if (absolute(n, [...LINE, "ram:SpecifiedLineTradeSettlement", "ram:ApplicableTradeTax", "ram:CategoryCode"])) continue;
+    if (endsWith(n, "ReferencedDocument")) {
+      for (const [id, child, allowed] of REFERENCED_DOCUMENT_ELEMENTS) if (has(n, child) && !allowed?.(n)) fail(id, n, child);
+      continue;
+    }
+    if (endsWith(n, "Amount") && n.local !== "TaxTotalAmount") {
+      noAttr("CII-DT-031", n, "currencyID");
+      noAttr("CII-DT-032", n, "currencyCodeListVersionID");
+      continue;
+    }
+    if (endsWith(n, "Quantity")) {
+      if (hasAttr(n, "unitCode") && !billedUnit) fail("CII-DT-033", n, `@unitCode="${attr(n, "unitCode")}"`);
+      noAttr("CII-DT-034", n, "unitCodeListID");
+      noAttr("CII-DT-035", n, "unitCodeListAgencyID");
+      noAttr("CII-DT-036", n, "unitCodeListAgencyName");
+      continue;
+    }
+    if (endsWith(n, "TradeTax")) {
+      const types = path2(n, "ram:TypeCode").map(sv);
+      if (types.length && !types.includes("VAT")) fail("CII-DT-037", n, types.map((t) => JSON.stringify(t)).join(", "));
+      continue;
+    }
+    if (n.local === "BillingSpecifiedPeriod") {
+      for (const [id, child] of BILLING_PERIOD_ELEMENTS) notAllowed(id, n, child);
+      continue;
+    }
+    if (n.local === "PostalTradeAddress") for (const [id, child] of POSTAL_ADDRESS_ELEMENTS) notAllowed(id, n, child);
+  }
+  return out;
+}
+var ONLY_IN = {
+  ...Object.fromEntries(CEN_1317_ONLY.map((id) => [id, "1.3.17"])),
+  ...Object.fromEntries(CEN_1316_ONLY.map((id) => [id, "1.3.16"]))
+};
+function syntaxBindingViolations(root, syntax) {
+  return syntax === "UBL" ? ubl(root) : cii(root);
+}
+var forCen = (vs, cen) => vs.filter((v) => !v.cen || v.cen === cen);
 
 // src/engine/read-cii.ts
 var CII_NS = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100";
@@ -7559,6 +8317,8 @@ function readCii(root) {
     if (net) {
       L["price"] = ctx.loc(net);
       line.priceAmount = ctx.num(net, "ChargeAmount", L, "priceAmount", "BT-146");
+      const own = new ReadCtx();
+      line.netPrices = kids(net, "ChargeAmount").map((c) => own.num(c, "", {}, "v", "BT-146"));
       const bq = at(net, "BasisQuantity");
       if (bq) {
         line.baseQuantity = ctx.num(bq, "", L, "baseQuantity", "BT-149");
@@ -7568,6 +8328,8 @@ function readCii(root) {
     const gross = at(la, "GrossPriceProductTradePrice");
     if (gross) {
       line.grossPrice = ctx.num(gross, "ChargeAmount", L, "grossPrice", "BT-148");
+      const own = new ReadCtx();
+      line.grossPrices = kids(gross, "ChargeAmount").map((c) => own.num(c, "", {}, "v", "BT-148"));
       const gbq = at(gross, "BasisQuantity");
       if (gbq) {
         line.grossBaseQuantity = ctx.num(gbq, "", L, "grossBaseQuantity", "BT-149");
@@ -7621,6 +8383,7 @@ function readCii(root) {
   }
   model.schemeIds = collectCiiSchemeIds(root, ctx);
   model.binaryObjects = collectBinaryObjects(root, ctx);
+  model.syntaxViolations = syntaxBindingViolations(root, "CII").map((v) => ({ id: v.id, detail: v.detail, loc: ctx.loc(v.node), ...v.cen ? { cen: v.cen } : {} }));
   model.currencyIds = collectCurrencyIds(root, ctx, "CII");
   model.objectIdSchemes = collectObjectIdSchemes(root, ctx, "CII");
   model.dates = collectDates(root, ctx, "CII");
@@ -7679,15 +8442,16 @@ function readParty2(ctx, partyNode) {
       L["taxRegistrationId"] = ctx.loc(company);
     }
   }
-  const legal = at(partyNode, "PartyLegalEntity");
-  if (legal) {
-    p.name = ctx.str(legal, "RegistrationName", L, "name");
-    const cid = at(legal, "CompanyID");
+  const legals = kids(partyNode, "PartyLegalEntity");
+  if (legals.length) {
+    const holding = (name) => legals.find((l) => at(l, name)) ?? legals[0];
+    p.name = ctx.str(holding("RegistrationName"), "RegistrationName", L, "name");
+    const cid = at(holding("CompanyID"), "CompanyID");
     if (cid) {
       p.legalId = { id: text(cid) ?? "", scheme: cid.attrs["schemeID"] };
       L["legalId"] = ctx.loc(cid);
     }
-    p.legalForm = ctx.str(legal, "CompanyLegalForm", L, "legalForm");
+    p.legalForm = ctx.str(holding("CompanyLegalForm"), "CompanyLegalForm", L, "legalForm");
   }
   const contact = at(partyNode, "Contact");
   if (contact) {
@@ -7783,14 +8547,28 @@ function readUbl(root) {
   };
   const noteNode = at(root, "Note");
   if (noteNode) locs["notes"] = ctx.loc(noteNode);
-  const period = at(root, "InvoicePeriod");
-  if (period) {
+  const periods = kids(root, "InvoicePeriod");
+  if (periods.length) {
+    const holding = (name) => periods.find((pd) => at(pd, name)) ?? periods[0];
     model.hasPeriod = true;
-    model.periodHasContent = period.children.length > 0;
-    locs["period"] = ctx.loc(period);
-    model.periodStart = ctx.isoDate(period, "StartDate", locs, "periodStart", "BT-73");
-    model.periodEnd = ctx.isoDate(period, "EndDate", locs, "periodEnd", "BT-74");
-    model.taxPointCode = ctx.str(period, "DescriptionCode", locs, "taxPointCode");
+    model.periodHasContent = periods.some((pd) => pd.children.length > 0);
+    locs["period"] = ctx.loc(periods[0]);
+    model.periodStart = ctx.isoDate(holding("StartDate"), "StartDate", locs, "periodStart", "BT-73");
+    model.periodEnd = ctx.isoDate(holding("EndDate"), "EndDate", locs, "periodEnd", "BT-74");
+    model.taxPointCode = ctx.str(holding("DescriptionCode"), "DescriptionCode", locs, "taxPointCode");
+    model.invoicePeriods = periods.map((pd) => {
+      const own = new ReadCtx();
+      const pl = {};
+      return {
+        start: own.isoDate(pd, "StartDate", pl, "start", "BT-73"),
+        end: own.isoDate(pd, "EndDate", pl, "end", "BT-74"),
+        startGiven: !!at(pd, "StartDate"),
+        endGiven: !!at(pd, "EndDate"),
+        codeGiven: !!at(pd, "DescriptionCode"),
+        locs: pl,
+        loc: ctx.loc(pd)
+      };
+    });
   }
   const payee = at(root, "PayeeParty");
   if (payee) {
@@ -7814,7 +8592,11 @@ function readUbl(root) {
   const sepa = (p) => p?.identifiers.find((i) => i.scheme?.toUpperCase() === "SEPA" && i.id)?.id;
   model.creditorId = sepa(model.seller) ?? sepa(model.payee);
   const delivery = at(root, "Delivery");
-  model.deliveryDateGiven = Array.from(exactText(at(delivery, "ActualDeliveryDate")) ?? "").length > 1;
+  const deliveries = kids(root, "Delivery");
+  const firstIn = (path3) => deliveries.map((d) => at(d, path3)).find((n) => n) ?? null;
+  model.deliveryDateGiven = Array.from(exactText(firstIn("ActualDeliveryDate")) ?? "").length > 1;
+  model.deliveryCountryGiven = Array.from(exactText(firstIn("DeliveryLocation/Address/Country/IdentificationCode")) ?? "").length > 1;
+  model.deliveryAddresses = deliveries.map((d) => at(d, "DeliveryLocation/Address")).filter((a) => !!a).map((a) => ({ countryGiven: !!at(a, "Country/IdentificationCode"), loc: ctx.loc(a) }));
   if (delivery) {
     const dl = {};
     model.delivery = {
@@ -8020,6 +8802,7 @@ function readUbl(root) {
   model.amountCurrencies = collectUblAmountCurrencies(root, ctx);
   model.schemeIds = collectUblSchemeIds(root, ctx);
   model.binaryObjects = collectBinaryObjects(root, ctx);
+  model.syntaxViolations = syntaxBindingViolations(root, "UBL").map((v) => ({ id: v.id, detail: v.detail, loc: ctx.loc(v.node), ...v.cen ? { cen: v.cen } : {} }));
   model.currencyIds = collectCurrencyIds(root, ctx, "UBL");
   model.objectIdSchemes = collectObjectIdSchemes(root, ctx, "UBL");
   model.dates = collectDates(root, ctx, "UBL");
@@ -8214,8 +8997,56 @@ function total(values) {
 var toNumber = (a) => Number(a.n) / Number(a.d);
 var within = (a, b, limit) => cmp(abs(sub(a, b)), limit) < 0;
 var withinOrEqual = (a, b, limit) => cmp(abs(sub(a, b)), limit) <= 0;
+function exactDouble(x) {
+  if (!Number.isFinite(x) || x === 0) return ZERO;
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, x);
+  const bits = view.getBigUint64(0);
+  const negative = bits >> 63n === 1n;
+  const biased = Number(bits >> 52n & 0x7ffn);
+  let mantissa = bits & 0xfffffffffffffn;
+  let exp;
+  if (biased === 0) exp = -1074;
+  else {
+    mantissa |= 1n << 52n;
+    exp = biased - 1075;
+  }
+  const n = exp >= 0 ? mantissa << BigInt(exp) : mantissa;
+  const d = exp >= 0 ? ONE : ONE << BigInt(-exp);
+  return make(negative ? -n : n, d);
+}
+function nearestDouble(a) {
+  let k = 0;
+  let scale = ONE;
+  while (k <= 1100 && scale % a.d !== ZERO_N) {
+    scale *= 10n;
+    k++;
+  }
+  if (scale % a.d !== ZERO_N) return Number(a.n) / Number(a.d);
+  const digits = ((a.n < ZERO_N ? -a.n : a.n) * (scale / a.d)).toString().padStart(k + 1, "0");
+  const text2 = k ? `${digits.slice(0, digits.length - k)}.${digits.slice(digits.length - k)}` : digits;
+  return Number(a.n < ZERO_N ? `-${text2}` : text2);
+}
 var ONE_UNIT = { n: 1n, d: 1n };
 var TWO_CENTS = { n: 2n, d: 100n };
+function roundDouble(x) {
+  if (!Number.isFinite(x)) return x;
+  const f = Math.floor(x);
+  return x - f >= 0.5 ? f + 1 : f;
+}
+function sumDoubles(values) {
+  let s = 0;
+  for (const v of values) if (v !== void 0) s += v;
+  return s;
+}
+var round2Doubles = (values) => roundDouble(sumDoubles(values) * 10 * 10) / 100;
+function parseDecimal(raw) {
+  const m = /^[ \t\r\n]*([+-]?)(\d*)(?:\.(\d*))?[ \t\r\n]*$/.exec(raw);
+  if (!m || m[2] === "" && (m[3] ?? "") === "") return void 0;
+  const frac = m[3] ?? "";
+  const n = BigInt(`${m[2] || "0"}${frac}`);
+  return make(m[1] === "-" ? -n : n, 10n ** BigInt(frac.length));
+}
 
 // src/engine/rules-national.ts
 var NL_TYPE_CODES = ["380", "381", "384", "389"];
@@ -8224,10 +9055,10 @@ var shown = (v) => v === void 0 ? "(missing)" : normalizeSpace(v) === "" ? "(emp
 function nlciusRules(m, emit) {
   const f = m.nlcius;
   if (!f) return;
-  const ubl = m.syntax === "UBL";
+  const ubl2 = m.syntax === "UBL";
   const si = f.declared;
   const s = f.dutchSupplier;
-  if (ubl) {
+  if (ubl2) {
     for (const c of f.customizationIds)
       if (!c.value.startsWith("urn:cen.eu:en16931:2017#compliant#urn:fdc:nen.nl:nlcius:v1.0"))
         emit("SI-V20-INV-R000", `Specification identifier is ${shown(c.value)}, not SI-UBL 2.0 / NLCIUS.`, c.loc, {
@@ -8253,12 +9084,12 @@ function nlciusRules(m, emit) {
       else emit("BR-NL-5", `The Dutch tax representative's address has no ${a.missing.join(", ")}.`, a.loc);
     }
   }
-  if (ubl ? s : si)
+  if (ubl2 ? s : si)
     for (const t of f.typeCodes) {
-      const ok = ubl ? NL_TYPE_CODES.includes(t.text) : NL_TYPE_CODES.some((c) => xsDouble(t.text) === Number(c));
+      const ok = ubl2 ? NL_TYPE_CODES.includes(t.text) : NL_TYPE_CODES.some((c) => xsDouble(t.text) === Number(c));
       if (!ok)
         emit("BR-NL-7", `Type code ${shown(t.text)} is not one of 380, 381, 384 or 389.`, t.loc, { expected: "380, 381, 384 or 389", actual: t.text });
-      if (!ubl) continue;
+      if (!ubl2) continue;
       if (t.text === "381" && m.kind === "invoice")
         emit("BR-NL-8", "Type code 381 (credit note) is sent as a UBL Invoice; it must be a UBL CreditNote.", t.loc, { expected: "<CreditNote>", actual: "<Invoice>" });
       if (t.text !== "381" && m.kind === "creditnote")
@@ -8279,7 +9110,7 @@ function nlciusRules(m, emit) {
       );
     }
     for (const t of f.totals) {
-      if (t.paymentGiven || !ubl && f.creditNoteType) continue;
+      if (t.paymentGiven || !ubl2 && f.creditNoteType) continue;
       const due = t.payable === void 0 ? void 0 : xsDecimal(t.payable);
       if (t.payable !== void 0 && due === void 0) continue;
       if (due !== void 0 && due <= 0) continue;
@@ -8287,10 +9118,10 @@ function nlciusRules(m, emit) {
     }
     for (const pm of f.paymentMeans) {
       const code2 = pm.codes[0];
-      const ok = ubl ? NL_PAYMENT_CODES.includes(normalizeSpace(code2)) : pm.codes.some((c) => NL_PAYMENT_CODES.some((n) => xsDouble(c) === Number(n)));
+      const ok = ubl2 ? NL_PAYMENT_CODES.includes(normalizeSpace(code2)) : pm.codes.some((c) => NL_PAYMENT_CODES.some((n) => xsDouble(c) === Number(n)));
       if (!ok)
         emit("BR-NL-12", `Payment means code ${shown(code2)} is not one of 30, 48, 49, 57, 58 or 59.`, pm.codeLoc ?? pm.loc, { expected: "30, 48, 49, 57, 58 or 59", actual: code2 });
-      if (ubl && (normalizeSpace(code2) === "58" || normalizeSpace(code2) === "59") && pm.branchIdGiven)
+      if (ubl2 && (normalizeSpace(code2) === "58" || normalizeSpace(code2) === "59") && pm.branchIdGiven)
         emit("BR-NL-31", `A payment service provider identifier (BIC) is given for SEPA payment means ${normalizeSpace(code2)}.`, pm.branchLoc ?? pm.loc);
     }
   }
@@ -8314,8 +9145,8 @@ function nlciusRules(m, emit) {
     };
     for (const d of f.discouraged) {
       if (d.rule === "BR-NL-32") {
-        const charge = !ubl && d.charge;
-        emit(charge ? "BR-NL-34" : "BR-NL-32", `${charge ? "A charge" : ubl ? "An allowance or charge" : "An allowance"} reason code (${shown(d.value)}) is given.`, d.loc, { actual: d.value });
+        const charge = !ubl2 && d.charge;
+        emit(charge ? "BR-NL-34" : "BR-NL-32", `${charge ? "A charge" : ubl2 ? "An allowance or charge" : "An allowance"} reason code (${shown(d.value)}) is given.`, d.loc, { actual: d.value });
       } else emit(d.rule, MESSAGES[d.rule].replace(/\.$/, d.value !== void 0 && normalizeSpace(d.value) !== "" ? ` ("${normalizeSpace(d.value)}").` : "."), d.loc, { actual: d.value });
     }
     for (const t of f.sellerTaxSchemes)
@@ -8366,7 +9197,7 @@ var threeDigits = (s) => (s.match(/[0-9]/g) ?? []).length >= 3;
 function xrechnungRules(m, emit) {
   const f = m.xrechnung;
   if (!f) return;
-  const ubl = m.syntax === "UBL";
+  const ubl2 = m.syntax === "UBL";
   if (!f.paymentMeansGiven) emit("BR-DE-1", "Payment instructions (BG-16) are missing.");
   if (!f.buyerReferenceFilled) emit("BR-DE-15", "The buyer reference / Leitweg-ID (BT-10) is missing.", m.locs["buyerReference"]);
   if (f.vatCodeUsed !== void 0 && !f.sellerTaxIdGiven)
@@ -8393,7 +9224,7 @@ function xrechnungRules(m, emit) {
   if (f.typeCodes.includes("384") && !f.invoiceReferenceGiven)
     emit("BR-DE-26", "A corrected invoice (type 384) should reference the invoice it corrects (BG-3).", m.locs["typeCode"]);
   const dd = f.directDebit;
-  if (ubl) {
+  if (ubl2) {
     if (dd.mandate && !dd.creditorId) emit("BR-DE-30", "Direct debit is used, but the SEPA creditor identifier (BT-90, a seller or payee identifier with schemeID SEPA) is missing.");
     if (dd.mandate && !dd.debitedAccount) emit("BR-DE-31", "Direct debit is used, but the debited account (BT-91) is missing.");
   } else {
@@ -8450,7 +9281,7 @@ function xrechnungRules(m, emit) {
     if (d.attachments > 1) emit("BR-TMP-5", `A supporting document (BG-24) has ${d.attachments} attached files (BT-125); at most one is allowed.`, d.loc);
   }
   for (const d of f.tmp.badDates) {
-    if (ubl) emit("BR-TMP-6", `Date "${normalizeSpace(d.text)}" is not written as YYYY-MM-DD.`, d.loc, { actual: d.text, expected: "YYYY-MM-DD" });
+    if (ubl2) emit("BR-TMP-6", `Date "${normalizeSpace(d.text)}" is not written as YYYY-MM-DD.`, d.loc, { actual: d.text, expected: "YYYY-MM-DD" });
     else
       emit("BR-TMP-7", `Date "${normalizeSpace(d.text)}"${d.format === void 0 ? " has no format attribute" : ` with format "${d.format}"`} is not written as format="102" YYYYMMDD.`, d.loc, {
         actual: d.text,
@@ -8527,23 +9358,23 @@ var CATEGORY_NAME = {
 };
 var catName = (c) => CATEGORY_NAME[c] ?? c;
 var PREFIXES = ["S", "Z", "E", "AE", "IC", "G", "O", "IG", "IP"];
-function categoryOf(prefix, cii) {
+function categoryOf(prefix, cii2, cen = "1.3.17") {
+  const swapped = cii2 && cen === "1.3.17";
   switch (prefix) {
     case "IC":
       return "K";
     case "IG":
-      return cii ? "M" : "L";
+      return swapped ? "M" : "L";
     case "IP":
-      return cii ? "L" : "M";
+      return swapped ? "L" : "M";
     default:
       return prefix;
   }
 }
-function allowanceRateTest(prefix, cii) {
+function allowanceRateTest(prefix, cii2, category) {
   if (prefix === "S") return "positive";
   if (prefix === "O") return "absent";
-  if (prefix === "IG") return "non-negative";
-  if (prefix === "IP") return cii ? "positive" : "non-negative";
+  if (prefix === "IG" || prefix === "IP") return cii2 && category === "L" ? "positive" : "non-negative";
   return "zero";
 }
 function rateOk(test, present, rate) {
@@ -8559,12 +9390,12 @@ var RATE_EXPECTED = {
   "non-negative": "0 or more",
   absent: "no rate"
 };
-function vatCategoryRules(m, emit) {
-  const cii = m.syntax === "CII";
-  const isVat = (scheme, loc) => cii ? exactText2(scheme, loc).toUpperCase() === "VAT" : normSpace(scheme).toUpperCase() === "VAT";
-  const acs = everyAllowanceCharge(m).filter((x) => !cii || x.level !== "price").flatMap(({ ac, level }) => acTaxViews(ac).map((view) => ({ ac: view, level }))).map(({ ac, level }) => {
+function vatCategoryRules(m, emit, cen = "1.3.17") {
+  const cii2 = m.syntax === "CII";
+  const isVat = (scheme, loc) => cii2 ? exactText2(scheme, loc).toUpperCase() === "VAT" : normSpace(scheme).toUpperCase() === "VAT";
+  const acs = everyAllowanceCharge(m).filter((x) => !cii2 || x.level !== "price").flatMap(({ ac, level }) => acTaxViews(ac).map((view) => ({ ac: view, level }))).map(({ ac, level }) => {
     const catLoc = ac.locs["vatCategory"];
-    const category = catLoc ? cii ? exactText2(ac.vatCategory, catLoc) : normSpace(ac.vatCategory) : void 0;
+    const category = catLoc ? cii2 ? exactText2(ac.vatCategory, catLoc) : normSpace(ac.vatCategory) : void 0;
     return {
       ac,
       level,
@@ -8576,8 +9407,8 @@ function vatCategoryRules(m, emit) {
   const kindOf = (charge) => charge ? "charge" : "allowance";
   const where = (level, charge) => level === "document" ? `A document-level ${kindOf(charge)}` : level === "line" ? `A line ${kindOf(charge)}` : `A price-level ${kindOf(charge)}`;
   for (const prefix of PREFIXES) {
-    const category = categoryOf(prefix, cii);
-    const test = allowanceRateTest(prefix, cii);
+    const category = categoryOf(prefix, cii2, cen);
+    const test = allowanceRateTest(prefix, cii2, category);
     for (const x of acs) {
       if (x.charge === void 0 || !x.vat || x.category !== category) continue;
       const present = !!x.ac.locs["vatRate"];
@@ -8597,7 +9428,7 @@ function vatCategoryRules(m, emit) {
   const buyer = m.buyer;
   const rep = m.taxRepresentative;
   const identifiersOk = (prefix) => {
-    if (cii) {
+    if (cii2) {
       const sellerVat2 = ciiParty(seller, ["VA"]) || ciiParty(rep, ["VA"]);
       const sellerAny2 = ciiParty(seller, ["VA", "FC"]) || ciiParty(rep, ["VA"]);
       if (prefix === "S" || prefix === "Z" || prefix === "E" || prefix === "IG" || prefix === "IP") return sellerAny2;
@@ -8626,11 +9457,11 @@ function vatCategoryRules(m, emit) {
     IC: "the seller's (BT-31) or tax representative's (BT-63) VAT identifier and the buyer's VAT identifier (BT-48)"
   };
   for (const prefix of PREFIXES) {
-    const category = categoryOf(prefix, cii);
+    const category = categoryOf(prefix, cii2, cen);
     for (const charge of [false, true]) {
-      const rawOnly = !cii && prefix === "IG" && charge;
+      const rawOnly = !cii2 && prefix === "IG" && charge;
       const hits = acs.filter(
-        (x) => x.charge === charge && x.vat && x.category === category && (cii || prefix !== "O" || x.level === "document") && (!rawOnly || exactText2(x.ac.vatCategory, x.ac.locs["vatCategory"]) === category)
+        (x) => x.charge === charge && x.vat && x.category === category && (cii2 || prefix !== "O" || x.level === "document") && (!rawOnly || exactText2(x.ac.vatCategory, x.ac.locs["vatCategory"]) === category)
       );
       if (hits.length === 0 || identifiersOk(prefix)) continue;
       emit(
@@ -8644,17 +9475,17 @@ function vatCategoryRules(m, emit) {
     const catLoc = v.locs["category"];
     return {
       v,
-      category: catLoc ? cii ? exactText2(v.category, catLoc) : normSpace(v.category) : void 0,
+      category: catLoc ? cii2 ? exactText2(v.category, catLoc) : normSpace(v.category) : void 0,
       vat: isVat(v.scheme, v.locs["scheme"])
     };
   });
   const label = (v, category) => `The VAT breakdown for ${catName(category)}${v.rate !== void 0 ? ` at ${v.rate}%` : ""}`;
   const at2 = (v, key) => v.locs[key] ?? v.loc;
   for (const prefix of PREFIXES) {
-    const category = categoryOf(prefix, cii);
-    if (cii && (prefix === "IG" || prefix === "IP")) continue;
-    const needsVat = !(cii && (prefix === "S" || prefix === "Z"));
-    const calculated = prefix === "S" || !cii && (prefix === "IG" || prefix === "IP");
+    const category = categoryOf(prefix, cii2, cen);
+    if (cii2 && (prefix === "IG" || prefix === "IP")) continue;
+    const needsVat = !(cii2 && (prefix === "S" || prefix === "Z"));
+    const calculated = prefix === "S" || !cii2 && (prefix === "IG" || prefix === "IP");
     for (const { v, category: c, vat } of rows) {
       if (c !== category || needsVat && !vat) continue;
       if (!calculated) {
@@ -8684,7 +9515,7 @@ function vatCategoryRules(m, emit) {
     }
   }
   for (const prefix of ["G", "IG", "IP"]) {
-    const category = categoryOf(prefix, cii);
+    const category = categoryOf(prefix, cii2, cen);
     for (const { v, category: c, vat } of rows) {
       if (c !== category || !vat) continue;
       const hasReason = !!(v.locs["exemptionReason"] || v.locs["exemptionCode"]);
@@ -8701,7 +9532,7 @@ function vatCategoryRules(m, emit) {
   if (oRows.length > 0) {
     const first = oRows[0].v;
     const oLoc = at2(first, "category");
-    if (cii) {
+    if (cii2) {
       const lineCat = (ln) => ln.locs["vatCategoryCode"] ? exactText2(ln.vatCategory, ln.locs["vatCategoryCode"]) : void 0;
       const otherTax = rows.some((r) => r.category !== void 0 && r.category !== "O") || m.lines.flatMap(lineTaxViews).some((ln) => {
         const c = lineCat(ln);
@@ -8731,32 +9562,32 @@ function vatCategoryRules(m, emit) {
   const lineCategory = (ln) => {
     const codeLoc = ln.locs["vatCategoryCode"];
     if (!codeLoc) return void 0;
-    return cii ? exactText2(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
+    return cii2 ? exactText2(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
   };
   for (const prefix of PREFIXES) {
-    const category = categoryOf(prefix, cii);
+    const category = categoryOf(prefix, cii2, cen);
     const groups = m.lines.flatMap(lineTaxViews);
     const inCategory = groups.filter((ln) => lineCategory(ln) === category && isVat(ln.vatScheme, ln.locs["vatScheme"]));
-    const sWithoutVat = !cii && prefix === "S" && inCategory.length === 0 ? groups.find((ln) => lineCategory(ln) === "S") : void 0;
+    const sWithoutVat = !cii2 && prefix === "S" && inCategory.length === 0 ? groups.find((ln) => lineCategory(ln) === "S") : void 0;
     if (sWithoutVat) {
       emit("BR-S-02", `Line ${sWithoutVat.id ?? "?"} is in VAT category ${catName("S")}, but its tax scheme isn't VAT, so the official rule can't find a standard-rated VAT line to accept.`, sWithoutVat.locs["vatScheme"] ?? sWithoutVat.locs["vatCategoryCode"] ?? sWithoutVat.loc);
       continue;
     }
     if (inCategory.length === 0 || identifiersOk(prefix)) continue;
-    for (const ln of cii ? inCategory : inCategory.slice(0, 1))
+    for (const ln of cii2 ? inCategory : inCategory.slice(0, 1))
       emit(
         `BR-${prefix}-02`,
-        prefix === "O" ? `${cii ? `Line ${ln.id ?? "?"} is` : "The invoice has lines"} in VAT category ${catName(category)}, so it must not carry the seller's, tax representative's or buyer's VAT identifier.` : `${cii ? `Line ${ln.id ?? "?"} is` : "The invoice has lines"} in VAT category ${catName(category)}, so it needs ${NEEDS[prefix]}.`,
+        prefix === "O" ? `${cii2 ? `Line ${ln.id ?? "?"} is` : "The invoice has lines"} in VAT category ${catName(category)}, so it must not carry the seller's, tax representative's or buyer's VAT identifier.` : `${cii2 ? `Line ${ln.id ?? "?"} is` : "The invoice has lines"} in VAT category ${catName(category)}, so it needs ${NEEDS[prefix]}.`,
         prefix === "O" ? m.seller.locs["vatId"] ?? m.buyer.locs["vatId"] ?? ln.locs["vatCategoryCode"] ?? ln.loc : ln.locs["vatCategoryCode"] ?? ln.loc
       );
   }
   for (const prefix of ["IG", "IP"]) {
-    const category = categoryOf(prefix, cii);
-    const test = cii && prefix === "IP" ? "positive" : "non-negative";
+    const category = categoryOf(prefix, cii2, cen);
+    const test = cii2 && category === "L" ? "positive" : "non-negative";
     for (const ln of m.lines.flatMap(lineTaxViews)) {
       const codeLoc = ln.locs["vatCategoryCode"];
       if (!codeLoc) continue;
-      const c = cii ? exactText2(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
+      const c = cii2 ? exactText2(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);
       if (c !== category || !isVat(ln.vatScheme, ln.locs["vatScheme"])) continue;
       if (rateOk(test, !!ln.locs["vatRate"], ln.vatRate)) continue;
       emit(
@@ -8775,16 +9606,21 @@ var listed = (set, raw) => {
   return !v.includes(" ") && set.has(v);
 };
 var shown2 = (raw) => normSpace(raw) === "" ? "(empty)" : `"${normSpace(raw)}"`;
-function codeListRules(m, emit, peppol) {
-  const cii = m.syntax === "CII";
+function codeListRules(m, emit, peppol, cen = "1.3.17") {
+  const cii2 = m.syntax === "CII";
+  const old = cen === "1.3.16";
+  const ICD_LIST = old ? CEN_1316_ICD_CODES : ICD_CODES;
+  const VATEX = old ? CEN_1316_VATEX_CODES : CEN_VATEX_CODES;
+  const SUBJECTS = old && !cii2 ? CEN_1316_UBL_UNTDID_4451_CODES : UNTDID_4451_CODES;
+  const SUBJECT_TEXT = old && !cii2 ? CEN_1316_UBL_UNTDID_4451_TEXT : UNTDID_4451_TEXT;
   const values = m.codedValues ?? [];
   const of = (kind) => values.filter((v) => v.kind === kind);
-  for (const c of of(cii ? "dueDateTypeCode" : "periodDescriptionCode")) {
-    if (listed(cii ? CII_DUE_DATE_TYPE_CODES : UBL_VAT_DATE_CODES, c.value)) continue;
-    const expected = cii ? "5, 29 or 72" : "3, 35 or 432";
+  for (const c of of(cii2 ? "dueDateTypeCode" : "periodDescriptionCode")) {
+    if (listed(cii2 ? CII_DUE_DATE_TYPE_CODES : UBL_VAT_DATE_CODES, c.value)) continue;
+    const expected = cii2 ? "5, 29 or 72" : "3, 35 or 432";
     emit("BR-CL-06", `${c.owner} VAT point date code (BT-8) ${shown2(c.value)} is not ${expected}.`, c.loc, { actual: normSpace(c.value), expected });
   }
-  if (peppol && !cii)
+  if (peppol && !cii2)
     for (const c of of("periodDescriptionCode")) {
       if (UBL_VAT_DATE_CODES.has(normSpace(c.value))) continue;
       emit("PEPPOL-EN16931-CL006", `${c.owner} VAT point date code (BT-8) ${shown2(c.value)} is not 3, 35 or 432 (UNCL 2005).`, c.loc, {
@@ -8792,9 +9628,9 @@ function codeListRules(m, emit, peppol) {
         expected: "3, 35 or 432"
       });
     }
-  if (cii) {
+  if (cii2) {
     for (const c of of("subjectCode")) {
-      if (listed(UNTDID_4451_CODES, c.value)) continue;
+      if (listed(SUBJECTS, c.value)) continue;
       emit("BR-CL-08", `Invoice note subject code (BT-21) ${shown2(c.value)} is not a UNTDID 4451 code.`, c.loc, { actual: normSpace(c.value), expected: "AAI, SUR, REG, ABL, TXD …" });
     }
   } else {
@@ -8804,32 +9640,32 @@ function codeListRules(m, emit, peppol) {
       const rest = c.value.slice(first + 1);
       const second = rest.indexOf("#");
       const code2 = second < 0 ? "" : rest.slice(0, second);
-      if ([...code2].length !== 3 || UNTDID_4451_TEXT.includes(code2)) continue;
+      if ([...code2].length !== 3 || SUBJECT_TEXT.includes(code2)) continue;
       emit("BR-CL-08", `Invoice note subject code (BT-21) "#${code2}#" is not a UNTDID 4451 code.`, c.loc, { actual: code2, expected: "AAI, SUR, REG, ABL, TXD …" });
     }
   }
   const ICD = [
-    { kind: "partyIdScheme", id: "BR-CL-10", what: cii ? "global identifier" : "party identifier" },
+    { kind: "partyIdScheme", id: "BR-CL-10", what: cii2 ? "global identifier" : "party identifier" },
     { kind: "itemIdScheme", id: "BR-CL-21", what: "item standard identifier (BT-157)" },
     { kind: "deliveryIdScheme", id: "BR-CL-26", what: "deliver-to location identifier (BT-71)" }
   ];
   for (const { kind, id, what } of ICD)
     for (const c of of(kind)) {
-      if (listed(ICD_CODES, c.value)) continue;
-      if (kind === "partyIdScheme" && !cii && c.sellerOrPayee && normSpace(c.value) === "SEPA") continue;
+      if (listed(ICD_LIST, c.value)) continue;
+      if (kind === "partyIdScheme" && !cii2 && c.sellerOrPayee && normSpace(c.value) === "SEPA") continue;
       emit(id, `${c.owner} ${what} scheme ${shown2(c.value)} is not an ISO/IEC 6523 ICD code.`, c.loc, {
         actual: normSpace(c.value),
-        expected: kind === "partyIdScheme" && !cii ? "an ICD code such as 0088 (GLN), or SEPA for the seller or payee" : "an ICD code such as 0088 (GLN) or 0160 (GTIN)"
+        expected: kind === "partyIdScheme" && !cii2 ? "an ICD code such as 0088 (GLN), or SEPA for the seller or payee" : "an ICD code such as 0088 (GLN) or 0160 (GTIN)"
       });
     }
   for (const c of of("legalIdScheme")) {
-    if (listed(ICD_CODES, c.value)) continue;
-    emit("BR-CL-11", `${c.owner} ${cii ? "identifier" : "legal registration number"} scheme ${shown2(c.value)} is not an ISO/IEC 6523 ICD code.`, c.loc, {
+    if (listed(ICD_LIST, c.value)) continue;
+    emit("BR-CL-11", `${c.owner} ${cii2 ? "identifier" : "legal registration number"} scheme ${shown2(c.value)} is not an ISO/IEC 6523 ICD code.`, c.loc, {
       actual: normSpace(c.value),
       expected: "an ICD code such as 0208 (Belgian enterprise number) or 0106 (KvK)"
     });
   }
-  const EAS = new Set(Object.keys(EAS_CODES));
+  const EAS = old ? CEN_1316_EAS_CODES : new Set(Object.keys(EAS_CODES));
   for (const c of of("endpointScheme")) {
     if (listed(EAS, c.value)) continue;
     emit("BR-CL-25", `${c.owner} electronic address scheme ${shown2(c.value)} is not in the EAS code list.`, c.loc, {
@@ -8839,7 +9675,7 @@ function codeListRules(m, emit, peppol) {
   }
   for (const c of of("exemptionCode")) {
     const v = normSpace(c.value);
-    if (!v.includes(" ") && CEN_VATEX_CODES.has(normSpace(c.value.toUpperCase()))) continue;
+    if (!v.includes(" ") && VATEX.has(normSpace(c.value.toUpperCase()))) continue;
     emit("BR-CL-22", `${c.owner} VAT exemption reason code ${shown2(c.value)} is not a VATEX code.`, c.loc, { actual: v, expected: "VATEX-EU-AE, VATEX-EU-IC, VATEX-EU-G …" });
   }
   for (const c of of("creditTransferAccount")) {
@@ -8847,19 +9683,81 @@ function codeListRules(m, emit, peppol) {
     emit("BR-50", "A credit transfer (payment means 30 or 58) has a payee account without an account identifier (BT-84).", c.loc);
   }
   const hasCode = (kinds, code2, docLevelOnly = false) => values.some((v) => kinds.includes(v.kind) && v.value === code2 && (!docLevelOnly || v.kind !== "taxCategory" || v.docLevel));
-  const splitPayment = cii ? hasCode(["categoryCode"], "B") : hasCode(["taxCategory", "itemTaxCategory"], "B");
+  const splitPayment = cii2 ? hasCode(["categoryCode"], "B") : hasCode(["taxCategory", "itemTaxCategory"], "B");
   if (splitPayment) {
-    const foreign = values.find((v) => v.kind === (cii ? "country" : "identificationCode") && v.value !== "IT");
+    const foreign = values.find((v) => v.kind === (cii2 ? "country" : "identificationCode") && v.value !== "IT");
     if (foreign)
       emit("BR-B-01", `The invoice uses VAT category B (split payment), which is for Italian invoices only, but it has country code ${shown2(foreign.value)}.`, foreign.loc, {
         actual: normSpace(foreign.value),
         expected: "IT"
       });
   }
-  const splitAtDoc = cii ? splitPayment : hasCode(["taxCategory", "itemTaxCategory"], "B", true);
-  const standard = cii ? hasCode(["categoryCode"], "S") : hasCode(["taxCategory", "itemTaxCategory"], "S", true);
+  const splitAtDoc = cii2 ? splitPayment : hasCode(["taxCategory", "itemTaxCategory"], "B", true);
+  const standard = cii2 ? hasCode(["categoryCode"], "S") : hasCode(["taxCategory", "itemTaxCategory"], "S", true);
   if (splitAtDoc && standard)
     emit("BR-B-02", "The invoice uses both VAT category B (split payment) and S (standard rated); a split-payment invoice can't contain standard-rated items.", values.find((v) => (v.kind === "taxCategory" || v.kind === "itemTaxCategory" || v.kind === "categoryCode") && v.value === "S")?.loc);
+}
+
+// src/engine/facturx-profile-rules.ts
+var FACTURX_MINIMUM_RULES = /* @__PURE__ */ new Set(["BR-01", "BR-02", "BR-03", "BR-04", "BR-05", "BR-06", "BR-07", "BR-08", "BR-09", "BR-13", "BR-14", "BR-15", "BR-CO-09", "BR-CO-26", "BR-DEC", "BR-E-02", "BR-E-03", "BR-E-04", "BR-E-05", "BR-E-06", "BR-E-07", "BR-E-10", "BR-G-02", "BR-G-03", "BR-G-04", "BR-G-05", "BR-G-06", "BR-G-07", "BR-G-09", "BR-G-10", "BR-IC-02", "BR-IC-03", "BR-IC-04", "BR-IC-05", "BR-IC-06", "BR-IC-07", "BR-IC-09", "BR-IC-10", "BR-IC-11", "BR-IC-12", "BR-O-03", "BR-O-04", "BR-O-06", "BR-O-09", "BR-O-10", "BR-O-11", "BR-O-12", "BR-O-13", "BR-O-14", "BR-VAT-08", "CII-SR-463", "CII-SR-465", "CII-SR-466"]);
+var FACTURX_BASIC_WL_RULES = /* @__PURE__ */ new Set(["BR-01", "BR-02", "BR-03", "BR-04", "BR-05", "BR-06", "BR-07", "BR-08", "BR-09", "BR-10", "BR-11", "BR-12", "BR-13", "BR-14", "BR-15", "BR-17", "BR-18", "BR-19", "BR-20", "BR-29", "BR-31", "BR-32", "BR-33", "BR-36", "BR-37", "BR-38", "BR-45", "BR-46", "BR-47", "BR-48", "BR-49", "BR-50", "BR-51", "BR-53", "BR-55", "BR-56", "BR-57", "BR-61", "BR-62", "BR-63", "BR-AE-03", "BR-AE-04", "BR-AE-06", "BR-AE-07", "BR-AE-09", "BR-AE-10", "BR-CO-03", "BR-CO-09", "BR-CO-11", "BR-CO-12", "BR-CO-13", "BR-CO-14", "BR-CO-15", "BR-CO-16", "BR-CO-17", "BR-CO-19", "BR-CO-21", "BR-CO-22", "BR-CO-26", "BR-DEC", "BR-E-03", "BR-E-04", "BR-E-06", "BR-E-07", "BR-E-09", "BR-E-10", "BR-G-03", "BR-G-04", "BR-G-06", "BR-G-07", "BR-G-09", "BR-G-10", "BR-IC-03", "BR-IC-04", "BR-IC-06", "BR-IC-07", "BR-IC-09", "BR-IC-10", "BR-IC-11", "BR-IC-12", "BR-IG-03", "BR-IG-04", "BR-IG-06", "BR-IG-07", "BR-IG-09", "BR-IG-10", "BR-IP-03", "BR-IP-04", "BR-IP-06", "BR-IP-07", "BR-IP-09", "BR-IP-10", "BR-O-03", "BR-O-04", "BR-O-06", "BR-O-07", "BR-O-09", "BR-O-10", "BR-O-11", "BR-O-13", "BR-O-14", "BR-S-03", "BR-S-04", "BR-S-06", "BR-S-07", "BR-S-09", "BR-S-10", "BR-Z-03", "BR-Z-04", "BR-Z-06", "BR-Z-07", "BR-Z-09", "BR-Z-10", "CII-SR-463", "CII-SR-465", "CII-SR-466"]);
+var FACTURX_BR_CO_25_PROFILES = ["EXTENDED"];
+
+// src/engine/facturx-profile.ts
+var PROFILE_OF = {
+  "urn:factur-x.eu:1p0:minimum": "MINIMUM",
+  "urn:zugferd.de:2p0:minimum": "MINIMUM",
+  "urn:factur-x.eu:1p0:basicwl": "BASIC-WL",
+  "urn:zugferd.de:2p0:basicwl": "BASIC-WL",
+  "urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic": "BASIC",
+  "urn:cen.eu:en16931:2017#compliant#urn:zugferd.de:2p0:basic": "BASIC",
+  "urn:cen.eu:en16931:2017": "EN16931",
+  "urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended": "EXTENDED",
+  "urn:cen.eu:en16931:2017#conformant#urn:zugferd.de:2p0:extended": "EXTENDED"
+};
+var facturXProfile = (guidelineId) => guidelineId ? PROFILE_OF[guidelineId] : void 0;
+var isFacturXExtended = (guidelineId) => {
+  const p = facturXProfile(guidelineId);
+  return !!p && FACTURX_BR_CO_25_PROFILES.includes(p);
+};
+function facturXSubset(guidelineId) {
+  const p = facturXProfile(guidelineId);
+  return p === "MINIMUM" ? FACTURX_MINIMUM_RULES : p === "BASIC-WL" ? FACTURX_BASIC_WL_RULES : void 0;
+}
+
+// src/engine/kosit-levels.ts
+var CIUS = "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0";
+var EXTENSION = `${CIUS}#conformant#urn:xeinkauf.de:kosit:extension:xrechnung_3.0`;
+var CVD = `${CIUS}#compliant#urn:xeinkauf.de:kosit:xrechnung:cvd_0.9`;
+var KOSIT_RAISED = /* @__PURE__ */ new Set(["UBL-CR-646", "CII-SR-452", "CII-SR-453", "CII-SR-454", "CII-SR-465", "CII-SR-466"]);
+var CII_RAISED = { "CII-SR-452": "error", "CII-SR-453": "error", "CII-SR-454": "error", "CII-SR-465": "error", "CII-SR-466": "error", "CII-SR-475": "info", "CII-SR-476": "info" };
+var CODE_LISTS = { "BR-CL-21": "warning", "BR-CL-23": "warning" };
+var EXTENSION_LISTS = { "BR-CL-10": "info", "BR-CL-11": "info", "BR-CL-21": "info", "BR-CL-23": "warning", "BR-CL-24": "info", "BR-CL-25": "info", "BR-CL-26": "info" };
+var KOSIT_LEVELS = {
+  "ubl-invoice": { ...CODE_LISTS, "UBL-CR-646": "error" },
+  "ubl-invoice-extension": { ...EXTENSION_LISTS, "BR-CO-16": "info", "UBL-CR-470": "info", "UBL-CR-646": "info" },
+  "ubl-invoice-cvd": { ...CODE_LISTS, "BR-CL-13": "info", "UBL-CR-646": "error" },
+  "ubl-creditnote": { ...CODE_LISTS },
+  "ubl-creditnote-cvd": { ...CODE_LISTS, "BR-CL-13": "info", "UBL-CR-646": "error" },
+  cii: { ...CODE_LISTS, ...CII_RAISED },
+  "cii-extension": { ...EXTENSION_LISTS, ...CII_RAISED },
+  "cii-cvd": { ...CODE_LISTS, "BR-CL-13": "info", ...CII_RAISED }
+};
+function kositScenario(format) {
+  const id = format.customizationId;
+  if (format.syntax === "CII") return id === EXTENSION ? "cii-extension" : id === CVD ? "cii-cvd" : "cii";
+  if (format.document === "Credit note") return id === CVD ? "ubl-creditnote-cvd" : "ubl-creditnote";
+  return id === EXTENSION ? "ubl-invoice-extension" : id === CVD ? "ubl-invoice-cvd" : "ubl-invoice";
+}
+function kositExactScenario(syntax, document, specIds) {
+  const has2 = (id) => specIds.includes(id);
+  if (syntax === "CII") return has2(CIUS) ? "cii" : has2(EXTENSION) ? "cii-extension" : has2(CVD) ? "cii-cvd" : null;
+  if (document === "Credit note") return has2(CIUS) ? "ubl-creditnote" : has2(CVD) ? "ubl-creditnote-cvd" : null;
+  return has2(CIUS) ? "ubl-invoice" : has2(EXTENSION) ? "ubl-invoice-extension" : has2(CVD) ? "ubl-invoice-cvd" : null;
+}
+var KOSIT_SPEC_IDS = { cius: CIUS, extension: EXTENSION, cvd: CVD };
+function kositLevel(ruleId, scenario) {
+  return KOSIT_LEVELS[scenario][ruleId] ?? (KOSIT_RAISED.has(ruleId) ? "warning" : void 0);
 }
 
 // src/engine/vat-id.ts
@@ -9301,6 +10199,7 @@ var fd = (x) => {
   return eq(round22(x), x) ? v.toFixed(2) : String(Math.round(v * 1e4) / 1e4);
 };
 var VAT_PREFIX_EXTRAS = /* @__PURE__ */ new Set(["EL", "XI", "1A"]);
+var UBL_1316_VAT_PREFIX_TEXT = ` ${[...Object.keys(ISO_3166), ...VAT_PREFIX_EXTRAS].join(" ")} `;
 var PER_RATE_CATEGORIES = /* @__PURE__ */ new Set(["S", "L", "M"]);
 var ONE_BREAKDOWN_ROW = /* @__PURE__ */ new Set(["Z", "E", "AE", "K", "G", "O"]);
 function linePeriodViews(ln) {
@@ -9335,8 +10234,8 @@ var VATEX_CATEGORY_RULES = {
   "VATEX-EU-I": { id: "PEPPOL-EN16931-P0110", category: "E" },
   "VATEX-EU-J": { id: "PEPPOL-EN16931-P0111", category: "E" }
 };
-function peppolDateOk(d, cii) {
-  if (cii) return normSpace2(d.format) === "102" && d.raw.length === 8 && /20[0-9]{6}/.test(normSpace2(d.raw));
+function peppolDateOk(d, cii2) {
+  if (cii2) return normSpace2(d.format) === "102" && d.raw.length === 8 && /20[0-9]{6}/.test(normSpace2(d.raw));
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d.raw);
   if (!m) return false;
   const [y, mo, da] = [Number(m[1]), Number(m[2]), Number(m[3])];
@@ -9348,11 +10247,15 @@ function runRules(m, fmt, opts) {
   const out = [];
   const kosit = !!opts.xrechnung && !opts.peppol;
   const peppolOn = !!opts.peppol || kosit;
+  const cen = opts.cen ?? (opts.peppol || opts.xrechnung || opts.nlcius ? "1.3.16" : "1.3.17");
+  const cen1316 = cen === "1.3.16";
+  const currencies = cen1316 ? CEN_1316_ISO_4217 : ISO_4217;
   const slack = kosit && m.xrechnung?.kosit.huf ? dec(0.5) : TWO_CENTS;
   const emit = (ruleId, message, loc, extra = {}) => {
     const meta = RULE_INDEX[ruleId];
     if (!meta) throw new Error(`Unknown rule ${ruleId}`);
     if (kosit && meta.source === "Peppol" && !KOSIT_PEPPOL_RULES.has(ruleId)) return;
+    if (opts.subset && !opts.subset.has(ruleId) && meta.source !== "InvoiceVerify") return;
     const where = loc ?? m.loc;
     out.push({
       ruleId,
@@ -9383,10 +10286,19 @@ function runRules(m, fmt, opts) {
       emit("PEPPOL-EN16931-R008", `Element ${loc.xpath.split("/").pop()} is empty.`, loc);
     }
   }
+  if (opts.en16931)
+    for (const v of forCen(m.syntaxViolations ?? [], cen))
+      emit(v.id, `${RULE_INDEX[v.id].description}${v.detail ? ` Found: ${v.detail}.` : ""}`, v.loc);
   if (!opts.en16931) {
     emit(
       "IV-SYN-04",
       `${fmt.label} carries only header data. It is not an EN 16931 compliant e-invoice; line and VAT checks were skipped.`,
+      at2(m.locs, "customizationId")
+    );
+  } else if (opts.subset) {
+    emit(
+      "IV-SYN-04",
+      `${fmt.label} is not an EN 16931 compliant e-invoice, so only the EN 16931 rules the official Factur-X Schematron runs for this profile were checked.`,
       at2(m.locs, "customizationId")
     );
   }
@@ -9414,12 +10326,12 @@ function runRules(m, fmt, opts) {
     }
   }
   if (!m.currency) emit("BR-05", "The invoice currency code is missing.", m.locs["currency"]);
-  if (m.locs["currency"] && !ISO_4217.has(normSpace2(m.currency)))
+  if (m.locs["currency"] && !currencies.has(normSpace2(m.currency)))
     emit("BR-CL-04", m.currency ? `Currency "${m.currency}" is not an ISO 4217 code.` : "The invoice currency code is empty, so it is not an ISO 4217 code.", at2(m.locs, "currency"), {
       actual: m.currency,
       expected: "EUR, USD, GBP …"
     });
-  if (m.locs["taxCurrency"] && !ISO_4217.has(normSpace2(m.taxCurrency)))
+  if (m.locs["taxCurrency"] && !currencies.has(normSpace2(m.taxCurrency)))
     emit(
       "BR-CL-05",
       `VAT accounting currency "${m.taxCurrency ?? ""}" (BT-6) is not an ISO 4217 code.`,
@@ -9427,7 +10339,7 @@ function runRules(m, fmt, opts) {
       { actual: m.taxCurrency, expected: "EUR, USD, GBP …" }
     );
   {
-    const bad = (m.currencyIds ?? []).filter((c) => !ISO_4217.has(normSpace2(c.currency)));
+    const bad = (m.currencyIds ?? []).filter((c) => !currencies.has(normSpace2(c.currency)));
     for (const c of bad.slice(0, 25))
       emit(
         "BR-CL-03",
@@ -9444,23 +10356,24 @@ function runRules(m, fmt, opts) {
           { actual: c.currency, expected: "EUR, USD, GBP …" }
         );
   }
-  codeListRules(m, emit, !!peppolOn);
+  codeListRules(m, emit, !!peppolOn, cen);
   for (const o of m.objectIdSchemes ?? [])
     if (!UNTDID_1153_CODES.has(normSpace2(o.scheme)))
       emit("BR-CL-07", `The invoiced object identifier (BT-18) uses scheme "${o.scheme}", which is not a UNTDID 1153 reference code.`, o.loc, {
         actual: o.scheme,
         expected: "AAA, AJS, ATS …"
       });
-  const CODE_LISTS = {
-    country: { id: "BR-CL-14", ok: (v) => CEN_COUNTRY_CODES.has(v), what: "country code", list: "an ISO 3166-1 alpha-2 code", example: "DE, FR, NL …" },
-    originCountry: { id: "BR-CL-15", ok: (v) => CEN_COUNTRY_CODES.has(v), what: "item country of origin (BT-159)", list: "an ISO 3166-1 alpha-2 code", example: "DE, FR, CN …" },
+  const countries = cen1316 && m.syntax === "CII" ? CEN_1316_CII_COUNTRY_CODES : CEN_COUNTRY_CODES;
+  const CODE_LISTS2 = {
+    country: { id: "BR-CL-14", ok: (v) => countries.has(v), what: "country code", list: "an ISO 3166-1 alpha-2 code", example: "DE, FR, NL …" },
+    originCountry: { id: "BR-CL-15", ok: (v) => countries.has(v), what: "item country of origin (BT-159)", list: "an ISO 3166-1 alpha-2 code", example: "DE, FR, CN …" },
     classificationScheme: { id: "BR-CL-13", ok: (v) => UNTDID_7143_CODES.has(v), what: "item classification scheme (listID, BT-158-1)", list: "a UNTDID 7143 scheme", example: "STI, TST, HS …" },
     taxCategory: { id: "BR-CL-17", ok: (v) => UNCL_5305_CODES.has(v), what: "VAT category", list: "a UNCL 5305 code", example: "S, Z, E, AE, K, G, O, L, M" },
     itemTaxCategory: { id: "BR-CL-18", ok: (v) => UNCL_5305_CODES.has(v), what: "VAT category", list: "a UNCL 5305 code", example: "S, Z, E, AE, K, G, O, L, M" }
   };
   for (const c of m.codedValues ?? []) {
-    if (!(c.kind in CODE_LISTS)) continue;
-    const spec = CODE_LISTS[c.kind];
+    if (!(c.kind in CODE_LISTS2)) continue;
+    const spec = CODE_LISTS2[c.kind];
     const v = normSpace2(c.value);
     if (spec.ok(v)) continue;
     emit(spec.id, `${c.owner} ${spec.what} "${c.value.trim()}" is not ${spec.list}${c.kind === "country" && v === "UK" ? " (use GB)" : ""}.`, c.loc, {
@@ -9509,7 +10422,13 @@ function runRules(m, fmt, opts) {
       "Both a VAT point date and a VAT point date code are present.",
       at2(m.locs, "taxPointDate")
     );
-  if (m.hasPeriod) {
+  if (m.syntax === "UBL" && m.invoicePeriods) {
+    for (const pd of m.invoicePeriods) {
+      if (!pd.startGiven && !pd.endGiven && !pd.codeGiven) emit("BR-CO-19", "The invoice period has neither a start nor an end date.", pd.loc);
+      if (pd.start && pd.end && pd.end < pd.start)
+        emit("BR-29", `Invoice period ends (${pd.end}) before it starts (${pd.start}).`, at2(pd.locs, "end", pd.loc));
+    }
+  } else if (m.hasPeriod) {
     if (!m.locs["periodStart"] && !m.locs["periodEnd"] && !(m.syntax === "UBL" && m.locs["taxPointCode"]))
       emit(
         "BR-CO-19",
@@ -9533,17 +10452,17 @@ function runRules(m, fmt, opts) {
       at2(m.locs, "dueDate")
     );
   if (peppolOn) {
-    const cii2 = m.syntax === "CII";
-    const profileApproved = (cii2 ? PEPPOL_CII_PROFILE_IDS : PEPPOL_PROFILE_IDS).has(normSpace2(m.profileId));
-    if (!m.locs["profileId"] && (!cii2 || m.locs["documentContext"]))
+    const cii3 = m.syntax === "CII";
+    const profileApproved = (cii3 ? PEPPOL_CII_PROFILE_IDS : PEPPOL_PROFILE_IDS).has(normSpace2(m.profileId));
+    if (!m.locs["profileId"] && (!cii3 || m.locs["documentContext"]))
       emit(
         "PEPPOL-EN16931-R001",
-        cii2 ? "The business process (BusinessProcessSpecifiedDocumentContextParameter/ID) is missing." : "cbc:ProfileID (business process) is missing."
+        cii3 ? "The business process (BusinessProcessSpecifiedDocumentContextParameter/ID) is missing." : "cbc:ProfileID (business process) is missing."
       );
     if (!profileApproved)
       emit(
         "PEPPOL-EN16931-R007",
-        m.profileId ? `ProfileID "${m.profileId}" is not an approved Peppol business process${cii2 ? " for CII invoices" : ""}.` : "No business process is given, so it is not an approved Peppol one.",
+        m.profileId ? `ProfileID "${m.profileId}" is not an approved Peppol business process${cii3 ? " for CII invoices" : ""}.` : "No business process is given, so it is not an approved Peppol one.",
         at2(m.locs, "profileId"),
         {
           actual: m.profileId,
@@ -9567,14 +10486,14 @@ function runRules(m, fmt, opts) {
         `TaxCurrencyCode equals the invoice currency (${m.currency}).`,
         at2(m.locs, "taxCurrency")
       );
-    const bothGerman = !cii2 && countryIs(m.seller, "DE") && countryIs(m.buyer, "DE");
+    const bothGerman = !cii3 && countryIs(m.seller, "DE") && countryIs(m.buyer, "DE");
     if (m.notes.length > 1 && !bothGerman)
       emit(
         "PEPPOL-EN16931-R002",
         `The invoice has ${m.notes.length} notes; Peppol allows one.`,
         at2(m.locs, "notes")
       );
-    else if (cii2 && m.noteSubjectCode)
+    else if (cii3 && m.noteSubjectCode)
       emit("PEPPOL-EN16931-R002", "The document note has a subject code, which Peppol doesn't allow in CII.", m.noteSubjectCode);
     if (!m.locs["buyerReference"] && !m.locs["orderRef"])
       emit(
@@ -9582,7 +10501,7 @@ function runRules(m, fmt, opts) {
         "Neither a buyer reference nor a purchase order reference is present."
       );
     const tc = normSpace2(m.typeCode);
-    if (m.locs["typeCode"] && profileApproved && !cii2) {
+    if (m.locs["typeCode"] && profileApproved && !cii3) {
       if (m.kind === "invoice" && !PEPPOL_INVOICE_TYPE_CODES.has(tc))
         emit(
           "PEPPOL-EN16931-P0100",
@@ -9612,7 +10531,7 @@ function runRules(m, fmt, opts) {
       }
     }
     const writtenCurrency = m.locs["currency"] ? exactText2(m.currency, m.locs["currency"]) : void 0;
-    if (cii2) {
+    if (cii3) {
       const inCurrency = m.taxTotals.filter((t) => writtenCurrency !== void 0 && t.currency === writtenCurrency);
       if (kosit ? inCurrency.length > 1 : inCurrency.length !== 1)
         emit(
@@ -9631,35 +10550,35 @@ function runRules(m, fmt, opts) {
     }
     {
       const docCurrency = m.locs["currency"] ? exactText2(m.currency, m.locs["currency"]) : void 0;
-      const extra = cii2 ? m.taxTotals.filter((t) => t.currency !== void 0 && docCurrency !== void 0 && t.currency !== docCurrency) : m.taxTotals.filter((t) => !t.hasSubtotals);
+      const extra = cii3 ? m.taxTotals.filter((t) => t.currency !== void 0 && docCurrency !== void 0 && t.currency !== docCurrency) : m.taxTotals.filter((t) => !t.hasSubtotals);
       const want = m.locs["taxCurrency"] ? 1 : 0;
       if (extra.length !== want)
         emit(
           "PEPPOL-EN16931-R054",
-          want === 1 ? `TaxCurrencyCode is given, so there must be exactly one VAT total in the accounting currency${cii2 ? "" : " (a TaxTotal without TaxSubtotal)"}; found ${extra.length}.` : `There is ${extra.length === 1 ? "a VAT total" : `${extra.length} VAT totals`} ${cii2 ? "in another currency than the invoice currency" : "without a VAT breakdown (TaxSubtotal)"}, but no TaxCurrencyCode (BT-6).`,
+          want === 1 ? `TaxCurrencyCode is given, so there must be exactly one VAT total in the accounting currency${cii3 ? "" : " (a TaxTotal without TaxSubtotal)"}; found ${extra.length}.` : `There is ${extra.length === 1 ? "a VAT total" : `${extra.length} VAT totals`} ${cii3 ? "in another currency than the invoice currency" : "without a VAT breakdown (TaxSubtotal)"}, but no TaxCurrencyCode (BT-6).`,
           extra[want]?.loc ?? extra[0]?.loc ?? at2(m.locs, "taxCurrency", tLoc("taxAmount")),
           { expected: String(want), actual: String(extra.length) }
         );
     }
     const docRefs = (code2) => m.attachments.filter((a) => a.typeCode === code2);
-    if (cii2 && docRefs("130").length > 1)
+    if (cii3 && docRefs("130").length > 1)
       emit("PEPPOL-EN16931-R006", `The invoice has ${docRefs("130").length} invoiced object references (type code 130); Peppol allows one.`, docRefs("130")[1].loc);
-    if ((cii2 || m.kind === "creditnote") && docRefs("50").length > 1)
-      emit("PEPPOL-EN16931-R080", `The ${cii2 ? "invoice" : "credit note"} has ${docRefs("50").length} tender or lot references (type code 50); Peppol allows one.`, docRefs("50")[1].loc);
-    for (const d of (m.dates ?? []).filter((x) => !peppolDateOk(x, cii2)).slice(0, 25))
+    if ((cii3 || m.kind === "creditnote") && docRefs("50").length > 1)
+      emit("PEPPOL-EN16931-R080", `The ${cii3 ? "invoice" : "credit note"} has ${docRefs("50").length} tender or lot references (type code 50); Peppol allows one.`, docRefs("50")[1].loc);
+    for (const d of (m.dates ?? []).filter((x) => !peppolDateOk(x, cii3)).slice(0, 25))
       emit(
         "PEPPOL-EN16931-F001",
-        cii2 ? `Date "${d.raw}"${normSpace2(d.format) !== "102" ? ` has format ${d.format === void 0 ? "missing" : `"${d.format}"`}, not 102,` : ""} must be 8 digits YYYYMMDD starting with 20.` : `${d.element} "${d.raw}" is not a date written as YYYY-MM-DD.`,
+        cii3 ? `Date "${d.raw}"${normSpace2(d.format) !== "102" ? ` has format ${d.format === void 0 ? "missing" : `"${d.format}"`}, not 102,` : ""} must be 8 digits YYYYMMDD starting with 20.` : `${d.element} "${d.raw}" is not a date written as YYYY-MM-DD.`,
         d.loc,
-        { actual: d.raw, expected: cii2 ? "20250131 (format 102)" : "2025-01-31" }
+        { actual: d.raw, expected: cii3 ? "20250131 (format 102)" : "2025-01-31" }
       );
-    const kositNoDocTotal = kosit && cii2 && !m.taxTotals.some((t) => m.currency !== void 0 && t.currency === m.currency);
+    const kositNoDocTotal = kosit && cii3 && !m.taxTotals.some((t) => m.currency !== void 0 && t.currency === m.currency);
     if (m.locs["taxCurrency"] && !kositNoDocTotal) {
       const amounts = (c) => m.taxTotals.filter((t) => c !== void 0 && t.currency === c && t.amount !== void 0).map((t) => t.amount);
-      const inTax = amounts(cii2 ? exactText2(m.taxCurrency, m.locs["taxCurrency"]) : m.taxCurrency);
-      const inDoc = amounts(cii2 ? m.locs["currency"] ? exactText2(m.currency, m.locs["currency"]) : void 0 : m.currency);
+      const inTax = amounts(cii3 ? exactText2(m.taxCurrency, m.locs["taxCurrency"]) : m.taxCurrency);
+      const inDoc = amounts(cii3 ? m.locs["currency"] ? exactText2(m.currency, m.locs["currency"]) : void 0 : m.currency);
       const some = (xs, ok) => xs.some(ok);
-      const same = cii2 ? some(inTax, (x) => x < 0) && some(inDoc, (x) => x < 0) || some(inTax, (x) => x >= 0) && some(inDoc, (x) => x >= 0) : some(inTax, (x) => x <= 0) && some(inDoc, (x) => x <= 0) || some(inTax, (x) => x >= 0) && some(inDoc, (x) => x >= 0);
+      const same = cii3 ? some(inTax, (x) => x < 0) && some(inDoc, (x) => x < 0) || some(inTax, (x) => x >= 0) && some(inDoc, (x) => x >= 0) : some(inTax, (x) => x <= 0) && some(inDoc, (x) => x <= 0) || some(inTax, (x) => x >= 0) && some(inDoc, (x) => x >= 0);
       if (!same)
         emit(
           "PEPPOL-EN16931-R055",
@@ -9667,7 +10586,7 @@ function runRules(m, fmt, opts) {
           tLoc("taxAmountAccounting")
         );
     }
-    if (!cii2) {
+    if (!cii3) {
       if (!m.currency) {
         if (m.amountCurrencies.length > 0)
           emit(
@@ -9704,12 +10623,12 @@ function runRules(m, fmt, opts) {
     emit("BR-06", "The seller's legal name is missing.", seller.locs["name"] ?? seller.loc);
   if (!buyer.name)
     emit("BR-07", "The buyer's legal name is missing.", buyer.locs["name"] ?? buyer.loc);
-  const cii = m.syntax === "CII";
+  const cii2 = m.syntax === "CII";
   if (!seller.address) emit("BR-08", "The seller has no postal address.", seller.loc);
-  if ((seller.address || cii) && !seller.address?.country)
+  if ((seller.address || cii2) && !seller.address?.country)
     emit("BR-09", seller.address ? "The seller address has no country code." : "The seller has no postal address, so it has no country code.", at2(seller.locs, "address", seller.loc));
   if (!buyer.address) emit("BR-10", "The buyer has no postal address.", buyer.loc);
-  if ((buyer.address || cii) && !buyer.address?.country)
+  if ((buyer.address || cii2) && !buyer.address?.country)
     emit("BR-11", buyer.address ? "The buyer address has no country code." : "The buyer has no postal address, so it has no country code.", at2(buyer.locs, "address", buyer.loc));
   if (m.payee && !m.payee.locs["name"]) emit("BR-17", "A payee is present without a name.", m.payee.loc);
   else if (m.payee && m.payeeRepeatsSeller)
@@ -9718,13 +10637,16 @@ function runRules(m, fmt, opts) {
     const tr = m.taxRepresentative;
     if (!tr.name) emit("BR-18", "The tax representative has no name.", tr.loc);
     if (!tr.address) emit("BR-19", "The tax representative has no postal address.", tr.loc);
-    if ((tr.address || cii) && !tr.address?.country)
+    if ((tr.address || cii2) && !tr.address?.country)
       emit("BR-20", "The tax representative's postal address has no country code.", at2(tr.locs, "address", tr.loc));
     const regs = tr.taxRegistrations ?? [];
-    const hasVat = cii ? regs.some((r) => r.scheme === "VA" && normSpace2(exactText2(r.id, r.loc)) !== "") : regs.some((r) => normSpace2(r.scheme).toUpperCase() === "VAT");
+    const hasVat = cii2 ? regs.some((r) => r.scheme === "VA" && normSpace2(exactText2(r.id, r.loc)) !== "") : regs.some((r) => normSpace2(r.scheme).toUpperCase() === "VAT");
     if (!hasVat) emit("BR-56", "The tax representative has no VAT identifier.", tr.loc);
   }
-  if (m.delivery?.address && (m.syntax === "UBL" ? !m.delivery.locs["address.country"] : !m.delivery.address.country))
+  if (m.syntax === "UBL") {
+    for (const a of m.deliveryAddresses ?? [])
+      if (!a.countryGiven) emit("BR-57", "The deliver-to address has no country code.", a.loc ?? m.delivery?.loc);
+  } else if (m.delivery?.address && !m.delivery.address.country)
     emit(
       "BR-57",
       "The deliver-to address has no country code.",
@@ -9826,8 +10748,12 @@ function runRules(m, fmt, opts) {
     return /^[A-Z1][A-Z]$/.test(prefix) && (!!ISO_3166[prefix] || VAT_PREFIX_EXTRAS.has(prefix));
   };
   const VAT_BT = { Seller: "BT-31", Buyer: "BT-48", "Tax representative": "BT-63" };
+  const brCo09Ok = !cen1316 ? vatPrefixOk : m.syntax === "UBL" ? (value) => UBL_1316_VAT_PREFIX_TEXT.includes(Array.from(value).slice(0, 2).join("")) : (value) => {
+    const prefix = Array.from(value).slice(0, 2).join("");
+    return /^[A-Z1][A-Z]$/.test(prefix) && prefix !== "SS" && (!!ISO_3166[prefix] || VAT_PREFIX_EXTRAS.has(prefix) || prefix === "AN");
+  };
   for (const c of (m.codedValues ?? []).filter((x) => x.kind === "vatIdentifier")) {
-    if (vatPrefixOk(c.value)) continue;
+    if (brCo09Ok(c.value)) continue;
     const bt = VAT_BT[c.owner];
     emit(
       "BR-CO-09",
@@ -9910,7 +10836,7 @@ function runRules(m, fmt, opts) {
         codeLoc
       );
   }
-  const facturx = fmt.id === "factur-x";
+  const facturx = fmt.id === "factur-x" && isFacturXExtended(fmt.customizationId);
   if ((T.payable ?? 0) > 0 && !m.dueDate && !m.paymentTerms && (facturx || m.kind === "invoice"))
     emit(
       "BR-CO-25",
@@ -9946,7 +10872,12 @@ function runRules(m, fmt, opts) {
     const valueOf = (t) => m.decimals.find((d) => (d.bt === "BT-110" || d.bt === "BT-111") && d.loc.xpath === t.loc?.xpath)?.raw;
     const twoDecimals = (t) => {
       const raw = valueOf(t);
-      return raw !== void 0 && (/^[+-]?\d*(?:\.(\d*))?$/.exec(raw)?.[1] ?? "").replace(/0+$/, "").length <= 2;
+      if (raw === void 0 || !/^\s*[+-]?(?:\d+\.?\d*|\.\d+)\s*$/.test(raw)) return false;
+      if (cen1316) {
+        const d = Number(raw);
+        return d === roundDouble(d * 100) / 100;
+      }
+      return (/^[+-]?\d*(?:\.(\d*))?$/.exec(raw.trim())?.[1] ?? "").replace(/0+$/, "").length <= 2;
     };
     const inv = m.locs["currency"] ? exactText2(m.currency, m.locs["currency"]) : void 0;
     if (!m.taxTotals.some((t) => t.currency === inv ? twoDecimals(t) : true)) {
@@ -10086,9 +11017,17 @@ function runRules(m, fmt, opts) {
       if (!ln.itemName) emit("BR-25", `${label} has no item name.`, L("item"));
       if (ln.priceAmount === void 0 && !ln.locs["priceAmount"])
         emit("BR-26", `${label} has no net price.`, L("price"));
-      if (ln.priceAmount !== void 0 ? ln.priceAmount < 0 : !ln.locs["priceAmount"])
+      const atLeastOne = (xs) => !!xs?.some((v) => v !== void 0 && v >= 0);
+      const repeatedNet = m.syntax === "CII" && (ln.netPrices?.length ?? 0) > 1;
+      if (repeatedNet ? !atLeastOne(ln.netPrices) : ln.priceAmount !== void 0 ? ln.priceAmount < 0 : !ln.locs["priceAmount"])
         emit("BR-27", ln.priceAmount !== void 0 ? `${label} net price is negative (${ln.priceAmount}).` : `${label} has no net price, so it can't be checked for a negative value.`, L("priceAmount"));
-      if (ln.grossPrice !== void 0 && ln.grossPrice < 0)
+      if (m.syntax === "UBL") {
+        const gross = (ln.priceAllowanceCharges ?? []).filter((pac) => pac.locs["baseAmount"]);
+        if (gross.length && !gross.some((pac) => pac.baseAmount !== void 0 && pac.baseAmount >= 0)) {
+          const shown3 = gross.find((pac) => pac.baseAmount !== void 0);
+          emit("BR-28", `${label} gross price is negative (${shown3?.baseAmount ?? "not a number"}).`, at2(gross[0].locs, "baseAmount", L("grossPrice")));
+        }
+      } else if ((ln.grossPrices?.length ?? 0) > 1 ? !atLeastOne(ln.grossPrices) : ln.grossPrice !== void 0 && ln.grossPrice < 0)
         emit("BR-28", `${label} gross price is negative (${ln.grossPrice}).`, L("grossPrice"));
       for (const pv of linePeriodViews(ln)) {
         if (!pv.locs["period"]) continue;
@@ -10203,42 +11142,41 @@ function runRules(m, fmt, opts) {
           noListId.loc ?? L("item")
         );
       if (peppolOn) {
-        const ubl = m.syntax === "UBL";
-        if (ubl && ln.hasPriceCharge)
+        const ubl2 = m.syntax === "UBL";
+        if (ubl2 && ln.hasPriceCharge)
           emit("PEPPOL-EN16931-R044", `${label} has a price-level allowance/charge whose ChargeIndicator isn't "false" (a charge on price level).`, L("priceCharge"));
         const bases = [
           [ln.baseQuantity, ln.baseQuantityUnit, "baseQuantity", "base quantity"],
-          ...ubl ? [] : [[ln.grossBaseQuantity, ln.grossBaseQuantityUnit, "grossBaseQuantity", "gross price base quantity"]]
+          ...ubl2 ? [] : [[ln.grossBaseQuantity, ln.grossBaseQuantityUnit, "grossBaseQuantity", "gross price base quantity"]]
         ];
         for (const [qty, , key, what] of bases)
           if (qty !== void 0 && qty <= 0) emit("PEPPOL-EN16931-R121", `${label} ${what} is ${qty}.`, L(key));
         for (const [, unit, key, what] of bases) {
-          if (unit === void 0 || ubl && !ln.locs["quantity"] || unit === ln.unitCode) continue;
+          if (unit === void 0 || ubl2 && !ln.locs["quantity"] || unit === ln.unitCode) continue;
           emit(
             "PEPPOL-EN16931-R130",
             ln.unitCode === void 0 ? `${label} ${what} has unit ${unit}, but the invoiced quantity has no unit code.` : `${label} ${what} unit ${unit} differs from ${ln.unitCode}.`,
             L(key)
           );
         }
-        if (ubl && ln.grossPrice !== void 0 && ln.priceAmount !== void 0) {
-          const expectedNet = sub(dec(ln.grossPrice), dec(ln.priceDiscount ?? 0));
-          if (!eq(expectedNet, dec(ln.priceAmount)))
+        if (ubl2 && ln.priceAmount !== void 0)
+          for (const pac of ln.priceAllowanceCharges ?? []) {
+            if (!pac.locs["baseAmount"] || pac.baseAmount === void 0) continue;
+            const expectedNet = pac.amount === void 0 ? void 0 : sub(dec(pac.baseAmount), dec(pac.amount));
+            if (expectedNet && eq(expectedNet, dec(ln.priceAmount))) continue;
             emit(
               "PEPPOL-EN16931-R046",
-              `${label} net price ${ln.priceAmount} ≠ gross ${ln.grossPrice} − discount ${ln.priceDiscount ?? 0}.`,
+              `${label} net price ${ln.priceAmount} ≠ gross ${pac.baseAmount} − discount ${pac.amount ?? "(none)"}.`,
               L("priceAmount"),
-              {
-                expected: fd(expectedNet),
-                actual: String(ln.priceAmount)
-              }
+              { expected: expectedNet ? fd(expectedNet) : void 0, actual: String(ln.priceAmount) }
             );
-        }
+          }
         {
           const quantity = ln.quantity ?? 1;
           const price = ln.priceAmount ?? 0;
-          const base = ln.baseQuantity !== void 0 && ln.baseQuantity !== 0 ? ln.baseQuantity : kosit && !ubl && ln.grossBaseQuantity !== void 0 && ln.grossBaseQuantity !== 0 ? ln.grossBaseQuantity : 1;
+          const base = ln.baseQuantity !== void 0 && ln.baseQuantity !== 0 ? ln.baseQuantity : kosit && !ubl2 && ln.grossBaseQuantity !== void 0 && ln.grossBaseQuantity !== 0 ? ln.grossBaseQuantity : 1;
           const lineAcs = [...ln.allowances, ...ln.charges];
-          const sumOf = (indicator) => round22(total(lineAcs.filter((ac) => normSpace2(ac.rawIndicator) === indicator).flatMap((ac) => ubl ? [ac.amount] : ac.actualAmounts ?? [ac.amount])));
+          const sumOf = (indicator) => round22(total(lineAcs.filter((ac) => normSpace2(ac.rawIndicator) === indicator).flatMap((ac) => ubl2 ? [ac.amount] : ac.actualAmounts ?? [ac.amount])));
           const expected = sub(add(mul(dec(quantity), div(dec(price), dec(base))), sumOf("true")), sumOf("false"));
           if (!withinOrEqual(dec(ln.netAmount ?? 0), expected, slack))
             emit(
@@ -10272,21 +11210,25 @@ function runRules(m, fmt, opts) {
   const lineTotal = total(m.lines.map((l) => l.netAmount));
   const allowanceTotal = total(docAllowances.map((a) => a.amount));
   const chargeTotal = total(docCharges.map((c) => c.amount));
-  const is2 = (declared, computed) => eq(dec(declared), computed);
+  const is3 = (declared, computed) => eq(dec(declared), computed);
   const fa = (n) => n === void 0 || Number.isNaN(n) ? "—" : fd(dec(n));
   const missingTotal = (key) => totalsCtx && !T.locs[key];
-  if (opts.en16931 && (T.lineExtension !== void 0 ? !is2(T.lineExtension, round22(lineTotal)) : missingTotal("lineExtension")))
+  const ciiDoubles = cen1316 && m.syntax === "CII";
+  const inOrder = (xs) => [...xs].sort((a, b) => (a.loc?.line ?? 0) - (b.loc?.line ?? 0) || (a.loc?.col ?? 0) - (b.loc?.col ?? 0));
+  const lineExpected = ciiDoubles ? round22(exactDouble(sumDoubles(m.lines.map((l) => l.netAmount)))) : round22(lineTotal);
+  const totalOk = (declared, amounts, exact2) => ciiDoubles ? declared === round2Doubles(amounts) : is3(declared, exact2);
+  if (opts.en16931 && (T.lineExtension !== void 0 ? !is3(T.lineExtension, lineExpected) : missingTotal("lineExtension")))
     emit(
       "BR-CO-10",
       T.lineExtension === void 0 ? `LineExtensionAmount (BT-106) is missing, so it can't match the sum of line amounts (${fd(lineTotal)}).` : `Sum of line amounts is ${fd(lineTotal)}, but LineExtensionAmount is ${fa(T.lineExtension)}.`,
       tLoc("lineExtension"),
       {
-        expected: fd(round22(lineTotal)),
+        expected: fd(lineExpected),
         actual: fa(T.lineExtension)
       }
     );
   if (totalsCtx && (docAllowances.length > 0 || T.allowanceTotal !== void 0)) {
-    if (T.allowanceTotal === void 0 || !is2(T.allowanceTotal, round22(allowanceTotal)))
+    if (T.allowanceTotal === void 0 || !totalOk(T.allowanceTotal, inOrder(docAllowances).map((a) => a.amount), round22(allowanceTotal)))
       emit(
         "BR-CO-11",
         `Document allowances add up to ${fd(allowanceTotal)}, but AllowanceTotalAmount is ${fa(T.allowanceTotal)}.`,
@@ -10298,7 +11240,7 @@ function runRules(m, fmt, opts) {
       );
   }
   if (totalsCtx && (docCharges.length > 0 || T.chargeTotal !== void 0)) {
-    if (T.chargeTotal === void 0 || !is2(T.chargeTotal, round22(chargeTotal)))
+    if (T.chargeTotal === void 0 || !totalOk(T.chargeTotal, inOrder(docCharges).map((c) => c.amount), round22(chargeTotal)))
       emit(
         "BR-CO-12",
         `Document charges add up to ${fd(chargeTotal)}, but ChargeTotalAmount is ${fa(T.chargeTotal)}.`,
@@ -10320,7 +11262,7 @@ function runRules(m, fmt, opts) {
     const plain = T.allowanceTotal === void 0 && T.chargeTotal === void 0 && m.syntax === "UBL";
     const raw = add(sub(dec(T.lineExtension), dec(T.allowanceTotal ?? 0)), dec(T.chargeTotal ?? 0));
     const expected = plain ? raw : round22(raw);
-    if (!is2(T.taxExclusive, expected))
+    if (!is3(T.taxExclusive, expected))
       emit(
         "BR-CO-13",
         `${f2(T.lineExtension)} − ${f2(T.allowanceTotal ?? 0)} + ${f2(T.chargeTotal ?? 0)} = ${fd(expected)}, but TaxExclusiveAmount is ${fa(T.taxExclusive)}.`,
@@ -10335,7 +11277,7 @@ function runRules(m, fmt, opts) {
   if (m.syntax === "CII") {
     const inv = m.locs["currency"] ? exactText2(m.currency, m.locs["currency"]) : void 0;
     for (const t of m.taxTotals)
-      if (inv !== void 0 && t.currency === inv && t.amount !== void 0 && !is2(t.amount, round22(vatTotal)))
+      if (inv !== void 0 && t.currency === inv && t.amount !== void 0 && !totalOk(t.amount, m.vat.map((v) => v.taxAmount), round22(vatTotal)))
         emit("BR-CO-14", m.vat.length ? `VAT breakdown adds up to ${fd(vatTotal)}, but the VAT total is ${fa(t.amount)}.` : `The VAT total is ${fa(t.amount)}, but there is no VAT breakdown to add up to it.`, t.loc ?? tLoc("taxAmount"), {
           expected: fd(round22(vatTotal)),
           actual: fa(t.amount)
@@ -10344,7 +11286,7 @@ function runRules(m, fmt, opts) {
     for (const t of m.taxTotals) {
       if (!t.hasSubtotals || t.amount === void 0) continue;
       const sum2 = total(t.subtotalTaxAmounts ?? []);
-      if (!is2(t.amount, round22(sum2)))
+      if (!is3(t.amount, round22(sum2)))
         emit("BR-CO-14", `VAT breakdown adds up to ${fd(sum2)}, but the VAT total is ${fa(t.amount)}.`, t.loc ?? tLoc("taxAmount"), {
           expected: fd(round22(sum2)),
           actual: fa(t.amount)
@@ -10355,8 +11297,8 @@ function runRules(m, fmt, opts) {
   if (invoiceCurrency !== void 0) {
     const inCurrency = m.taxTotals.filter((t) => t.currency === invoiceCurrency);
     const vat = inCurrency.length === 1 ? inCurrency[0].amount : void 0;
-    const sumOk = vat !== void 0 && T.taxInclusive !== void 0 && T.taxExclusive !== void 0 && is2(T.taxInclusive, round22(add(dec(T.taxExclusive), dec(vat))));
-    const noVatOk = m.syntax === "CII" && T.taxInclusive !== void 0 && T.taxExclusive !== void 0 && is2(T.taxInclusive, dec(T.taxExclusive));
+    const sumOk = vat !== void 0 && T.taxInclusive !== void 0 && T.taxExclusive !== void 0 && is3(T.taxInclusive, round22(add(dec(T.taxExclusive), dec(vat))));
+    const noVatOk = m.syntax === "CII" && T.taxInclusive !== void 0 && T.taxExclusive !== void 0 && is3(T.taxInclusive, dec(T.taxExclusive));
     if (!sumOk && !noVatOk) {
       const where = tLoc("taxInclusive");
       if (T.taxInclusive === void 0 || T.taxExclusive === void 0)
@@ -10562,10 +11504,10 @@ function runRules(m, fmt, opts) {
     }
     for (const v of m.vat) {
       if (!v.category || !VAT_CATEGORIES[v.category] || v.taxableAmount === void 0 && v.locs["taxableAmount"]) continue;
-      const cii2 = m.syntax === "CII";
-      if (cii2 ? v.category === "L" || v.category === "M" || v.category !== "S" && v.category !== "Z" && !ciiVatType(v.scheme, v.locs["scheme"]) : !ublVatScheme(v.scheme)) continue;
-      const written = (value, loc) => cii2 ? exactText2(value, loc) : value;
-      if (cii2 && written(v.category, v.locs["category"]) !== v.category) continue;
+      const cii3 = m.syntax === "CII";
+      if (cii3 ? v.category === "L" || v.category === "M" || v.category !== "S" && v.category !== "Z" && !ciiVatType(v.scheme, v.locs["scheme"]) : !ublVatScheme(v.scheme)) continue;
+      const written = (value, loc) => cii3 ? exactText2(value, loc) : value;
+      if (cii3 && written(v.category, v.locs["category"]) !== v.category) continue;
       const perRate = PER_RATE_CATEGORIES.has(v.category);
       if (perRate && v.rate === void 0) continue;
       const rate = perRate ? dec(v.rate) : void 0;
@@ -10574,7 +11516,7 @@ function runRules(m, fmt, opts) {
       const acIn = (ac) => inRow(acTaxViews(ac).map((t) => ({ cat: written(t.vatCategory, t.locs["vatCategory"]), rate: t.vatRate })));
       const charges = docCharges.filter(acIn);
       const allowances = docAllowances.filter(acIn);
-      const part = (xs) => cii2 ? round22(total(xs)) : total(xs);
+      const part = (xs) => cii3 ? round22(total(xs)) : total(xs);
       const computed = sub(
         add(part(lines.map((l) => l.netAmount)), part(charges.map((c) => c.amount))),
         part(allowances.map((a) => a.amount))
@@ -10586,12 +11528,20 @@ function runRules(m, fmt, opts) {
         });
         continue;
       }
-      const declared = dec(v.taxableAmount);
-      const margin = cii2 ? !perRate && v.category !== "O" : perRate;
+      const declaredRaw = m.decimals.find((d) => d.bt === "BT-116" && d.loc.xpath === v.locs["taxableAmount"]?.xpath)?.raw;
+      const declared = (declaredRaw !== void 0 ? parseDecimal(declaredRaw) : void 0) ?? dec(v.taxableAmount);
+      const taxable = v.taxableAmount;
+      const margin = cii3 ? !perRate && v.category !== "O" : perRate;
+      const fits = (sum2) => !margin ? cii3 && cen1316 ? taxable === nearestDouble(sum2) : eq(declared, sum2) : cii3 ? cmp(sub(declared, ONE_UNIT), sum2) < 0 && taxable + 1 > nearestDouble(sum2) : cmp(exactDouble(taxable - 1), sum2) < 0 && cmp(exactDouble(taxable + 1), sum2) > 0;
       const hasUse = lines.length + charges.length + allowances.length > 0;
-      const used2 = cii2 || (v.category === "S" ? hasUse : m.lines.length > 0);
-      if (used2 && (margin ? within(declared, computed, ONE_UNIT) : eq(declared, computed)))
-        continue;
+      let ok;
+      if (cii3) ok = fits(computed);
+      else if (v.category === "S") {
+        const anyAc = everyAllowanceCharge(m).some(({ ac }) => acIn(ac));
+        const withoutLines = sub(part(charges.map((c) => c.amount)), part(allowances.map((a) => a.amount)));
+        ok = (lines.length > 0 || anyAc) && fits(computed) || anyAc && fits(withoutLines);
+      } else ok = m.lines.length > 0 && fits(computed);
+      if (ok) continue;
       emit(
         v.category === "S" ? "BR-S-08" : "BR-VAT-08",
         hasUse ? `Lines, allowances and charges in ${label} add up to ${fd(computed)}, but the taxable amount is ${f2(v.taxableAmount)}.` : `No line, document allowance or charge uses ${label}, but its VAT breakdown has a taxable amount of ${f2(v.taxableAmount)}.`,
@@ -10599,7 +11549,7 @@ function runRules(m, fmt, opts) {
         { expected: fd(computed), actual: f2(v.taxableAmount) }
       );
     }
-    vatCategoryRules(m, emit);
+    vatCategoryRules(m, emit, cen);
     if (peppolOn && m.syntax === "UBL") {
       const taxCategories = [
         ...m.vat.map((v) => ({ id: v.category, code: v.exemptionCode, codeLoc: v.locs["exemptionCode"], loc: v.locs["category"] ?? v.loc })),
@@ -10623,17 +11573,17 @@ function runRules(m, fmt, opts) {
           m.hasPeriod ? "Intra-community supply needs an actual delivery date or invoice period dates; the invoice period is empty." : "Intra-community supply needs an actual delivery date or invoice period.",
           m.hasPeriod ? at2(m.locs, "period") : void 0
         );
-      if (!m.delivery?.address?.country)
+      if (m.syntax === "UBL" ? !m.deliveryCountryGiven : !m.delivery?.address?.country)
         emit("BR-IC-12", "Intra-community supply needs a deliver-to country.", m.delivery?.loc);
     }
   }
   if (peppolOn && isNL(m.seller.address?.country)) {
     const s = m.seller;
     const b = m.buyer;
-    const cii2 = m.syntax === "CII";
+    const cii3 = m.syntax === "CII";
     const buyerNl = isNL(b.address?.country);
     const tc = normSpace2(m.typeCode);
-    const isCreditNote = cii2 ? ["81", "83", "381", "396", "532"].includes(tc) : m.kind === "creditnote" && !!m.locs["typeCode"];
+    const isCreditNote = cii3 ? ["81", "83", "381", "396", "532"].includes(tc) : m.kind === "creditnote" && !!m.locs["typeCode"];
     if (isCreditNote && !m.precedingInvoices.some((p) => p.id))
       emit("NL-R-001", "This credit note from a Dutch supplier doesn't reference the invoice it corrects (BT-25).", at2(m.locs, "typeCode"));
     if (s.address) {
@@ -10660,7 +11610,7 @@ function runRules(m, fmt, opts) {
       if (miss.length) emit("NL-R-006", `The Dutch tax representative's address has no ${miss.join(", ")}.`, at2(rep.locs, "address", rep.loc));
     }
     if (T.loc && m.paymentMeans.length === 0) {
-      const credit = cii2 ? tc === "381" : m.kind === "creditnote";
+      const credit = cii3 ? tc === "381" : m.kind === "creditnote";
       const due = T.payable;
       if (due === void 0 || (credit ? due < 0 : due > 0))
         emit(
@@ -10686,6 +11636,14 @@ function runRules(m, fmt, opts) {
   if (opts.xrechnung) {
     const b = m.buyer;
     xrechnungRules(m, emit);
+    const specIds = m.xrechnung?.specIds?.values ?? [];
+    if (!kositExactScenario(m.syntax, fmt.document, specIds))
+      emit(
+        "IV-DE-02",
+        `KoSIT's validator has no scenario for the specification identifier ${JSON.stringify(specIds[0] ?? m.customizationId ?? "")}${fmt.document === "Credit note" && specIds.includes(KOSIT_SPEC_IDS.extension) ? " on a credit note" : ""}, so it rejects the invoice without checking it further.`,
+        m.xrechnung?.specIds?.loc ?? at2(m.locs, "customizationId"),
+        { expected: KOSIT_SPEC_IDS.cius, actual: specIds[0] ?? "" }
+      );
     if (m.buyerReference && looksLikeLeitwegId(m.buyerReference)) {
       const lw = checkLeitwegId(m.buyerReference);
       if (!lw.ok)
@@ -10767,19 +11725,22 @@ function computeTotals(m) {
     lines
   };
 }
-function rulesApplicable(peppol, en16931, xrechnung, nlcius, syntax) {
+function rulesApplicable(peppol, en16931, xrechnung, nlcius, syntax, cen, subset) {
   return RULES.filter((r) => {
     if (r.syntax && r.syntax !== syntax) return false;
+    if (subset && r.source !== "InvoiceVerify" && !subset.has(r.id)) return false;
     if (r.source === "Peppol") return peppol || xrechnung && KOSIT_PEPPOL_RULES.has(r.id);
     if (r.source === "NLCIUS") return nlcius;
     if (r.source === "XRechnung" || r.id.startsWith("IV-DE-")) return xrechnung;
     if (!en16931 && (r.section === "lines" || r.section === "vat")) return false;
+    if (!en16931 && /^(UBL-SR|UBL-CR|CII-SR|CII-DT)-/.test(r.id)) return false;
+    if (r.cen && r.cen !== cen) return false;
     return true;
   }).length;
 }
 var CII_WITH_OWN_RULES = /* @__PURE__ */ new Set(["factur-x", "xrechnung-cii", "nlcius-cii"]);
 var now = () => typeof performance !== "undefined" ? performance.now() : Date.now();
-function validateInvoiceXml(xml, profile = "auto") {
+function validateInvoiceXml(xml, profile = "auto", options = {}) {
   const started = now();
   const sourceLines = xml.split(/\r\n|\r|\n/).length;
   const finish = (r) => ({
@@ -10854,8 +11815,17 @@ function validateInvoiceXml(xml, profile = "auto") {
   const peppol = profile === "peppol" ? format.syntax === "UBL" || !CII_WITH_OWN_RULES.has(format.id) : profile === "en16931" || profile === "xrechnung" || profile === "nlcius" ? false : format.peppol;
   const xrechnung = profile === "xrechnung" || profile === "auto" && (format.id === "xrechnung-ubl" || format.id === "xrechnung-cii");
   const nlcius = profile === "nlcius" || profile === "auto" && (format.id === "si-ubl-2" || format.id === "nlcius-cii");
-  const en16931 = format.en16931;
-  const findings = runRules(model, format, { peppol, en16931, xrechnung, nlcius });
+  const explicitEn16931 = profile === "en16931" || profile === "xrechnung" || profile === "nlcius";
+  const subset = format.id === "factur-x" && !explicitEn16931 ? facturXSubset(format.customizationId) : void 0;
+  const en16931 = format.en16931 || !!subset || explicitEn16931;
+  const cen = options.cen ?? (peppol || xrechnung || nlcius ? "1.3.16" : "1.3.17");
+  const ruled = runRules(model, format, { peppol, en16931, xrechnung, nlcius, cen, ...subset ? { subset } : {} });
+  const exact2 = xrechnung ? kositExactScenario(model.syntax, format.document, model.xrechnung?.specIds?.values ?? []) : null;
+  const scenario = xrechnung ? exact2 ?? kositScenario(format) : null;
+  const findings = scenario ? ruled.map((f) => {
+    const level = kositLevel(f.ruleId, scenario);
+    return level && level !== f.severity ? { ...f, severity: level } : f;
+  }) : ruled;
   const order = { error: 0, warning: 1, info: 2 };
   findings.sort((a, b) => order[a.severity] - order[b.severity] || (a.line ?? 0) - (b.line ?? 0));
   const { counts, sections } = summarize(findings);
@@ -10868,13 +11838,13 @@ function validateInvoiceXml(xml, profile = "auto") {
     findings,
     counts,
     sections,
-    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius, model.syntax)
+    rulesChecked: rulesApplicable(peppol, en16931, xrechnung, nlcius, model.syntax, cen, subset)
   });
 }
 
 // src/version.ts
 var TOOL_NAME = "peppol-ubl-check";
-var VERSION = "1.5.3";
+var VERSION = "1.6.0";
 var SITE_URL = "https://peppol-invoice-compass.lovable.app";
 var VALIDATOR_URL = `${SITE_URL}/validate`;
 var TOOL_PAGE_URL = `${SITE_URL}/tools/peppol-github-action`;
@@ -10885,8 +11855,11 @@ var FAIL_ON = ["error", "warning", "never"];
 var NON_INVOICE = ["skip", "fail"];
 var INVOICE_ROOTS = ["Invoice", "CreditNote", "CrossIndustryInvoice"];
 function ruleCounts() {
-  const counts = { total: RULES.length, EN16931: 0, Peppol: 0, XRechnung: 0, NLCIUS: 0, InvoiceVerify: 0 };
-  for (const r of RULES) counts[r.source]++;
+  const counts = { total: RULES.length, EN16931: 0, syntax: 0, Peppol: 0, XRechnung: 0, NLCIUS: 0, InvoiceVerify: 0 };
+  for (const r of RULES) {
+    if (SYNTAX_BINDING_IDS.has(r.id)) counts.syntax++;
+    else counts[r.source]++;
+  }
   return counts;
 }
 function ruleUrl(ruleId) {
@@ -10918,13 +11891,13 @@ function rootLocalName(report) {
   const f = report.findings.find((x) => x.ruleId === "IV-SYN-02");
   return f?.xpath?.replace(/^\//, "").split(":").pop();
 }
-function checkFile(path2, options) {
-  const abs2 = (0, import_node_path.resolve)(options.cwd, path2);
+function checkFile(path3, options) {
+  const abs2 = (0, import_node_path.resolve)(options.cwd, path3);
   const size = (0, import_node_fs.statSync)(abs2).size;
   if (size > MAX_XML_BYTES) {
     const meta = RULE_INDEX["IV-SYN-01"];
     return {
-      path: path2,
+      path: path3,
       status: "errors",
       rulesChecked: 1,
       counts: { error: 1, warning: 0, info: 0 },
@@ -10947,7 +11920,7 @@ function checkFile(path2, options) {
   const root = report.format.id === "unknown" && !report.syntaxError ? rootLocalName(report) : void 0;
   if (root !== void 0 && options.nonInvoice === "skip" && !INVOICE_ROOTS.includes(root)) {
     return {
-      path: path2,
+      path: path3,
       status: "skipped",
       skipped: `Not an invoice: the root element is <${root}>, not Invoice, CreditNote or CrossIndustryInvoice.`,
       rulesChecked: 0,
@@ -10956,7 +11929,7 @@ function checkFile(path2, options) {
     };
   }
   return {
-    path: path2,
+    path: path3,
     status: statusOf(report.counts),
     format: report.format.label,
     formatId: report.format.id,
@@ -11240,8 +12213,8 @@ var STATUS = {
 function cell(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\|/g, "\\|").replace(/\r?\n/g, " ").trim();
 }
-function code(path2) {
-  const clean = path2.replace(/\|/g, "\\|").replace(/`/g, "'");
+function code(path3) {
+  const clean = path3.replace(/\|/g, "\\|").replace(/`/g, "'");
   return `\`${clean}\``;
 }
 var plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -11255,7 +12228,7 @@ function headline(r) {
 }
 function coverageNote() {
   const c = ruleCounts();
-  return `Checked offline with InvoiceVerify's ${c.total} rules (${c.EN16931} EN 16931, ${c.Peppol} Peppol BIS Billing 3.0, ${c.XRechnung} XRechnung, ${c.NLCIUS} SI-UBL 2.0, ${c.InvoiceVerify} extra checks for tax IDs, IBANs and syntax): a partial version of the official Schematron rule sets, without XSD schema validation or PDF/A checks. Nothing was sent anywhere.`;
+  return `Checked offline with InvoiceVerify's ${c.total} rules (${c.EN16931} EN 16931, ${c.syntax} CEN syntax, ${c.Peppol} Peppol BIS Billing 3.0, ${c.XRechnung} XRechnung, ${c.NLCIUS} SI-UBL 2.0, ${c.InvoiceVerify} extra checks for tax IDs, IBANs and syntax): a partial version of the official Schematron rule sets, without XSD schema validation or PDF/A checks. Nothing was sent anywhere.`;
 }
 function findingRow(f) {
   const rule = `[${cell(f.ruleId)}](${f.url})`;

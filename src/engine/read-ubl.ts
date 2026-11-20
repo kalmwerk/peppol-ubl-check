@@ -25,6 +25,7 @@ import {
   readTaxGroups,
 } from "./read-utils";
 import { readNationalFacts } from "./read-national";
+import { syntaxBindingViolations } from "./syntax-binding";
 import { all, at, kids, text, type XNode } from "./xml";
 
 export const UBL_INVOICE_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
@@ -81,15 +82,19 @@ function readParty(ctx: ReadCtx, partyNode: XNode | null): Party {
       L["taxRegistrationId"] = ctx.loc(company);
     }
   }
-  const legal = at(partyNode, "PartyLegalEntity");
-  if (legal) {
-    p.name = ctx.str(legal, "RegistrationName", L, "name");
-    const cid = at(legal, "CompanyID");
+  // PartyLegalEntity may repeat; the official rules read its children across every copy
+  // (`normalize-space(cac:Party/cac:PartyLegalEntity/cbc:RegistrationName)`, `exists(…/cac:PartyLegalEntity/cbc:CompanyID)`),
+  // so each field comes from the first copy that has it (two names stop the official files)
+  const legals = kids(partyNode, "PartyLegalEntity");
+  if (legals.length) {
+    const holding = (name: string) => legals.find((l) => at(l, name)) ?? legals[0]!;
+    p.name = ctx.str(holding("RegistrationName"), "RegistrationName", L, "name");
+    const cid = at(holding("CompanyID"), "CompanyID");
     if (cid) {
       p.legalId = { id: text(cid) ?? "", scheme: cid.attrs["schemeID"] };
       L["legalId"] = ctx.loc(cid);
     }
-    p.legalForm = ctx.str(legal, "CompanyLegalForm", L, "legalForm");
+    p.legalForm = ctx.str(holding("CompanyLegalForm"), "CompanyLegalForm", L, "legalForm");
   }
   const contact = at(partyNode, "Contact");
   if (contact) {
@@ -197,14 +202,31 @@ export function readUbl(root: XNode): InvoiceModel {
   const noteNode = at(root, "Note");
   if (noteNode) locs["notes"] = ctx.loc(noteNode);
 
-  const period = at(root, "InvoicePeriod");
-  if (period) {
+  // BG-14 may repeat in UBL. Rules on the document read across every copy (`cac:InvoicePeriod/*`,
+  // `cac:InvoicePeriod/cbc:DescriptionCode`, R110's `../../../cac:InvoicePeriod/cbc:StartDate`), so those fields come
+  // from the first copy that has them; BR-CO-19 and BR-29 check each period on its own (invoicePeriods).
+  const periods = kids(root, "InvoicePeriod");
+  if (periods.length) {
+    const holding = (name: string) => periods.find((pd) => at(pd, name)) ?? periods[0]!;
     model.hasPeriod = true;
-    model.periodHasContent = period.children.length > 0;
-    locs["period"] = ctx.loc(period);
-    model.periodStart = ctx.isoDate(period, "StartDate", locs, "periodStart", "BT-73");
-    model.periodEnd = ctx.isoDate(period, "EndDate", locs, "periodEnd", "BT-74");
-    model.taxPointCode = ctx.str(period, "DescriptionCode", locs, "taxPointCode");
+    model.periodHasContent = periods.some((pd) => pd.children.length > 0);
+    locs["period"] = ctx.loc(periods[0]!);
+    model.periodStart = ctx.isoDate(holding("StartDate"), "StartDate", locs, "periodStart", "BT-73");
+    model.periodEnd = ctx.isoDate(holding("EndDate"), "EndDate", locs, "periodEnd", "BT-74");
+    model.taxPointCode = ctx.str(holding("DescriptionCode"), "DescriptionCode", locs, "taxPointCode");
+    model.invoicePeriods = periods.map((pd) => {
+      const own = new ReadCtx();
+      const pl: LocMap = {};
+      return {
+        start: own.isoDate(pd, "StartDate", pl, "start", "BT-73"),
+        end: own.isoDate(pd, "EndDate", pl, "end", "BT-74"),
+        startGiven: !!at(pd, "StartDate"),
+        endGiven: !!at(pd, "EndDate"),
+        codeGiven: !!at(pd, "DescriptionCode"),
+        locs: pl,
+        loc: ctx.loc(pd),
+      };
+    });
   }
 
   // Payee and tax representative
@@ -236,8 +258,17 @@ export function readUbl(root: XNode): InvoiceModel {
   model.creditorId = sepa(model.seller) ?? sepa(model.payee);
 
   const delivery = at(root, "Delivery");
-  // BR-IC-11: string-length(cac:Delivery/cbc:ActualDeliveryDate) > 1, on the text as written
-  model.deliveryDateGiven = Array.from(exactText(at(delivery, "ActualDeliveryDate")) ?? "").length > 1;
+  // Delivery may repeat. BR-IC-11 and BR-IC-12 read across every copy (string-length(cac:Delivery/cbc:ActualDeliveryDate)
+  // > 1 and string-length(cac:Delivery/cac:DeliveryLocation/cac:Address/cac:Country/cbc:IdentificationCode) > 1, on the
+  // text as written; two of either stop the official files); BR-57 checks every deliver-to address on its own.
+  const deliveries = kids(root, "Delivery");
+  const firstIn = (path: string) => deliveries.map((d) => at(d, path)).find((n) => n) ?? null;
+  model.deliveryDateGiven = Array.from(exactText(firstIn("ActualDeliveryDate")) ?? "").length > 1;
+  model.deliveryCountryGiven = Array.from(exactText(firstIn("DeliveryLocation/Address/Country/IdentificationCode")) ?? "").length > 1;
+  model.deliveryAddresses = deliveries
+    .map((d) => at(d, "DeliveryLocation/Address"))
+    .filter((a): a is XNode => !!a)
+    .map((a) => ({ countryGiven: !!at(a, "Country/IdentificationCode"), loc: ctx.loc(a) }));
   if (delivery) {
     const dl: LocMap = {};
     model.delivery = {
@@ -465,6 +496,7 @@ export function readUbl(root: XNode): InvoiceModel {
   model.amountCurrencies = collectUblAmountCurrencies(root, ctx);
   model.schemeIds = collectUblSchemeIds(root, ctx);
   model.binaryObjects = collectBinaryObjects(root, ctx);
+  model.syntaxViolations = syntaxBindingViolations(root, "UBL").map((v) => ({ id: v.id, detail: v.detail, loc: ctx.loc(v.node), ...(v.cen ? { cen: v.cen } : {}) }));
   model.currencyIds = collectCurrencyIds(root, ctx, "UBL");
   model.objectIdSchemes = collectObjectIdSchemes(root, ctx, "UBL");
   model.dates = collectDates(root, ctx, "UBL");
