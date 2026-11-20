@@ -41,6 +41,8 @@ export const PER_RATE_IGIC_IPSI = /^Category [LM]( \S+%)? is used but has no VAT
  * site test keeps this list in step with official-parity.ts.
  */
 export const DELIBERATE_RULES: ReadonlySet<string> = new Set(["BR-CO-25", "BR-S-01", "BR-CO-09"]);
+/** The same for Peppol BIS 3.0.22, whose CEN 1.3.16 copy still lists EL: no BR-CO-09 difference is deliberate there */
+export const DELIBERATE_RULES_1316: ReadonlySet<string> = new Set([...DELIBERATE_RULES].filter((id) => id !== "BR-CO-09"));
 
 /** The CI fixture (src/test/fixtures/schematron-parity/multi-error-verdicts.json), written by the recording run. */
 export interface RecordedCorpus {
@@ -116,6 +118,22 @@ export function ruleDifferences(official: Verdicts, ours: readonly FindingLike[]
     (rules.deliberate.has(id) || (d.kind === "extra" && perRateOnly(id)) ? deliberate : real).push(d);
   }
   return { real, deliberate, notChecked };
+}
+
+/**
+ * The overall verdict exactly as each side reports it: any official fatal against any error of ours, nothing set
+ * aside (our own checks, the deliberate differences and official rules we don't check all count). `causes` are the
+ * rules that fail on one side only, which is what a reader of both reports would see differ.
+ */
+export function rawVerdictDiffers(official: Verdicts, ours: readonly FindingLike[]): { official: boolean; ours: boolean; causes: string[] } | undefined {
+  const mine = flagsOf(ours);
+  const offFails = Object.values(official).some((f) => f === "error");
+  const ourFails = Object.values(mine).some((f) => f === "error");
+  if (offFails === ourFails) return undefined;
+  const causes = offFails
+    ? Object.keys(official).filter((id) => official[id] === "error" && mine[id] !== "error")
+    : Object.keys(mine).filter((id) => mine[id] === "error" && official[id] !== "error");
+  return { official: offFails, ours: ourFails, causes: causes.sort() };
 }
 
 /**
