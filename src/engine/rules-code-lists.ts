@@ -1,4 +1,18 @@
-import { CEN_VATEX_CODES, CII_DUE_DATE_TYPE_CODES, EAS_CODES, ICD_CODES, UBL_VAT_DATE_CODES, UNTDID_4451_CODES, UNTDID_4451_TEXT } from "./codes";
+import {
+  CEN_1316_EAS_CODES,
+  CEN_1316_ICD_CODES,
+  CEN_1316_UBL_UNTDID_4451_CODES,
+  CEN_1316_UBL_UNTDID_4451_TEXT,
+  CEN_1316_VATEX_CODES,
+  CEN_VATEX_CODES,
+  CII_DUE_DATE_TYPE_CODES,
+  EAS_CODES,
+  ICD_CODES,
+  UBL_VAT_DATE_CODES,
+  UNTDID_4451_CODES,
+  UNTDID_4451_TEXT,
+} from "./codes";
+import type { CenVersion } from "./syntax-binding";
 import type { CodedKind, CodedValue, InvoiceModel } from "./model";
 import { normSpace, type Emit } from "./rules-vat-categories";
 
@@ -15,8 +29,15 @@ const listed = (set: ReadonlySet<string>, raw: string) => {
 };
 const shown = (raw: string) => (normSpace(raw) === "" ? "(empty)" : `"${normSpace(raw)}"`);
 
-export function codeListRules(m: InvoiceModel, emit: Emit, peppol: boolean): void {
+/** The cen version's lists: 1.3.16 (Peppol BIS 3.0.22's copy) lacks codes 1.3.17 added (codes.ts) */
+export function codeListRules(m: InvoiceModel, emit: Emit, peppol: boolean, cen: CenVersion = "1.3.17"): void {
   const cii = m.syntax === "CII";
+  const old = cen === "1.3.16";
+  const ICD_LIST = old ? CEN_1316_ICD_CODES : ICD_CODES;
+  const VATEX = old ? CEN_1316_VATEX_CODES : CEN_VATEX_CODES;
+  // CII's BR-CL-08 list is the same in both versions, UBL's grew in 1.3.17
+  const SUBJECTS = old && !cii ? CEN_1316_UBL_UNTDID_4451_CODES : UNTDID_4451_CODES;
+  const SUBJECT_TEXT = old && !cii ? CEN_1316_UBL_UNTDID_4451_TEXT : UNTDID_4451_TEXT;
   const values = m.codedValues ?? [];
   const of = (kind: CodedKind): CodedValue[] => values.filter((v) => v.kind === kind);
 
@@ -39,7 +60,7 @@ export function codeListRules(m: InvoiceModel, emit: Emit, peppol: boolean): voi
   // BR-CL-08: an invoice note's subject code (UBL: "#CODE#" at the start of a note under the root; CII: ram:SubjectCode)
   if (cii) {
     for (const c of of("subjectCode")) {
-      if (listed(UNTDID_4451_CODES, c.value)) continue;
+      if (listed(SUBJECTS, c.value)) continue;
       emit("BR-CL-08", `Invoice note subject code (BT-21) ${shown(c.value)} is not a UNTDID 4451 code.`, c.loc, { actual: normSpace(c.value), expected: "AAI, SUR, REG, ABL, TXD …" });
     }
   } else {
@@ -50,7 +71,7 @@ export function codeListRules(m: InvoiceModel, emit: Emit, peppol: boolean): voi
       const second = rest.indexOf("#");
       const code = second < 0 ? "" : rest.slice(0, second);
       // Only a three-character code between the first two # is tested, by XPath contains() on the written-out list
-      if ([...code].length !== 3 || UNTDID_4451_TEXT.includes(code)) continue;
+      if ([...code].length !== 3 || SUBJECT_TEXT.includes(code)) continue;
       emit("BR-CL-08", `Invoice note subject code (BT-21) "#${code}#" is not a UNTDID 4451 code.`, c.loc, { actual: code, expected: "AAI, SUR, REG, ABL, TXD …" });
     }
   }
@@ -63,7 +84,7 @@ export function codeListRules(m: InvoiceModel, emit: Emit, peppol: boolean): voi
   ];
   for (const { kind, id, what } of ICD)
     for (const c of of(kind)) {
-      if (listed(ICD_CODES, c.value)) continue;
+      if (listed(ICD_LIST, c.value)) continue;
       if (kind === "partyIdScheme" && !cii && c.sellerOrPayee && normSpace(c.value) === "SEPA") continue;
       emit(id, `${c.owner} ${what} scheme ${shown(c.value)} is not an ISO/IEC 6523 ICD code.`, c.loc, {
         actual: normSpace(c.value),
@@ -74,14 +95,14 @@ export function codeListRules(m: InvoiceModel, emit: Emit, peppol: boolean): voi
   // BR-CL-11: legal registration identifier schemes (UBL PartyLegalEntity/CompanyID; CII every ram:ID with a
   // schemeID outside a tax registration, party identifiers included) from ISO/IEC 6523
   for (const c of of("legalIdScheme")) {
-    if (listed(ICD_CODES, c.value)) continue;
+    if (listed(ICD_LIST, c.value)) continue;
     emit("BR-CL-11", `${c.owner} ${cii ? "identifier" : "legal registration number"} scheme ${shown(c.value)} is not an ISO/IEC 6523 ICD code.`, c.loc, {
       actual: normSpace(c.value),
       expected: "an ICD code such as 0208 (Belgian enterprise number) or 0106 (KvK)",
     });
   }
   // BR-CL-25: every electronic address scheme (UBL EndpointID, CII URIUniversalCommunication/URIID) from the EAS list
-  const EAS = new Set(Object.keys(EAS_CODES));
+  const EAS = old ? CEN_1316_EAS_CODES : new Set(Object.keys(EAS_CODES));
   for (const c of of("endpointScheme")) {
     if (listed(EAS, c.value)) continue;
     emit("BR-CL-25", `${c.owner} electronic address scheme ${shown(c.value)} is not in the EAS code list.`, c.loc, {
@@ -93,7 +114,7 @@ export function codeListRules(m: InvoiceModel, emit: Emit, peppol: boolean): voi
   // BR-CL-22: VAT exemption reason codes from the VATEX list, compared in upper case
   for (const c of of("exemptionCode")) {
     const v = normSpace(c.value);
-    if (!v.includes(" ") && CEN_VATEX_CODES.has(normSpace(c.value.toUpperCase()))) continue;
+    if (!v.includes(" ") && VATEX.has(normSpace(c.value.toUpperCase()))) continue;
     emit("BR-CL-22", `${c.owner} VAT exemption reason code ${shown(c.value)} is not a VATEX code.`, c.loc, { actual: v, expected: "VATEX-EU-AE, VATEX-EU-IC, VATEX-EU-G …" });
   }
 

@@ -90,5 +90,76 @@ export const within = (a: Dec, b: Dec, limit: Dec): boolean => cmp(abs(sub(a, b)
 export const withinOrEqual = (a: Dec, b: Dec, limit: Dec): boolean =>
   cmp(abs(sub(a, b)), limit) <= 0;
 
+/**
+ * The exact value of a JS number (an IEEE double). XPath arithmetic on an untyped value, such as the official
+ * `xs:decimal(cbc:TaxableAmount - 1)`, is done in xs:double, and Saxon casts the double result to xs:decimal exactly:
+ * 909.91 − 1 is the double 908.9099999999999681…, which is less than 908.91. Rules written that way compare this value,
+ * not the shortest decimal string `dec()` reads. Non-finite → 0.
+ */
+export function exactDouble(x: number): Dec {
+  if (!Number.isFinite(x) || x === 0) return ZERO;
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, x);
+  const bits = view.getBigUint64(0);
+  const negative = bits >> 63n === 1n;
+  const biased = Number((bits >> 52n) & 0x7ffn);
+  let mantissa = bits & 0xfffffffffffffn;
+  let exp: number;
+  if (biased === 0) exp = -1074;
+  else {
+    mantissa |= 1n << 52n;
+    exp = biased - 1075;
+  }
+  const n = exp >= 0 ? mantissa << BigInt(exp) : mantissa;
+  const d = exp >= 0 ? ONE : ONE << BigInt(-exp);
+  return make(negative ? -n : n, d);
+}
+
+/**
+ * The double nearest to `a`, as XPath promotes an xs:decimal to xs:double when it is compared with a double (the
+ * official CII `ram:BasisAmount + 1 > (… sum …)`). Exact for terminating decimals (every sum of amounts as written).
+ */
+export function nearestDouble(a: Dec): number {
+  let k = 0;
+  let scale = ONE;
+  while (k <= 1100 && scale % a.d !== ZERO_N) {
+    scale *= 10n;
+    k++;
+  }
+  if (scale % a.d !== ZERO_N) return Number(a.n) / Number(a.d);
+  const digits = ((a.n < ZERO_N ? -a.n : a.n) * (scale / a.d)).toString().padStart(k + 1, "0");
+  const text = k ? `${digits.slice(0, digits.length - k)}.${digits.slice(digits.length - k)}` : digits;
+  return Number(a.n < ZERO_N ? `-${text}` : text);
+}
+
 export const ONE_UNIT: Dec = { n: 1n, d: 1n };
 export const TWO_CENTS: Dec = { n: 2n, d: 100n };
+
+/** XPath fn:round on an xs:double, as Saxon computes it: the nearest whole number, halves toward +∞. */
+export function roundDouble(x: number): number {
+  if (!Number.isFinite(x)) return x;
+  const f = Math.floor(x);
+  return x - f >= 0.5 ? f + 1 : f;
+}
+
+/** XPath fn:sum over untyped amounts: each read as an xs:double and added in document order, in xs:double. */
+export function sumDoubles(values: (number | undefined)[]): number {
+  let s = 0;
+  for (const v of values) if (v !== undefined) s += v;
+  return s;
+}
+
+/**
+ * CEN 1.3.16's CII `round(sum(<amounts>) * 10 * 10) div 100` (BR-CO-11, -12, -14): the amounts aren't cast to
+ * xs:decimal there, so the sum, the scaling and the rounding all happen in xs:double (1.3.17 casts each amount).
+ */
+export const round2Doubles = (values: (number | undefined)[]): number => roundDouble(sumDoubles(values) * 10 * 10) / 100;
+
+/** An xs:decimal as written (optional sign, digits, optional fraction; surrounding whitespace collapsed), exactly. */
+export function parseDecimal(raw: string): Dec | undefined {
+  const m = /^[ \t\r\n]*([+-]?)(\d*)(?:\.(\d*))?[ \t\r\n]*$/.exec(raw);
+  if (!m || (m[2] === "" && (m[3] ?? "") === "")) return undefined;
+  const frac = m[3] ?? "";
+  const n = BigInt(`${m[2] || "0"}${frac}`);
+  return make(m[1] === "-" ? -n : n, 10n ** BigInt(frac.length));
+}

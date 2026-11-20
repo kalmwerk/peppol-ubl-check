@@ -24,6 +24,7 @@ import {
   readTaxGroups,
 } from "./read-utils";
 import { readNationalFacts } from "./read-national";
+import { syntaxBindingViolations } from "./syntax-binding";
 import { all, at, kids, text, type XNode } from "./xml";
 import { normalizeSpace } from "./xpath-text";
 
@@ -538,6 +539,8 @@ export function readCii(root: XNode): InvoiceModel {
     if (net) {
       L["price"] = ctx.loc(net);
       line.priceAmount = ctx.num(net, "ChargeAmount", L, "priceAmount", "BT-146");
+      const own = new ReadCtx();
+      line.netPrices = kids(net, "ChargeAmount").map((c) => own.num(c, "", {}, "v", "BT-146"));
       const bq = at(net, "BasisQuantity");
       if (bq) {
         line.baseQuantity = ctx.num(bq, "", L, "baseQuantity", "BT-149");
@@ -547,6 +550,8 @@ export function readCii(root: XNode): InvoiceModel {
     const gross = at(la, "GrossPriceProductTradePrice");
     if (gross) {
       line.grossPrice = ctx.num(gross, "ChargeAmount", L, "grossPrice", "BT-148");
+      const own = new ReadCtx();
+      line.grossPrices = kids(gross, "ChargeAmount").map((c) => own.num(c, "", {}, "v", "BT-148"));
       const gbq = at(gross, "BasisQuantity");
       if (gbq) {
         line.grossBaseQuantity = ctx.num(gbq, "", L, "grossBaseQuantity", "BT-149");
@@ -603,6 +608,7 @@ export function readCii(root: XNode): InvoiceModel {
 
   model.schemeIds = collectCiiSchemeIds(root, ctx);
   model.binaryObjects = collectBinaryObjects(root, ctx);
+  model.syntaxViolations = syntaxBindingViolations(root, "CII").map((v) => ({ id: v.id, detail: v.detail, loc: ctx.loc(v.node), ...(v.cen ? { cen: v.cen } : {}) }));
   model.currencyIds = collectCurrencyIds(root, ctx, "CII");
   model.objectIdSchemes = collectObjectIdSchemes(root, ctx, "CII");
   model.dates = collectDates(root, ctx, "CII");

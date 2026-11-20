@@ -137,6 +137,10 @@ export interface InvoiceLine {
    * cac:AllowanceCharge (reason code lists, VAT category of any TaxCategory). Their amounts are BT-147/148 above.
    */
   priceAllowanceCharges?: AllowanceCharge[];
+  /** CII: every NetPriceProductTradePrice/ChargeAmount and GrossPriceProductTradePrice/ChargeAmount (the elements may
+   * repeat; BR-27 and BR-28 compare all of them at once, `(…/ram:ChargeAmount) >= 0`) */
+  netPrices?: (number | undefined)[];
+  grossPrices?: (number | undefined)[];
   /** Line object references (UBL cac:DocumentReference, CII line AdditionalReferencedDocument) with their type code as written */
   /** idGiven (CII): a filled-in IssuerAssignedID (BR-52 reads every AdditionalReferencedDocument) */
   documentRefs?: { typeCode?: string; idGiven?: boolean; loc: Loc }[];
@@ -309,8 +313,17 @@ export interface InvoiceModel {
   periodInOrder?: boolean;
   /** BG-14 carries something the official rules accept: UBL any child element, CII a start or end date element */
   periodHasContent?: boolean;
+  /**
+   * UBL: every BG-14 (cac:InvoicePeriod may repeat), for the rules that check each one (BR-CO-19, BR-29);
+   * periodStart/periodEnd/taxPointCode above come from the first copy that has them.
+   */
+  invoicePeriods?: { start?: string; end?: string; startGiven: boolean; endGiven: boolean; codeGiven: boolean; locs: LocMap; loc?: Loc }[];
   /** An actual delivery date is written (UBL: longer than one character; CII: a DateTimeString element) */
   deliveryDateGiven?: boolean;
+  /** UBL: a deliver-to country code longer than one character is written in some delivery (BR-IC-12, as written) */
+  deliveryCountryGiven?: boolean;
+  /** UBL: every deliver-to address (cac:Delivery may repeat), with whether it has a country code element (BR-57) */
+  deliveryAddresses?: { countryGiven: boolean; loc?: Loc }[];
   /** CII: first document note with a subject code (PEPPOL-EN16931-R002 forbids them) */
   noteSubjectCode?: Loc;
   seller: Party; // BG-4
@@ -346,6 +359,11 @@ export interface InvoiceModel {
    * BR-CL-24 and PEPPOL-EN16931-CL001 read the attachments (UBL EmbeddedDocumentBinaryObject, CII
    * AttachmentBinaryObject) that have a mimeCode, UBL-DT-06/07 every one.
    */
+  /**
+   * The fatal CEN syntax-binding violations (UBL-SR, UBL-CR, CII-SR, CII-DT), read off the XML tree (syntax-binding.ts);
+   * `cen` marks the ones only one CEN version reports (1.3.16 as Peppol BIS 3.0.22 ships it, or 1.3.17)
+   */
+  syntaxViolations?: { id: string; detail?: string; loc: Loc; cen?: "1.3.16" | "1.3.17" }[];
   binaryObjects?: {
     element: string;
     mime?: string;
