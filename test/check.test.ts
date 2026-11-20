@@ -8,8 +8,8 @@ const opts: CheckOptions = { cwd: FIXTURES, profile: "peppol", failOn: "error", 
 const ids = (path: string, o: Partial<CheckOptions> = {}) => checkFile(path, { ...opts, ...o }).findings.map((f) => f.ruleId);
 
 describe("the rule engine", () => {
-  it("has 324 rules: 189 EN 16931, 61 Peppol, 32 XRechnung, 30 NLCIUS, 12 extra checks", () => {
-    expect(ruleCounts()).toEqual({ total: 324, EN16931: 189, Peppol: 61, XRechnung: 32, NLCIUS: 30, InvoiceVerify: 12 });
+  it("has 332 rules: 189 EN 16931, 62 Peppol, 38 XRechnung, 31 NLCIUS, 12 extra checks", () => {
+    expect(ruleCounts()).toEqual({ total: 332, EN16931: 189, Peppol: 62, XRechnung: 38, NLCIUS: 31, InvoiceVerify: 12 });
   });
 });
 
@@ -44,8 +44,8 @@ describe("XRechnung test invoices", () => {
       }
   });
 
-  it("finds the XRechnung errors in UBL and CII", () => {
-    expect(ids("xrechnung/xrechnung-ubl-errors.xml", { profile: "auto" })).toEqual(["BR-DE-15", "BR-DE-6", "BR-DE-18"]);
+  it("finds the XRechnung errors in UBL and CII (and the BR-DE-27 warning KoSIT gives the UBL one)", () => {
+    expect(ids("xrechnung/xrechnung-ubl-errors.xml", { profile: "auto" })).toEqual(["BR-DE-15", "BR-DE-6", "BR-DE-18", "BR-DE-27"]);
     expect(ids("xrechnung/xrechnung-cii-errors.xml", { profile: "auto" })).toEqual(
       expect.arrayContaining(["IV-DE-01", "BR-DE-7", "BR-DE-23-a", "BR-DE-19"]),
     );
@@ -140,7 +140,7 @@ describe("checkFiles", () => {
     const r = checkFiles(all, opts);
     expect(r.totals).toEqual({ matched: 4, checked: 3, ok: 1, withWarnings: 1, withErrors: 1, skipped: 1, errors: 6, warnings: 1, info: 0 });
     expect(r.result).toBe("failed");
-    expect(r).toMatchObject({ tool: "peppol-ubl-check", rulesAvailable: 324, profile: "peppol", failOn: "error" });
+    expect(r).toMatchObject({ tool: "peppol-ubl-check", rulesAvailable: 332, profile: "peppol", failOn: "error" });
   });
 
   it("passes warnings unless fail-on is warning, and never fails with never", () => {

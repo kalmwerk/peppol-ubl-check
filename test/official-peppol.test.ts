@@ -230,7 +230,10 @@ describe("Peppol BIS 3.0 on CII (OpenPeppol's PEPPOL-EN16931-CII.sch)", () => {
     const doc = (code: string) => cii(`${ciiContext()}<rsm:ExchangedDocument><ram:TypeCode>${code}</ram:TypeCode></rsm:ExchangedDocument>`);
     expect(verdict(doc("381"), "PEPPOL-EN16931-P0100")).toBe("success");
     expect(verdict(doc("380"), "PEPPOL-EN16931-P0100")).toBe("success");
-    expect(verdict(doc("999"), "PEPPOL-EN16931-P0100")).toBe("error");
+    // The official CII assert sits on ram:ExchangedDocument/ram:TypeCode, a context no CII document has
+    // (it is rsm:ExchangedDocument), so it never fires; OpenPeppol's own CII test has success cases only
+    expect(verdict(doc("999"), "PEPPOL-EN16931-P0100")).toBe("success");
+    expect(verdict(doc("471"), "PEPPOL-EN16931-P0100")).toBe("success");
   });
   it("COMMON-R043 checks every URIID, ID and GlobalID with scheme 0208 (PEPPOL-COMMON-R043.xml)", () => {
     const party = (el: string) => cii(ciiContext() + ciiTx({ agreement: `<ram:BuyerTradeParty>${el}</ram:BuyerTradeParty>` }));
