@@ -22,6 +22,7 @@ import {
   collectUblSchemeIds,
   anyEqual,
   exactText,
+  readTaxGroups,
 } from "./read-utils";
 import { readNationalFacts } from "./read-national";
 import { all, at, kids, text, type XNode } from "./xml";
@@ -127,6 +128,7 @@ function readAllowanceCharge(readCtx: ReadCtx, node: XNode, level: "doc" | "line
     vatRate: ctx.num(node, "TaxCategory/Percent", locs, "vatRate", "BT-96"),
     vatScheme: ctx.str(node, "TaxCategory/TaxScheme/ID", locs, "vatScheme"),
     vatExemptionCode: ctx.str(node, "TaxCategory/TaxExemptionReasonCode", locs, "vatExemptionCode"),
+    taxes: readTaxGroups(node, "TaxCategory", "UBL"),
     locs,
     loc: ctx.loc(node),
   };
@@ -279,13 +281,15 @@ export function readUbl(root: XNode): InvoiceModel {
     const amountNode = at(tt, "TaxAmount");
     const subtotals = kids(tt, "TaxSubtotal");
     const rawAmount = text(amountNode);
-    model.taxTotals.push({
+    const total: InvoiceModel["taxTotals"][number] = {
       amount:
         rawAmount !== undefined && !Number.isNaN(Number(rawAmount)) ? Number(rawAmount) : undefined,
       currency: amountNode?.attrs["currencyID"],
       hasSubtotals: subtotals.length > 0,
+      subtotalTaxAmounts: [],
       loc: amountNode ? ctx.loc(amountNode) : ctx.loc(tt),
-    });
+    };
+    model.taxTotals.push(total);
     for (const st of subtotals) {
       const sl: LocMap = {};
       const vb: VatBreakdown = {
@@ -302,6 +306,7 @@ export function readUbl(root: XNode): InvoiceModel {
         loc: ctx.loc(st),
       };
       model.vat.push(vb);
+      total.subtotalTaxAmounts!.push(vb.taxAmount);
     }
   }
   // BT-110 lives in the document-currency TaxTotal, BT-111 in the accounting-currency one
@@ -381,6 +386,16 @@ export function readUbl(root: XNode): InvoiceModel {
       line.periodStart = ctx.isoDate(lp, "StartDate", L, "periodStart", "BT-134");
       line.periodEnd = ctx.isoDate(lp, "EndDate", L, "periodEnd", "BT-135");
     }
+    line.periods = kids(ln, "InvoicePeriod").map((p, i) => {
+      if (i === 0) {
+        const locs: LocMap = {};
+        if (L["periodStart"]) locs["start"] = L["periodStart"];
+        if (L["periodEnd"]) locs["end"] = L["periodEnd"];
+        return { start: line.periodStart, end: line.periodEnd, locs, loc: L["period"]! };
+      }
+      const locs: LocMap = {};
+      return { start: ctx.isoDate(p, "StartDate", locs, "start", "BT-134"), end: ctx.isoDate(p, "EndDate", locs, "end", "BT-135"), locs, loc: ctx.loc(p) };
+    });
     for (const ac of kids(ln, "AllowanceCharge")) {
       const item = readAllowanceCharge(ctx, ac, "line");
       (item.isCharge ? line.charges : line.allowances).push(item);
@@ -409,6 +424,7 @@ export function readUbl(root: XNode): InvoiceModel {
       if (L["vatCategory"]) L["vatCategoryCode"] = L["vatCategory"];
       if (!L["vatCategory"] && at(item, "ClassifiedTaxCategory"))
         L["vatCategory"] = ctx.loc(at(item, "ClassifiedTaxCategory")!);
+      line.taxes = readTaxGroups(item, "ClassifiedTaxCategory", "UBL");
       line.attributes = kids(item, "AdditionalItemProperty").map((ap) => ({
         name: text(ap, "Name"),
         value: text(ap, "Value"),

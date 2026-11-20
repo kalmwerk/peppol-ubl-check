@@ -1,5 +1,5 @@
 import * as D from "./decimal";
-import type { AllowanceCharge, InvoiceLine, InvoiceModel, Loc, Party, VatBreakdown } from "./model";
+import type { AllowanceCharge, InvoiceLine, InvoiceModel, Loc, LocMap, Party, VatBreakdown } from "./model";
 import type { Severity } from "./rules-catalog";
 import { normalizeSpace } from "./xpath-text";
 
@@ -37,6 +37,53 @@ export function xsBoolean(raw: string | undefined): boolean | undefined {
   if (v === "true" || v === "1") return true;
   if (v === "false" || v === "0") return false;
   return undefined;
+}
+
+/** The line and allowance/charge keys that hold the first VAT category group's elements. */
+const GROUP_LOC_KEYS = ["vatCategory", "vatCategoryCode", "vatRate", "vatScheme", "vatExemptionCode"];
+const withoutGroupLocs = (locs: LocMap): LocMap => {
+  const out = { ...locs };
+  for (const k of GROUP_LOC_KEYS) delete out[k];
+  return out;
+};
+
+/**
+ * One view of a line per VAT category group (UBL cac:ClassifiedTaxCategory, CII ram:ApplicableTradeTax), its VAT
+ * fields and their locs set to that group's; the first view is the line itself. The official rules take each group
+ * as a context or test them all (`exists(…)`, a path compared to a value), so a repeated group counts there: per-group
+ * rules check every view, existence tests take any. A line without groups (or a hand-built model) is its only view.
+ */
+export function lineTaxViews(ln: InvoiceLine): InvoiceLine[] {
+  const groups = ln.taxes ?? [];
+  if (groups.length <= 1) return [ln];
+  return [
+    ln,
+    ...groups.slice(1).map((g) => {
+      const locs = withoutGroupLocs(ln.locs);
+      if (g.locs["category"]) locs["vatCategory"] = locs["vatCategoryCode"] = g.locs["category"];
+      else locs["vatCategory"] = g.loc;
+      if (g.locs["rate"]) locs["vatRate"] = g.locs["rate"];
+      if (g.locs["scheme"]) locs["vatScheme"] = g.locs["scheme"];
+      return { ...ln, vatCategory: g.category, vatRate: g.rate, vatScheme: g.scheme, locs };
+    }),
+  ];
+}
+
+/** One view of an allowance or charge per VAT category group (UBL cac:TaxCategory, CII ram:CategoryTradeTax); see lineTaxViews. */
+export function acTaxViews(ac: AllowanceCharge): AllowanceCharge[] {
+  const groups = ac.taxes ?? [];
+  if (groups.length <= 1) return [ac];
+  return [
+    ac,
+    ...groups.slice(1).map((g) => {
+      const locs = withoutGroupLocs(ac.locs);
+      if (g.locs["category"]) locs["vatCategory"] = g.locs["category"];
+      if (g.locs["rate"]) locs["vatRate"] = g.locs["rate"];
+      if (g.locs["scheme"]) locs["vatScheme"] = g.locs["scheme"];
+      if (g.locs["exemptionCode"]) locs["vatExemptionCode"] = g.locs["exemptionCode"];
+      return { ...ac, vatCategory: g.category, vatRate: g.rate, vatScheme: g.scheme, vatExemptionCode: g.exemptionCode, locs };
+    }),
+  ];
 }
 
 export type AcLevel = "document" | "line" | "price";
@@ -117,6 +164,8 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
   const acs = everyAllowanceCharge(m)
     // CII: SpecifiedTradeAllowanceCharge only (price-level AppliedTradeAllowanceCharge are not read)
     .filter((x) => !cii || x.level !== "price")
+    // one entry per VAT category group: each is a context of BR-x-06/07, and BR-x-03/04 ask for any
+    .flatMap(({ ac, level }) => acTaxViews(ac).map((view) => ({ ac: view, level })))
     .map(({ ac, level }) => {
       const catLoc = ac.locs["vatCategory"];
       const category = catLoc ? (cii ? exactText(ac.vatCategory, catLoc) : normSpace(ac.vatCategory)) : undefined;
@@ -293,7 +342,7 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
       const lineCat = (ln: InvoiceLine) => (ln.locs["vatCategoryCode"] ? exactText(ln.vatCategory, ln.locs["vatCategoryCode"]) : undefined);
       const otherTax =
         rows.some((r) => r.category !== undefined && r.category !== "O") ||
-        m.lines.some((ln) => {
+        m.lines.flatMap(lineTaxViews).some((ln) => {
           const c = lineCat(ln);
           return c !== undefined && c !== "O";
         });
@@ -304,7 +353,7 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
       const other = rows.find((r) => r.vat && r.category !== "O");
       if (other)
         emit("BR-O-11", `The invoice has a VAT breakdown in category ${catName("O")}, so it can't have other VAT breakdowns (found ${other.category ? catName(other.category) : "one without a category"}).`, at(other.v, "category"));
-      const otherLine = m.lines.find((ln) => ln.locs["vatCategory"] && isVat(ln.vatScheme, ln.locs["vatScheme"]) && normSpace(ln.vatCategory) !== "O");
+      const otherLine = m.lines.flatMap(lineTaxViews).find((ln) => ln.locs["vatCategory"] && isVat(ln.vatScheme, ln.locs["vatScheme"]) && normSpace(ln.vatCategory) !== "O");
       if (otherLine)
         emit("BR-O-12", `The invoice has a VAT breakdown in category ${catName("O")}, so every line must be in category O too (line ${otherLine.id ?? "?"} is ${otherLine.vatCategory ?? "without a category"}).`, otherLine.locs["vatCategory"] ?? otherLine.loc);
       for (const charge of [false, true]) {
@@ -331,9 +380,11 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
   };
   for (const prefix of PREFIXES) {
     const category = categoryOf(prefix, cii);
-    const inCategory = m.lines.filter((ln) => lineCategory(ln) === category && isVat(ln.vatScheme, ln.locs["vatScheme"]));
+    // each VAT category group of a line counts (CII: each is a context of its own)
+    const groups = m.lines.flatMap(lineTaxViews);
+    const inCategory = groups.filter((ln) => lineCategory(ln) === category && isVat(ln.vatScheme, ln.locs["vatScheme"]));
     // UBL's BR-S-02 alone tests "no S line" without TaxScheme: an S line without VAT and no S line with VAT fails
-    const sWithoutVat = !cii && prefix === "S" && inCategory.length === 0 ? m.lines.find((ln) => lineCategory(ln) === "S") : undefined;
+    const sWithoutVat = !cii && prefix === "S" && inCategory.length === 0 ? groups.find((ln) => lineCategory(ln) === "S") : undefined;
     if (sWithoutVat) {
       emit("BR-S-02", `Line ${sWithoutVat.id ?? "?"} is in VAT category ${catName("S")}, but its tax scheme isn't VAT, so the official rule can't find a standard-rated VAT line to accept.`, sWithoutVat.locs["vatScheme"] ?? sWithoutVat.locs["vatCategoryCode"] ?? sWithoutVat.loc);
       continue;
@@ -352,7 +403,7 @@ export function vatCategoryRules(m: InvoiceModel, emit: Emit): void {
   for (const prefix of ["IG", "IP"] as const) {
     const category = categoryOf(prefix, cii);
     const test: RateTest = cii && prefix === "IP" ? "positive" : "non-negative";
-    for (const ln of m.lines) {
+    for (const ln of m.lines.flatMap(lineTaxViews)) {
       const codeLoc = ln.locs["vatCategoryCode"];
       if (!codeLoc) continue;
       const c = cii ? exactText(ln.vatCategory, codeLoc) : normSpace(ln.vatCategory);

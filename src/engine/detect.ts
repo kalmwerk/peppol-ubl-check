@@ -7,7 +7,7 @@ import {
 } from "./codes";
 import { CII_NS } from "./read-cii";
 import { UBL_CREDITNOTE_NS, UBL_INVOICE_NS } from "./read-ubl";
-import { text, at, type XNode } from "./xml";
+import { text, at, kids, type XNode } from "./xml";
 
 /** Part of every Peppol BIS billing identifier (BT-24 and BT-23). */
 const PEPPOL_BILLING_MARK = "urn:fdc:peppol.eu:2017:poacc:billing:";
@@ -97,10 +97,9 @@ export function detectFormat(root: XNode): FormatInfo {
     return { ...base, id: "ubl-generic", label: "UBL 2.1", en16931: true, peppol: false };
   }
   if (root.local === "CrossIndustryInvoice" && ns === CII_NS) {
-    const cid = text(
-      at(root, "ExchangedDocumentContext"),
-      "GuidelineSpecifiedDocumentContextParameter/ID",
-    );
+    // the first guideline parameter with an ID, as read-cii.ts reads it (the official files read every parameter)
+    const guidelines = kids(at(root, "ExchangedDocumentContext"), "GuidelineSpecifiedDocumentContextParameter");
+    const cid = text(guidelines.find((p) => at(p, "ID")) ?? guidelines[0] ?? null, "ID");
     const typeCode = text(at(root, "ExchangedDocument"), "TypeCode");
     const document = typeCode === "381" ? "Credit note" : "Invoice";
     const base = {

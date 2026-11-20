@@ -42,6 +42,8 @@ export interface Party {
   taxRegistrationId?: string; // BT-32
   legalForm?: string; // BT-33 seller additional legal information
   endpoint?: Identifier; // BT-34 / BT-49
+  /** CII: every ram:URIUniversalCommunication/ram:URIID of the party (`endpoint` is the first group's); Peppol's R010 / R020 and CL008 read them all */
+  endpointIds?: { id: string; scheme?: string; loc: Loc }[];
   address?: Address; // BG-5 / BG-8
   contact?: { name?: string; phone?: string; email?: string }; // BG-6 / BG-9
   /**
@@ -53,6 +55,24 @@ export interface Party {
   taxRegistrations?: { scheme?: string; id: string; loc: Loc; /** UBL TaxScheme/ID exactly as written (Peppol's `cbc:ID = 'VAT'`) */ schemeAsWritten?: string }[];
   locs: LocMap;
   loc?: Loc;
+}
+
+/**
+ * One VAT category group as written: UBL cac:TaxCategory (allowances and charges) or cac:ClassifiedTaxCategory
+ * (lines), CII ram:CategoryTradeTax or ram:ApplicableTradeTax. The single VAT fields of a line or an allowance /
+ * charge read the first group; the official rules take each group as a context or test them all (`exists(…)`),
+ * so a repeated group counts there.
+ */
+export interface TaxGroup {
+  category?: string;
+  rate?: number;
+  /** UBL TaxScheme/ID, CII TypeCode */
+  scheme?: string;
+  /** UBL TaxExemptionReasonCode */
+  exemptionCode?: string;
+  /** category, rate, scheme, exemptionCode: the elements (loc.raw keeps the text as written) */
+  locs: LocMap;
+  loc: Loc;
 }
 
 export interface AllowanceCharge {
@@ -69,6 +89,10 @@ export interface AllowanceCharge {
   /** UBL TaxCategory/TaxExemptionReasonCode (PEPPOL-EN16931-P0104 … P0111 check every TaxCategory) */
   vatExemptionCode?: string;
   rawIndicator?: string;
+  /** CII: every ram:ActualAmount as a number (undefined when not one); Peppol's R120 sums them all, EN 16931 reads the first */
+  actualAmounts?: (number | undefined)[];
+  /** Every VAT category group (the vat* fields above read the first) */
+  taxes?: TaxGroup[];
   locs: LocMap;
   loc?: Loc;
 }
@@ -84,8 +108,18 @@ export interface InvoiceLine {
   /** CII BR-30: the period's end and start dates with format exactly "102", compared as written, are in order (or one is missing) */
   periodInOrder?: boolean;
   periodEnd?: string; // BT-135
+  /**
+   * CII PEPPOL-EN16931-R110 / R111: the line period's start (end) DateTimeStrings compared as written, as strings,
+   * with the invoice period's (`>=` / `<=`, any pair matching). Unset when the rule doesn't run: the line or the
+   * invoice period has no StartDateTime (EndDateTime) element.
+   */
+  periodWithinInvoice?: { start?: { ok: boolean; line: string; invoice: string }; end?: { ok: boolean; line: string; invoice: string } };
+  /** UBL: every cac:InvoicePeriod of the line (periodStart / periodEnd read the first); locs: start, end */
+  periods?: { start?: string; end?: string; locs: LocMap; loc: Loc }[];
   allowances: AllowanceCharge[];
   charges: AllowanceCharge[];
+  /** Every VAT category group (vatCategory, vatRate and vatScheme read the first) */
+  taxes?: TaxGroup[];
   priceAmount?: number; // BT-146
   priceDiscount?: number; // BT-147
   grossPrice?: number; // BT-148
@@ -294,7 +328,8 @@ export interface InvoiceModel {
   allowances: AllowanceCharge[]; // BG-20
   charges: AllowanceCharge[]; // BG-21
   vat: VatBreakdown[]; // BG-23
-  taxTotals: { amount?: number; currency?: string; hasSubtotals: boolean; loc?: Loc }[];
+  /** UBL: every cac:TaxTotal, with its own TaxSubtotal tax amounts (BR-CO-14 runs per TaxTotal); CII: every TaxTotalAmount */
+  taxTotals: { amount?: number; currency?: string; hasSubtotals: boolean; subtotalTaxAmounts?: (number | undefined)[]; loc?: Loc }[];
   totals: Totals; // BG-22
   lines: InvoiceLine[]; // BG-25
   /** BG-24 and the other document references read with it (UBL AdditionalDocumentReference, CII header AdditionalReferencedDocument); typeCode as written */
