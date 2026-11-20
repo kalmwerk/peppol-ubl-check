@@ -96,7 +96,7 @@ export class ReadCtx {
     return `${m[1]}-${m[2]}-${m[3]}`;
   }
 
-  /** CII udt:DateTimeString with format 102 (YYYYMMDD) */
+  /** CII udt:DateTimeString (YYYYMMDD) */
   ciiDate(node: XNode | null | undefined, path: string, locs: LocMap, key: string, bt: string) {
     const holder = path ? at(node, path) : node;
     if (!holder) return undefined;
@@ -106,11 +106,20 @@ export class ReadCtx {
     const loc = this.loc(n);
     locs[key] = loc;
     const raw = text(n);
-    if (raw === undefined) return undefined;
-    const format = n.attrs["format"];
-    const m = /^(\d{4})(\d{2})(\d{2})$/.exec(raw);
-    if ((format && format !== "102") || !m || !validYmd(m[1]!, m[2]!, m[3]!)) {
-      this.typeErrors.push({ bt, raw, expected: "a date in format 102 (YYYYMMDD)", loc });
+    const checked = n.local === "DateTimeString" && n.attrs["format"] === "102";
+    if (raw === undefined) {
+      // CII-DT-097's pattern needs eight digits, so an empty or blank format-102 date fails it too
+      if (checked) this.typeErrors.push({ bt, raw: n.raw ?? "", expected: "a date in format 102 (YYYYMMDD)", loc });
+      return undefined;
+    }
+    // CEN's CII-DT-097 checks only udt:DateTimeString with format exactly "102": YYYYMMDD between optional XML
+    // whitespace, month 01–12 and day 01–31 with no calendar check (XPath's \d is any decimal digit). Another
+    // format, none, or a udt:DateString (the tax point date) isn't a data-type error there; BR-03, BR-29 and
+    // BR-30 read their own facts (issueDateFilled, periodInOrder)
+    const m = /^(\p{Nd}{4})(1[0-2]|0[1-9])(3[01]|[12][0-9]|0[1-9])$/u.exec(raw);
+    if (!m) {
+      if (checked)
+        this.typeErrors.push({ bt, raw, expected: "a date in format 102 (YYYYMMDD)", loc });
       return undefined;
     }
     return `${m[1]}-${m[2]}-${m[3]}`;
@@ -323,7 +332,13 @@ export function collectBinaryObjects(root: XNode, ctx: ReadCtx): NonNullable<Inv
   const out: NonNullable<InvoiceModel["binaryObjects"]> = [];
   walk(root, (n) => {
     if (n.local.endsWith("BinaryObject"))
-      out.push({ element: n.local, mime: n.attrs["mimeCode"], filename: n.attrs["filename"], loc: ctx.loc(n) });
+      out.push({
+        element: n.local,
+        mime: n.attrs["mimeCode"],
+        filename: n.attrs["filename"],
+        attachment: (n.ns === UBL_CBC && n.local === "EmbeddedDocumentBinaryObject") || (n.ns === CII_RAM && n.local === "AttachmentBinaryObject"),
+        loc: ctx.loc(n),
+      });
   });
   return out;
 }
