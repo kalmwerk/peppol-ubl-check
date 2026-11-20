@@ -142,7 +142,14 @@
     },
     "syntax": {
       "official": 1346,
-      "checked": 3
+      "checked": 181,
+      "fatal": 178,
+      "fatalChecked": 175,
+      "fatalNotChecked": [
+        "CII-DT-010",
+        "CII-DT-011",
+        "CII-DT-012"
+      ]
     },
     "national": {
       "official": 119,
@@ -264,5 +271,5 @@
       ]
     }
   },
-  "fingerprint": "e445a291c0e42b311e46a65051de6d7e3b5a2272bce9673e2bd1b352f8ba9836"
+  "fingerprint": "5dfee873a5eb90ccf1e04af6850f81a2e0840e483d4df5c49a4a4f054ed97bff"
 }
