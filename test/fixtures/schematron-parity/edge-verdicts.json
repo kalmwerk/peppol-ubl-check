@@ -1138,6 +1138,279 @@
     "UBL-SR-07": "error"
    },
    "peppol": {}
+  },
+  "edge/ubl-s-row-other-scheme-taxable-off.xml": {
+   "about": "the 6% S VAT breakdown row under tax scheme GST with a taxable amount that doesn't match its lines: BR-S-08 and BR-S-09 don't run on it",
+   "rules": [
+    "BR-S-08",
+    "BR-S-09"
+   ],
+   "cen": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-k-row-other-scheme.xml": {
+   "about": "the 6% row turned into an intra-community (K) row under tax scheme GST, no delivery date or country: BR-IC-11 and BR-IC-12 don't run",
+   "rules": [
+    "BR-IC-11",
+    "BR-IC-12"
+   ],
+   "cen": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-igic-row-unused-under-one.xml": {
+   "about": "an extra IGIC (L) row with a taxable amount of 0.50 that nothing uses: BR-IG-08 only needs an invoice line and a difference under 1.00",
+   "rules": [
+    "BR-VAT-08"
+   ],
+   "cen": {
+    "BR-IG-01": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-tax-total-repeated.xml": {
+   "about": "the TaxTotal written twice: BR-CO-14 checks each TaxTotal against its own rows (Peppol's R053 fails it)",
+   "rules": [
+    "BR-CO-14"
+   ],
+   "cen": {
+    "BR-CO-15": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-R053": "error"
+   }
+  },
+  "edge/ubl-line-tax-category-repeated.xml": {
+   "about": "line 1 with two ClassifiedTaxCategory groups, the first under tax scheme GST: BR-CO-04 finds the VAT one",
+   "rules": [
+    "BR-CO-04",
+    "BR-S-05"
+   ],
+   "outOfScope": [
+    "UBL-SR-48"
+   ],
+   "cen": {
+    "UBL-SR-48": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-line-tax-category-second-zero.xml": {
+   "about": "line 1 with a second standard-rated ClassifiedTaxCategory at 0%: BR-S-05 checks each group",
+   "rules": [
+    "BR-S-05"
+   ],
+   "outOfScope": [
+    "UBL-SR-48"
+   ],
+   "cen": {
+    "BR-S-05": "error",
+    "UBL-SR-48": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-line-period-repeated.xml": {
+   "about": "line 1 with two InvoicePeriods, the second ending before it starts: BR-30 checks each",
+   "rules": [
+    "BR-30",
+    "BR-CO-20"
+   ],
+   "cen": {
+    "BR-30": "error",
+    "UBL-SR-36": "error"
+   },
+   "peppol": {}
+  },
+  "edge/ubl-line-charge-indicator-1.xml": {
+   "about": "a line charge of 5.00 written with ChargeIndicator 1 (xs:boolean true) and the line amount unchanged: R120 only sums indicators written 'true' / 'false'",
+   "rules": [
+    "PEPPOL-EN16931-R120",
+    "PEPPOL-EN16931-R043"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-R043": "error"
+   }
+  },
+  "edge/cii-igic-row-unused.xml": {
+   "about": "an extra IGIC (L, 7%) VAT breakdown row of 5.00 that nothing uses: CII's BR-IG-08 reads its rate from ../ram:RateApplicablePercent, which isn't there, so it never fails",
+   "rules": [
+    "BR-VAT-08"
+   ],
+   "cen": {
+    "BR-CO-14": "error"
+   },
+   "peppol": {}
+  },
+  "edge/cii-exempt-row-other-type.xml": {
+   "about": "the 5.5% row turned into an exempt (E) row with TypeCode GST: BR-E-08 needs TypeCode VAT",
+   "rules": [
+    "BR-VAT-08",
+    "BR-E-10"
+   ],
+   "cen": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error",
+    "BR-E-01": "error",
+    "CII-DT-037": "error"
+   },
+   "peppol": {}
+  },
+  "edge/cii-k-row-other-type.xml": {
+   "about": "the 5.5% row turned into an intra-community (K) row with TypeCode GST, no delivery date or ship-to country: BR-IC-11 and BR-IC-12 don't run",
+   "rules": [
+    "BR-IC-11",
+    "BR-IC-12"
+   ],
+   "cen": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error",
+    "BR-IC-01": "error",
+    "CII-DT-037": "error"
+   },
+   "peppol": {}
+  },
+  "edge/cii-line-period-start-iso.xml": {
+   "about": "an invoice period and a line period, the line's start written 2026-10-01: R110 compares the DateTimeStrings as text",
+   "rules": [
+    "PEPPOL-EN16931-R110",
+    "PEPPOL-EN16931-R111"
+   ],
+   "cen": {
+    "CII-DT-097": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-F001": "error",
+    "PEPPOL-EN16931-R110": "error"
+   }
+  },
+  "edge/cii-line-period-end-nbsp.xml": {
+   "about": "an invoice period and a line period whose end is only a non-breaking space: R111 compares it as text and fails",
+   "rules": [
+    "PEPPOL-EN16931-R110",
+    "PEPPOL-EN16931-R111",
+    "BR-CO-20"
+   ],
+   "cen": {
+    "CII-DT-097": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-F001": "error",
+    "PEPPOL-EN16931-R111": "error"
+   }
+  },
+  "edge/cii-line-allowance-two-amounts.xml": {
+   "about": "a line allowance with two ActualAmounts of 0.02: Peppol's R120 sums both (0.04 off), EN 16931 reads the first",
+   "rules": [
+    "PEPPOL-EN16931-R120",
+    "BR-41"
+   ],
+   "outOfScope": [
+    "CII-SR-473"
+   ],
+   "cen": {
+    "CII-SR-473": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-R120": "error"
+   }
+  },
+  "edge/cii-line-trade-tax-repeated.xml": {
+   "about": "line 1 with a second ApplicableTradeTax, the first with TypeCode 384, the second exempt (E): BR-CO-04 finds the VAT one, BR-E-01 counts the E use",
+   "rules": [
+    "BR-CO-04",
+    "BR-VAT-01",
+    "BR-E-05"
+   ],
+   "cen": {
+    "BR-E-01": "error",
+    "CII-DT-037": "error",
+    "CII-SR-454": "warning"
+   },
+   "peppol": {}
+  },
+  "edge/cii-allowance-trade-tax-repeated.xml": {
+   "about": "a document allowance of 0.00 with two CategoryTradeTax groups, the first without CategoryCode, the second standard rated at 0%: BR-32 finds the second, BR-S-06 checks it",
+   "rules": [
+    "BR-32",
+    "BR-S-06"
+   ],
+   "cen": {
+    "BR-CO-11": "error",
+    "BR-S-06": "error",
+    "CII-SR-472": "error"
+   },
+   "peppol": {}
+  },
+  "edge/cii-allowance-indicator-1-decimals.xml": {
+   "about": "a document allowance with Indicator 1 and an amount with three decimals: BR-DEC-01 / -05 take Indicator 'false' / 'true' as written as context",
+   "rules": [
+    "BR-DEC"
+   ],
+   "cen": {
+    "BR-CO-12": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-R043": "error"
+   }
+  },
+  "edge/cii-buyer-uri-repeated.xml": {
+   "about": "the buyer with two URIUniversalCommunication groups, the first without URIID: R010 finds the second's (BR-63 reads the first)",
+   "rules": [
+    "PEPPOL-EN16931-R010",
+    "BR-63",
+    "PEPPOL-EN16931-CL008"
+   ],
+   "cen": {
+    "BR-63": "error",
+    "CII-SR-274": "warning",
+    "CII-SR-460": "error"
+   },
+   "peppol": {}
+  },
+  "edge/cii-tax-currency-padded.xml": {
+   "about": "TaxCurrencyCode written \" SEK\" with a VAT total in SEK: Peppol's R055 matches currencyID against the code as written and finds none",
+   "rules": [
+    "PEPPOL-EN16931-R055"
+   ],
+   "cen": {
+    "BR-53": "error",
+    "BR-DEC-15": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-R055": "error"
+   }
+  },
+  "edge/cii-business-process-repeated.xml": {
+   "about": "a second BusinessProcessSpecifiedDocumentContextParameter, the first without its ID: R001 and R007 read the ID across every parameter",
+   "rules": [
+    "PEPPOL-EN16931-R001",
+    "PEPPOL-EN16931-R007"
+   ],
+   "cen": {
+    "CII-SR-003": "warning"
+   },
+   "peppol": {}
+  },
+  "edge/cii-no-lines-no-rows.xml": {
+   "about": "no line items and no VAT breakdown rows: CII's BR-CO-18 takes each line item as context, so it doesn't run",
+   "rules": [
+    "BR-CO-18"
+   ],
+   "cen": {
+    "BR-16": "error",
+    "BR-CO-10": "error",
+    "BR-CO-14": "error"
+   },
+   "peppol": {}
   }
  }
 }
