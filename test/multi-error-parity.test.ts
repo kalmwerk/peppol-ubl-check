@@ -2,14 +2,14 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { RULE_INDEX, RULES } from "../src/engine/rules-catalog";
 import { validateInvoiceXml } from "../src/engine/validate";
 import { corpusHash, multiErrorCorpus } from "./multi-error/corpus";
-import { decodeVerdicts, describeDifferences, DELIBERATE_RULES, type CompareRules, type RecordedCorpus } from "./multi-error/compare";
+import { decodeVerdicts, describeDifferences, type RecordedCorpus } from "./multi-error/compare";
+import { familyRules } from "./multi-error/families";
 
 /**
  * Peppol UBL check 1.5.3: the seeded multi-error corpus (src/test/multi-error/corpus.ts), valid sample invoices with
- * 2–8 faults at once, held to the official Peppol BIS 3.0.22 + CEN EN 16931 1.3.17 verdicts recorded by
+ * 2–8 faults at once, held to the official Peppol BIS 3.0.22 verdicts (with the CEN 1.3.16 copy it ships) recorded by
  * `bun scripts/compare-multi-error-invoices.ts --record` in multi-error-verdicts.json. The test rebuilds every
  * invoice from the stored bases and the recorded seed (the recorded hash proves it's the same invoice) and compares
  * it rule by rule and on the overall verdict with the recording run's own comparator (src/test/multi-error/
@@ -22,8 +22,7 @@ const bases = Object.keys(recorded.bases).map((name) => ({ name, xml: readFileSy
 const corpus = new Map(multiErrorCorpus(bases, recorded).map((c) => [c.id, c]));
 const ids = Object.keys(recorded.cases);
 
-const OWN = new Set(RULES.filter((r) => r.source === "InvoiceVerify").map((r) => r.id));
-const RULES_3_0_22: CompareRules = { known: (id) => !!RULE_INDEX[id], own: (id) => OWN.has(id) || id.startsWith("IV-"), deliberate: DELIBERATE_RULES };
+const RULES_3_0_22 = familyRules("peppol");
 
 /** The cases in groups of 100, so a failure names a small group and the run reports progress. */
 const groups: [string, string[]][] = [];
@@ -46,7 +45,7 @@ describe("official verdicts on the seeded multi-error corpus", () => {
     expect(Math.max(...counts)).toBeLessThanOrEqual(recorded.max);
   });
 
-  it.each(groups)("invoices %s: Peppol BIS 3.0.22 + CEN 1.3.17, rule by rule and on the verdict", (_, group) => {
+  it.each(groups)("invoices %s: Peppol BIS 3.0.22 as released, rule by rule and on the verdict", (_, group) => {
     const differences = group.flatMap((id) => {
       const c = corpus.get(id)!;
       const d = describeDifferences(id, c.faults, decodeVerdicts(recorded.cases[id]!["3.0.22"]), validateInvoiceXml(c.xml, "peppol").findings, RULES_3_0_22);

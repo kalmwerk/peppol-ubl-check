@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { RULES } from "../src/engine/rules-catalog";
+import { RULES, SYNTAX_BINDING_RULES } from "../src/engine/rules-catalog";
 import { validateInvoiceXml } from "../src/engine/validate";
 
 /**
@@ -60,12 +60,22 @@ describe("official verdicts on generated invoices", () => {
  * two-change reproductions of what the seeded multi-error corpus found, held to the official verdicts recorded
  * by `bun scripts/record-official-edge-cases.ts` in edge-verdicts.json. Each case is checked under both
  * profiles: en16931 against the CEN artefacts, peppol against CEN and Peppol together, on the rules it is about
- * and on the overall verdict (any fatal finding or none; a case's `outOfScope` syntax-binding asserts aside).
+ * and on the overall verdict (any fatal finding or none). From 1.6.0 every case is also held to every fatal CEN
+ * syntax-binding rule (syntax-binding.ts), so no case can gain or lose one of those unnoticed, and the peppol profile
+ * is held to the CEN copy Peppol BIS 3.0.22 ships (1.3.16, `cen1316`) instead of CEN 1.3.17, whose code lists, CII
+ * IGIC/IPSI IDs and CII totals arithmetic differ (the `ubl-currency-…` … `cii-vat-total-many-decimals` cases).
  */
 interface EdgeRecorded {
   cases: Record<
     string,
-    { about: string; rules: string[]; outOfScope?: string[]; cen: Record<string, "error" | "warning">; peppol: Record<string, "error" | "warning"> }
+    {
+      about: string;
+      rules: string[];
+      cen: Record<string, "error" | "warning">;
+      peppol: Record<string, "error" | "warning">;
+      /** The CEN 1.3.16 copy Peppol BIS 3.0.22 ships (its IGIC/IPSI rules still named BR-AF-* / BR-AG-*) */
+      cen1316: Record<string, "error" | "warning">;
+    }
   >;
 }
 const edge = JSON.parse(readFileSync(resolve(DIR, "edge-verdicts.json"), "utf8")) as EdgeRecorded;
@@ -78,9 +88,14 @@ function engineVerdicts(xml: string, profile: "peppol" | "en16931") {
   }
   return out;
 }
-/** The engine ID that answers for an official one: the -01 and -08 rules of the non-standard categories, the decimal rules */
-const engineId = (id: string) =>
-  /^BR-(Z|E|AE|IC|G|O|IG|IP)-08$/.test(id) ? "BR-VAT-08" : /^BR-(Z|E|AE|IC|G|O|IG|IP)-01$/.test(id) ? "BR-VAT-01" : /^BR-DEC-\d+$/.test(id) ? "BR-DEC" : id;
+/**
+ * The engine ID that answers for an official one: CEN 1.3.16's IGIC and IPSI rules under their 1.3.17 names
+ * (BR-AF-* = BR-IG-*, BR-AG-* = BR-IP-*), the -01 and -08 rules of the non-standard categories, the decimal rules
+ */
+const engineId = (raw: string) => {
+  const id = raw.replace(/^BR-AF-/, "BR-IG-").replace(/^BR-AG-/, "BR-IP-");
+  return /^BR-(Z|E|AE|IC|G|O|IG|IP)-08$/.test(id) ? "BR-VAT-08" : /^BR-(Z|E|AE|IC|G|O|IG|IP)-01$/.test(id) ? "BR-VAT-01" : /^BR-DEC-\d+$/.test(id) ? "BR-DEC" : id;
+};
 const asEngineIds = (v: Record<string, "error" | "warning">) => {
   const out: Record<string, "error" | "warning"> = {};
   for (const [id, f] of Object.entries(v)) if (out[engineId(id)] !== "error") out[engineId(id)] = f;
@@ -89,6 +104,7 @@ const asEngineIds = (v: Record<string, "error" | "warning">) => {
 const only = (v: Record<string, "error" | "warning">, rules: string[]) =>
   Object.fromEntries(rules.filter((r) => v[r]).map((r) => [r, v[r]]));
 const fails = (v: Record<string, "error" | "warning">) => Object.values(v).includes("error");
+const SYNTAX_IDS = ["UBL-DT-01", "UBL-DT-06", "UBL-DT-07", ...SYNTAX_BINDING_RULES.map((r) => r.id)];
 
 describe("official verdicts on edge cases", () => {
   it("covers both syntaxes and every rule it names is in the catalog", () => {
@@ -99,25 +115,16 @@ describe("official verdicts on edge cases", () => {
     expect(Object.values(edge.cases).flatMap((c) => c.rules).filter((id) => !ids.has(id))).toEqual([]);
   });
 
-  it("leaves out of the verdict only syntax-binding asserts the checker doesn't have, and only where they fail", () => {
-    const ids = new Set(RULES.map((r) => r.id));
-    for (const [file, c] of Object.entries(edge.cases))
-      for (const id of c.outOfScope ?? []) {
-        expect({ file, id, syntaxRule: /^(UBL|CII)-SR-\d+$/.test(id), inCatalog: ids.has(id) }).toEqual({ file, id, syntaxRule: true, inCatalog: false });
-        expect({ file, id, fails: c.cen[id] ?? c.peppol[id] }).toEqual({ file, id, fails: "error" });
-      }
-  });
-
   it.each(Object.entries(edge.cases))("%s", (file, c) => {
     const xml = readFileSync(resolve(DIR, file), "utf8");
-    const outOfScope = new Set(c.outOfScope ?? []);
-    const inScope = (v: Record<string, "error" | "warning">) => Object.fromEntries(Object.entries(v).filter(([id]) => !outOfScope.has(id)));
-    const cen = asEngineIds(inScope(c.cen));
-    const official = { en16931: cen, peppol: { ...asEngineIds(inScope(c.peppol)), ...cen } };
-    for (const [k, v] of Object.entries(asEngineIds(inScope(c.peppol)))) if (v === "error") official.peppol[k] = "error";
+    const cen = asEngineIds(c.cen);
+    // Peppol BIS 3.0.22: its own rules and the CEN 1.3.16 copy it ships
+    const official = { en16931: cen, peppol: { ...asEngineIds(c.peppol), ...asEngineIds(c.cen1316) } };
+    for (const [k, v] of Object.entries(asEngineIds(c.peppol))) if (v === "error") official.peppol[k] = "error";
+    const held = [...new Set([...c.rules, ...SYNTAX_IDS])];
     for (const profile of ["en16931", "peppol"] as const) {
       const ours = engineVerdicts(xml, profile);
-      expect({ profile, rules: only(ours, c.rules) }).toEqual({ profile, rules: only(official[profile], c.rules) });
+      expect({ profile, rules: only(ours, held) }).toEqual({ profile, rules: only(official[profile], held) });
       expect({ profile, fails: fails(ours) }).toEqual({ profile, fails: fails(official[profile]) });
     }
   });
@@ -125,15 +132,16 @@ describe("official verdicts on edge cases", () => {
 
 /**
  * Peppol UBL check 1.5.2: SI-UBL 2.0 / NLCIUS and XRechnung invoices with a single change, held to the official
- * verdicts recorded by `bun scripts/record-official-national-cases.ts` in national-verdicts.json: the Dutch Peppol
- * Authority's validation set 2026-05-21 (its own BR-NL / SI rules), KoSIT's XRechnung Schematron 2.6.0 (with the
- * Peppol rules it copies) and CEN EN 16931 1.3.17. Each case runs under its national profile and is compared on
+ * verdicts recorded by `bun scripts/record-official-national-cases.ts` in national-verdicts.json, each country's
+ * official check as it runs: the Dutch Peppol Authority's validation set 2026-05-21 whole (built on CEN 1.3.16) and
+ * KoSIT's XRechnung validator configuration 2026-08-31 (CEN 1.3.16, XRechnung Schematron 2.6.0 with the Peppol rules
+ * it copies, and the levels of its scenarios.xml). Each case runs under its national profile and is compared on
  * the rules it is about and on the overall verdict (any official fatal against any error of ours; our IV-SYN-03
  * data-type check stands in for CEN's CII-DT-097). Info-level asserts (KoSIT's BR-DE-TMP-32) don't count.
  */
 type Level = "error" | "warning" | "info";
 interface NationalRecorded {
-  cases: Record<string, { about: string; profile: "nlcius" | "xrechnung"; rules: string[]; official: Record<string, Level> }>;
+  cases: Record<string, { about: string; profile: "nlcius" | "xrechnung"; rules: string[]; official: Record<string, Level>; kosit?: "no scenario: rejected" }>;
 }
 const national = JSON.parse(readFileSync(resolve(DIR, "national-verdicts.json"), "utf8")) as NationalRecorded;
 
@@ -163,6 +171,9 @@ describe("official verdicts on Dutch and German national cases", () => {
     const official = Object.fromEntries(Object.entries(c.official).filter(([, v]) => v !== "info")) as Record<string, "error" | "warning">;
     const rules = joint ? [...c.rules.filter((r) => r !== "BR-NL-32" && r !== "BR-NL-34"), ...(c.rules.some((r) => r === "BR-NL-32" || r === "BR-NL-34") ? [NL_CII_JOINT] : [])] : c.rules;
     const ours = nationalVerdicts(xml, c.profile, joint);
+    // KoSIT picks its scenario by the exact specification identifier; with none matching it rejects the invoice
+    // without running a rule, so ours must reject it too
+    if (c.kosit) return expect(fails(ours)).toBe(true);
     expect(only(ours, rules)).toEqual(only(official, rules));
     expect(fails(ours)).toBe(fails(official));
   });
