@@ -35,12 +35,13 @@ import {
   type Identifier,
   type InvoiceModel,
   type Loc,
+  type LocMap,
   type Party,
 } from "./model";
 import { RULE_INDEX, type RuleSource, type Section, type Severity } from "./rules-catalog";
 import { KOSIT_PEPPOL_RULES, nlciusRules, xrechnungRules } from "./rules-national";
 import { codeListRules } from "./rules-code-lists";
-import { everyAllowanceCharge, exactText, vatCategoryRules, xsBoolean } from "./rules-vat-categories";
+import { acTaxViews, everyAllowanceCharge, exactText, lineTaxViews, vatCategoryRules, xsBoolean } from "./rules-vat-categories";
 import { normalizeSpace, xmlTrim } from "./xpath-text";
 import {
   checkBelgianEnterprise,
@@ -146,6 +147,31 @@ const ONE_BREAKDOWN_ROW: ReadonlySet<string> = new Set(["Z", "E", "AE", "K", "G"
  * rule first, so the generic VAT breakdown rule (BR-45 … BR-48, BR-CO-03, BR-CO-17, BR-DEC-19, BR-DEC-20) never
  * runs on that row; the other categories' rules take the CategoryCode element as context and leave the row free.
  */
+/**
+ * One view of a line per UBL cac:InvoicePeriod, its period fields and locs set to that period's; the first view is
+ * the line itself. Each period is a context of BR-CO-20, BR-30, R110 and R111. (CII has one BillingSpecifiedPeriod.)
+ */
+function linePeriodViews(ln: InvoiceModel["lines"][number]): InvoiceModel["lines"][number][] {
+  const periods = ln.periods ?? [];
+  if (periods.length <= 1) return [ln];
+  return [
+    ln,
+    ...periods.slice(1).map((p) => {
+      const locs: LocMap = { ...ln.locs, period: p.loc };
+      delete locs["periodStart"];
+      delete locs["periodEnd"];
+      if (p.locs["start"]) locs["periodStart"] = p.locs["start"];
+      if (p.locs["end"]) locs["periodEnd"] = p.locs["end"];
+      return { ...ln, periodStart: p.start, periodEnd: p.end, locs };
+    }),
+  ];
+}
+
+/** UBL: `cac:TaxScheme/normalize-space(upper-case(cbc:ID)) = 'VAT'` */
+const ublVatScheme = (scheme: string | undefined) => normSpace(scheme).toUpperCase() === "VAT";
+/** CII: `upper-case(ram:TypeCode) = 'VAT'`, the TypeCode as written (no normalize-space) */
+const ciiVatType = (typeCode: string | undefined, loc: Loc | undefined) => !!loc && exactText(typeCode, loc).toUpperCase() === "VAT";
+
 function ciiRowTakenByCategoryRule(m: InvoiceModel, v: InvoiceModel["vat"][number]): boolean {
   if (m.syntax !== "CII" || !v.locs["category"] || !v.locs["scheme"]) return false;
   return ["L", "M", "O"].includes(exactText(v.category, v.locs["category"])) && exactText(v.scheme, v.locs["scheme"]).toUpperCase() === "VAT";
@@ -583,8 +609,9 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     if (m.locs["taxCurrency"] && !kositNoDocTotal) {
       const amounts = (c: string | undefined) =>
         m.taxTotals.filter((t) => c !== undefined && t.currency === c && t.amount !== undefined).map((t) => t.amount!);
-      const inTax = amounts(m.taxCurrency);
-      const inDoc = amounts(m.currency);
+      // UBL matches currencyID against normalize-space() of the codes, CII against the codes as written
+      const inTax = amounts(cii ? exactText(m.taxCurrency, m.locs["taxCurrency"]) : m.taxCurrency);
+      const inDoc = amounts(cii ? (m.locs["currency"] ? exactText(m.currency, m.locs["currency"]) : undefined) : m.currency);
       const some = (xs: number[], ok: (x: number) => boolean) => xs.some(ok);
       const same = cii
         ? (some(inTax, (x) => x < 0) && some(inDoc, (x) => x < 0)) || (some(inTax, (x) => x >= 0) && some(inDoc, (x) => x >= 0))
@@ -686,9 +713,25 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     // URIUniversalCommunication, so a blank schemeID or a group without URIID fails
     if (m.syntax === "CII" && p.locs["endpointGroup"] && !p.endpoint)
       emit(schemeRule, `${who} electronic address (URIUniversalCommunication) has no URIID with a schemeID.`, p.locs["endpointGroup"]);
+    // CII: Peppol's R010/R020 (`ram:URIUniversalCommunication/ram:URIID`) accept a URIID in any of the party's
+    // groups, and CL008 checks every one of them (each URIID is its context): Peppol's own, shorter list for the
+    // seller and buyer address, the schemeID as written, schemeID or not. UBL checks every EndpointID with a
+    // schemeID, below.
+    const ciiIds = m.syntax === "CII" ? (p.endpointIds ?? (p.endpoint ? [{ ...p.endpoint, loc: at(p.locs, "endpoint", p.loc) }] : [])) : [];
+    if (peppolOn)
+      for (const e of ciiIds)
+        if (!PEPPOL_EAS_CODES.has(e.scheme ?? ""))
+          emit(
+            "PEPPOL-EN16931-CL008",
+            e.scheme === undefined
+              ? `${who} electronic address "${e.id}" has no schemeID from the list Peppol accepts.`
+              : `${who} endpoint scheme "${e.scheme}" is not an electronic address scheme Peppol accepts.`,
+            e.loc,
+            { actual: e.scheme, expected: "0208, 9925, 0088 …" },
+          );
     if (!p.endpoint) {
       // R010/R020 have the party as context, so they only fire when the party element is there
-      if (peppolOn && p.loc)
+      if (peppolOn && p.loc && ciiIds.length === 0)
         emit(peppolRule, `${who} electronic address (EndpointID) is missing.`, p.loc);
       continue;
     }
@@ -702,17 +745,6 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       emit("IV-BE-01", `${who} enterprise number "${p.endpoint.id}" fails the mod-97 check.`, loc, {
         actual: p.endpoint.id,
       });
-    // CII: Peppol's own, shorter list for the seller and buyer address, schemeID or not (CL008).
-    // UBL checks every EndpointID with a schemeID, below.
-    if (peppolOn && m.syntax === "CII" && !PEPPOL_EAS_CODES.has(p.endpoint.scheme ?? ""))
-      emit(
-        "PEPPOL-EN16931-CL008",
-        p.endpoint.scheme === undefined
-          ? `${who} electronic address "${p.endpoint.id}" has no schemeID from the list Peppol accepts.`
-          : `${who} endpoint scheme "${p.endpoint.scheme}" is not an electronic address scheme Peppol accepts.`,
-        loc,
-        { actual: p.endpoint.scheme, expected: "0208, 9925, 0088 …" },
-      );
   }
   // BR-CL-11 (legal registration identifier schemes, wherever they sit) is in codeListRules
   // Peppol's identifier rules look at every identifier with that scheme, wherever it sits: GLN (0088),
@@ -995,12 +1027,13 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     const v = m.syntax === "CII" ? exactText(ac.rawIndicator, ac.locs["indicator"]) : xsBoolean(ac.rawIndicator);
     return v === false || v === "false" ? "allowance" : v === true || v === "true" ? "charge" : undefined;
   };
-  /** UBL exists(cac:TaxCategory[TaxScheme VAT]/cbc:ID); CII (ram:CategoryTradeTax[upper-case(ram:TypeCode) = 'VAT']/ram:CategoryCode) */
+  /** UBL exists(cac:TaxCategory[TaxScheme VAT]/cbc:ID); CII (ram:CategoryTradeTax[upper-case(ram:TypeCode) = 'VAT']/ram:CategoryCode): any of its groups */
   const acHasVatCategory = (ac: AllowanceCharge) =>
-    !!ac.locs["vatCategory"] &&
-    (m.syntax === "CII"
-      ? exactText(ac.vatScheme, ac.locs["vatScheme"]).toUpperCase() === "VAT"
-      : normSpace(ac.vatScheme).toUpperCase() === "VAT");
+    acTaxViews(ac).some(
+      (t) =>
+        !!t.locs["vatCategory"] &&
+        (m.syntax === "CII" ? exactText(t.vatScheme, t.locs["vatScheme"]).toUpperCase() === "VAT" : normSpace(t.vatScheme).toUpperCase() === "VAT"),
+    );
   const docAc = (ac: AllowanceCharge) => {
     peppolIndicator(ac.rawIndicator, at(ac.locs, "indicator", ac.loc), "A document allowance/charge");
     // BR-31 … BR-38 and BR-CO-21/22 read an allowance (indicator false) or charge (true) as each syntax
@@ -1133,35 +1166,55 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         emit("BR-27", ln.priceAmount !== undefined ? `${label} net price is negative (${ln.priceAmount}).` : `${label} has no net price, so it can't be checked for a negative value.`, L("priceAmount"));
       if (ln.grossPrice !== undefined && ln.grossPrice < 0)
         emit("BR-28", `${label} gross price is negative (${ln.grossPrice}).`, L("grossPrice"));
-      if (ln.locs["period"]) {
-        if (!ln.periodStart && !ln.periodEnd)
-          emit("BR-CO-20", `${label} has an empty period.`, L("period"));
-        if (m.syntax === "CII" ? ln.periodInOrder === false : ln.periodStart && ln.periodEnd && ln.periodEnd < ln.periodStart)
+      // UBL: each cac:InvoicePeriod of the line is a context of its own (BR-CO-20, BR-30, R110, R111)
+      for (const pv of linePeriodViews(ln)) {
+        if (!pv.locs["period"]) continue;
+        const PL = (key: string) => at(pv.locs, key, ln.loc);
+        // BR-CO-20 asks for the start or end date element, whatever it holds (an unreadable date is still there)
+        if (!pv.locs["periodStart"] && !pv.locs["periodEnd"])
+          emit("BR-CO-20", `${label} has an empty period.`, PL("period"));
+        if (m.syntax === "CII" ? pv.periodInOrder === false : pv.periodStart && pv.periodEnd && pv.periodEnd < pv.periodStart)
           emit(
             "BR-30",
-            ln.periodStart && ln.periodEnd && ln.periodEnd < ln.periodStart
+            pv.periodStart && pv.periodEnd && pv.periodEnd < pv.periodStart
               ? `${label} period ends before it starts.`
               : `${label} period's start and end dates can't be compared: both must be written as YYYYMMDD with format="102".`,
-            L("periodEnd"),
+            PL("periodEnd"),
           );
-        if (peppolOn && m.periodStart && ln.periodStart && ln.periodStart < m.periodStart)
+        // CII compares the DateTimeStrings as written (see periodWithinInvoice), so an unreadable date fails there
+        const within = pv.periodWithinInvoice;
+        if (peppolOn && m.syntax === "CII" && within?.start && !within.start.ok)
           emit(
             "PEPPOL-EN16931-R110",
-            `${label} period starts ${ln.periodStart}, before the invoice period (${m.periodStart}).`,
-            L("periodStart"),
+            `${label} period start "${within.start.line}" doesn't compare as on or after the invoice period start "${within.start.invoice}" (dates are compared as written, YYYYMMDD).`,
+            PL("periodStart"),
           );
-        if (peppolOn && m.periodEnd && ln.periodEnd && ln.periodEnd > m.periodEnd)
+        if (peppolOn && m.syntax === "CII" && within?.end && !within.end.ok)
           emit(
             "PEPPOL-EN16931-R111",
-            `${label} period ends ${ln.periodEnd}, after the invoice period (${m.periodEnd}).`,
-            L("periodEnd"),
+            `${label} period end "${within.end.line}" doesn't compare as on or before the invoice period end "${within.end.invoice}" (dates are compared as written, YYYYMMDD).`,
+            PL("periodEnd"),
+          );
+        if (peppolOn && m.syntax !== "CII" && m.periodStart && pv.periodStart && pv.periodStart < m.periodStart)
+          emit(
+            "PEPPOL-EN16931-R110",
+            `${label} period starts ${pv.periodStart}, before the invoice period (${m.periodStart}).`,
+            PL("periodStart"),
+          );
+        if (peppolOn && m.syntax !== "CII" && m.periodEnd && pv.periodEnd && pv.periodEnd > m.periodEnd)
+          emit(
+            "PEPPOL-EN16931-R111",
+            `${label} period ends ${pv.periodEnd}, after the invoice period (${m.periodEnd}).`,
+            PL("periodEnd"),
           );
       }
       // BR-CO-04: UBL ClassifiedTaxCategory[TaxScheme VAT]/cbc:ID, CII ApplicableTradeTax[upper-case(TypeCode)
-      // = 'VAT']/CategoryCode — the element, filled or not (BR-CL-18 checks the code itself)
-      const lineVatCategory =
-        !!ln.locs["vatCategoryCode"] &&
-        (m.syntax === "CII" ? exactText(ln.vatScheme, ln.locs["vatScheme"]).toUpperCase() === "VAT" : normSpace(ln.vatScheme).toUpperCase() === "VAT");
+      // = 'VAT']/CategoryCode — the element, filled or not, in any of the line's groups (BR-CL-18 checks the code)
+      const lineVatCategory = lineTaxViews(ln).some(
+        (t) =>
+          !!t.locs["vatCategoryCode"] &&
+          (m.syntax === "CII" ? exactText(t.vatScheme, t.locs["vatScheme"]).toUpperCase() === "VAT" : normSpace(t.vatScheme).toUpperCase() === "VAT"),
+      );
       if (!lineVatCategory) emit("BR-CO-04", `${label} has no VAT category (with tax scheme VAT).`, L("vatCategory"));
       // BR-CO-23 / BR-CO-24: each line allowance or charge has a reason or reason code element
       for (const ac of [...ln.allowances, ...ln.charges]) {
@@ -1190,30 +1243,34 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       // rate rules per category, on the official contexts: the line's VAT category (UBL normalize-space(cbc:ID),
       // CII ram:CategoryCode as written) under the VAT tax scheme (UBL normalize-space(upper-case(..)), CII
       // upper-case(ram:TypeCode)). A missing rate fails every "= 0" and "> 0" test (xs:decimal(()) = 0 is false).
-      const lineVat =
-        m.syntax === "CII"
-          ? exactText(ln.vatScheme, ln.locs["vatScheme"]).toUpperCase() === "VAT"
-          : normalizeSpace(ln.vatScheme).toUpperCase() === "VAT";
-      const cat = !lineVat ? undefined : m.syntax === "CII" ? exactText(ln.vatCategory, ln.locs["vatCategoryCode"]) : normalizeSpace(ln.vatCategory);
-      const rate = ln.vatRate;
-      if (cat === "S" && (rate === undefined || rate <= 0))
-        emit("BR-S-05", `${label} is standard rated with rate ${rate ?? "missing"}.`, L("vatRate"));
-      const zeroRules: Record<string, string> = {
-        Z: "BR-Z-05",
-        E: "BR-E-05",
-        AE: "BR-AE-05",
-        K: "BR-IC-05",
-        G: "BR-G-05",
-      };
-      const zr = cat ? zeroRules[cat] : undefined;
-      if (zr && rate !== 0)
-        emit(zr, rate === undefined ? `${label} has category ${cat} but no VAT rate; it must be 0.` : `${label} has category ${cat} with rate ${rate}%; it must be 0.`, L("vatRate"), {
-          expected: "0",
-          actual: rate === undefined ? undefined : String(rate),
-        });
-      // BR-O-05: not(cbc:Percent) / not(ram:RateApplicablePercent), a test of presence
-      if (cat === "O" && ln.locs["vatRate"])
-        emit("BR-O-05", `${label} is out of scope of VAT but carries rate ${rate}%.`, L("vatRate"));
+      // Each VAT category group of the line is a context of its own.
+      for (const t of lineTaxViews(ln)) {
+        const T = (key: string) => at(t.locs, key, ln.loc);
+        const lineVat =
+          m.syntax === "CII"
+            ? exactText(t.vatScheme, t.locs["vatScheme"]).toUpperCase() === "VAT"
+            : normalizeSpace(t.vatScheme).toUpperCase() === "VAT";
+        const cat = !lineVat ? undefined : m.syntax === "CII" ? exactText(t.vatCategory, t.locs["vatCategoryCode"]) : normalizeSpace(t.vatCategory);
+        const rate = t.vatRate;
+        if (cat === "S" && (rate === undefined || rate <= 0))
+          emit("BR-S-05", `${label} is standard rated with rate ${rate ?? "missing"}.`, T("vatRate"));
+        const zeroRules: Record<string, string> = {
+          Z: "BR-Z-05",
+          E: "BR-E-05",
+          AE: "BR-AE-05",
+          K: "BR-IC-05",
+          G: "BR-G-05",
+        };
+        const zr = cat ? zeroRules[cat] : undefined;
+        if (zr && rate !== 0)
+          emit(zr, rate === undefined ? `${label} has category ${cat} but no VAT rate; it must be 0.` : `${label} has category ${cat} with rate ${rate}%; it must be 0.`, T("vatRate"), {
+            expected: "0",
+            actual: rate === undefined ? undefined : String(rate),
+          });
+        // BR-O-05: not(cbc:Percent) / not(ram:RateApplicablePercent), a test of presence
+        if (cat === "O" && t.locs["vatRate"])
+          emit("BR-O-05", `${label} is out of scope of VAT but carries rate ${rate}%.`, T("vatRate"));
+      }
 
       for (const ac of [...ln.allowances, ...ln.charges])
         peppolIndicator(ac.rawIndicator, at(ac.locs, "indicator", ac.loc), `${label}: an allowance/charge`);
@@ -1288,7 +1345,9 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
         {
           // Official: u:slack(line amount, quantity × (price ÷ base quantity) + charges − allowances, 0.02),
           // with quantity 1, price 0, line amount 0 and base quantity 1 when absent (base also when 0),
-          // and each sum of line allowances / charges rounded to two decimals; 0.02 itself passes.
+          // and each sum of line allowances / charges rounded to two decimals; 0.02 itself passes. The sums take
+          // the line allowances and charges whose normalize-space(ChargeIndicator) is exactly 'false' / 'true'
+          // (a 0 or 1 is neither) and, in CII, every ram:ActualAmount of each (EN 16931 reads only the first).
           const quantity = ln.quantity ?? 1;
           const price = ln.priceAmount ?? 0;
           // KoSIT's CII copy falls back to the gross price's base quantity before 1
@@ -1298,13 +1357,10 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
               : kosit && !ubl && ln.grossBaseQuantity !== undefined && ln.grossBaseQuantity !== 0
                 ? ln.grossBaseQuantity
                 : 1;
-          const expected = D.sub(
-            D.add(
-              D.mul(D.dec(quantity), D.div(D.dec(price), D.dec(base))),
-              D.round2(D.total(ln.charges.map((c) => c.amount))),
-            ),
-            D.round2(D.total(ln.allowances.map((a) => a.amount))),
-          );
+          const lineAcs = [...ln.allowances, ...ln.charges];
+          const sumOf = (indicator: "true" | "false") =>
+            D.round2(D.total(lineAcs.filter((ac) => normSpace(ac.rawIndicator) === indicator).flatMap((ac) => (ubl ? [ac.amount] : (ac.actualAmounts ?? [ac.amount])))));
+          const expected = D.sub(D.add(D.mul(D.dec(quantity), D.div(D.dec(price), D.dec(base))), sumOf("true")), sumOf("false"));
           // KoSIT: a warning, with 0.5 slack for HUF invoices
           if (!D.withinOrEqual(D.dec(ln.netAmount ?? 0), expected, slack))
             emit(
@@ -1424,16 +1480,19 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
           expected: fd(D.round2(vatTotal)),
           actual: fa(t.amount),
         });
-  } else if (T.taxAmount !== undefined && m.vat.length > 0 && !is(T.taxAmount, D.round2(vatTotal)))
-    emit(
-      "BR-CO-14",
-      `VAT breakdown adds up to ${fd(vatTotal)}, but the VAT total is ${fa(T.taxAmount)}.`,
-      tLoc("taxAmount"),
-      {
-        expected: fd(D.round2(vatTotal)),
-        actual: fa(T.taxAmount),
-      },
-    );
+  } else {
+    // UBL's runs on every cac:TaxTotal against its own TaxSubtotals (`or not(cac:TaxSubtotal)`), so a second
+    // TaxTotal is checked on its own rows instead of the first one against all of them
+    for (const t of m.taxTotals) {
+      if (!t.hasSubtotals || t.amount === undefined) continue;
+      const sum = D.total(t.subtotalTaxAmounts ?? []);
+      if (!is(t.amount, D.round2(sum)))
+        emit("BR-CO-14", `VAT breakdown adds up to ${fd(sum)}, but the VAT total is ${fa(t.amount)}.`, t.loc ?? tLoc("taxAmount"), {
+          expected: fd(D.round2(sum)),
+          actual: fa(t.amount),
+        });
+    }
+  }
   // BR-CO-15 as the official rules: exactly one VAT total in the invoice currency (BT-110), and
   // BT-112 = round(BT-109 + BT-110); CII also accepts BT-112 = BT-109 (an invoice without VAT).
   // Without an invoice currency there is nothing to compare (`every $Currency in ()` holds). The currency
@@ -1515,7 +1574,8 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
 
   /* ---------------- VAT breakdown ---------------- */
   if (opts.en16931) {
-    if (m.vat.length === 0) emit("BR-CO-18", "The invoice has no VAT breakdown (TaxSubtotal).");
+    // CII's BR-CO-18 takes each line item as context, so an invoice without lines isn't checked
+    if (m.vat.length === 0 && (m.syntax !== "CII" || m.lines.length > 0)) emit("BR-CO-18", "The invoice has no VAT breakdown (TaxSubtotal).");
     for (const v of m.vat) {
       const V = (key: string) => at(v.locs, key, v.loc);
       const label = `VAT ${v.category ?? "?"}${v.rate !== undefined ? ` ${v.rate}%` : ""}`;
@@ -1658,7 +1718,7 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     if (m.syntax === "UBL") {
       const isS = (v: string | undefined) => normSpace(v) === "S";
       const sRow = m.vat.find((v) => isS(v.category));
-      const sUsed = m.lines.some((ln) => isS(ln.vatCategory)) || everyAllowanceCharge(m).some(({ ac }) => isS(ac.vatCategory));
+      const sUsed = m.lines.flatMap(lineTaxViews).some((ln) => isS(ln.vatCategory)) || everyAllowanceCharge(m).flatMap(({ ac }) => acTaxViews(ac)).some((ac) => isS(ac.vatCategory));
       if (sRow && !sUsed)
         emit("BR-S-01", "The VAT breakdown has a standard-rated row (S), but no line, allowance or charge is standard rated.", sRow.loc ?? m.loc, {
           expected: "a line, allowance or charge with category S",
@@ -1669,8 +1729,8 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       const vatScheme = (scheme: string | undefined) => normSpace(scheme).toUpperCase() === "VAT";
       for (const [category, name, exactNeedsVat] of [["L", "IGIC", false], ["M", "IPSI", true]] as const) {
         const uses =
-          m.lines.filter((ln) => normSpace(ln.vatCategory) === category && vatScheme(ln.vatScheme)).length +
-          everyAllowanceCharge(m).filter(({ ac }) => normSpace(ac.vatCategory) === category && vatScheme(ac.vatScheme)).length;
+          m.lines.flatMap(lineTaxViews).filter((ln) => normSpace(ln.vatCategory) === category && vatScheme(ln.vatScheme)).length +
+          everyAllowanceCharge(m).flatMap(({ ac }) => acTaxViews(ac)).filter((ac) => normSpace(ac.vatCategory) === category && vatScheme(ac.vatScheme)).length;
         const asWritten = m.vat.filter((v) => !!v.locs["category"] && exactText(v.category, v.locs["category"]) === category && (!exactNeedsVat || vatScheme(v.scheme)));
         const normalized = m.vat.filter((v) => normSpace(v.category) === category && vatScheme(v.scheme));
         if ((uses > 0 && asWritten.length > 0) || (uses === 0 && normalized.length === 0)) continue;
@@ -1693,8 +1753,8 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     const ublVat = (scheme: string | undefined) => m.syntax === "CII" || normSpace(scheme).toUpperCase() === "VAT";
     for (const category of ONE_BREAKDOWN_ROW) {
       const usedBy =
-        m.lines.find((ln) => lineCat(ln) === category && ublVat(ln.vatScheme)) ??
-        [...m.allowances, ...m.charges].find((ac) => acCat(ac) === category && ublVat(ac.vatScheme));
+        m.lines.flatMap(lineTaxViews).find((ln) => lineCat(ln) === category && ublVat(ln.vatScheme)) ??
+        [...m.allowances, ...m.charges].flatMap(acTaxViews).find((ac) => acCat(ac) === category && ublVat(ac.vatScheme));
       const rows = m.vat.filter((v) => rowCat(v) === category && ublVat(v.scheme));
       const loc = rows[1]?.loc ?? usedBy?.loc ?? rows[0]?.loc ?? m.loc;
       if (rows.length > 1)
@@ -1720,12 +1780,18 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     // row, as in the official Schematron. S, L and M sum the lines, document allowances and
     // charges at the row's rate, the other categories at the row's category. The margin depends
     // on the syntax: UBL allows a difference of less than 1.00 for S, L and M and none for the
-    // others; CII sums are rounded to the cent first, S, L, M and O must then match exactly and
+    // others; CII sums are rounded to the cent first, S and O must then match exactly and
     // Z, E, AE, K and G may differ by less than 1.00.
     for (const v of m.vat) {
       // A taxable amount that isn't a number stops the official files; a missing one fails the equation
       if (!v.category || !VAT_CATEGORIES[v.category] || (v.taxableAmount === undefined && v.locs["taxableAmount"])) continue;
       const cii = m.syntax === "CII";
+      // Only a row the official rule's context matches is checked: UBL needs the VAT tax scheme
+      // (cac:TaxScheme/normalize-space(upper-case(cbc:ID)) = 'VAT') for every category; CII's S and Z rules take any
+      // ram:CategoryCode, the others need upper-case(ram:TypeCode) = 'VAT' as written. CII's L and M rules read
+      // `every $rate in ../ram:RateApplicablePercent` from the ram:ApplicableTradeTax context, whose parent has no
+      // rate, so they never fail. With one fault these gates can't show (the row's values are still right).
+      if (cii ? v.category === "L" || v.category === "M" || (v.category !== "S" && v.category !== "Z" && !ciiVatType(v.scheme, v.locs["scheme"])) : !ublVatScheme(v.scheme)) continue;
       // CII compares the category codes exactly as written (`ram:CategoryCode[.='S']`, `ram:CategoryCode = 'S'`),
       // UBL after normalize-space(): in CII a padded code neither opens the row's check nor counts toward it
       const written = (value: string | undefined, loc: Loc | undefined) => (cii ? exactText(value, loc) : value);
@@ -1733,11 +1799,14 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       const perRate = PER_RATE_CATEGORIES.has(v.category);
       if (perRate && v.rate === undefined) continue; // `every $rate in ()` holds; BR-48 reports the rate
       const rate = perRate ? D.dec(v.rate) : undefined;
-      const inRow = (category: string | undefined, r: number | undefined) =>
-        category === v.category && (!rate || (r !== undefined && D.eq(D.dec(r), rate)));
-      const lines = m.lines.filter((l) => inRow(written(l.vatCategory, l.locs["vatCategoryCode"]), l.vatRate));
-      const charges = docCharges.filter((c) => inRow(written(c.vatCategory, c.locs["vatCategory"]), c.vatRate));
-      const allowances = docAllowances.filter((a) => inRow(written(a.vatCategory, a.locs["vatCategory"]), a.vatRate));
+      // A line, allowance or charge counts when any of its groups has the category and any has the rate
+      // (`[…/CategoryCode = 'S' and …/RateApplicablePercent = $rate]`, each path tested on its own)
+      const inRow = (groups: { cat: string | undefined; rate: number | undefined }[]) =>
+        groups.some((g) => g.cat === v.category) && (!rate || groups.some((g) => g.rate !== undefined && D.eq(D.dec(g.rate), rate)));
+      const lines = m.lines.filter((l) => inRow(lineTaxViews(l).map((t) => ({ cat: written(t.vatCategory, t.locs["vatCategoryCode"]), rate: t.vatRate }))));
+      const acIn = (ac: AllowanceCharge) => inRow(acTaxViews(ac).map((t) => ({ cat: written(t.vatCategory, t.locs["vatCategory"]), rate: t.vatRate })));
+      const charges = docCharges.filter(acIn);
+      const allowances = docAllowances.filter(acIn);
       const part = (xs: (number | undefined)[]) => (cii ? D.round2(D.total(xs)) : D.total(xs));
       const computed = D.sub(
         D.add(part(lines.map((l) => l.netAmount)), part(charges.map((c) => c.amount))),
@@ -1753,8 +1822,8 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
       const declared = D.dec(v.taxableAmount);
       const margin = cii ? !perRate && v.category !== "O" : perRate;
       const hasUse = lines.length + charges.length + allowances.length > 0;
-      // UBL also needs the row's rate to be used (S, L, M), or any invoice line (the others)
-      const used = cii || (perRate ? hasUse : m.lines.length > 0);
+      // UBL also needs the row's rate to be used (S), or any invoice line (the others, L and M included)
+      const used = cii || (v.category === "S" ? hasUse : m.lines.length > 0);
       if (used && (margin ? D.within(declared, computed, D.ONE_UNIT) : D.eq(declared, computed)))
         continue;
       emit(
@@ -1773,7 +1842,7 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     if (peppolOn && m.syntax === "UBL") {
       const taxCategories = [
         ...m.vat.map((v) => ({ id: v.category, code: v.exemptionCode, codeLoc: v.locs["exemptionCode"], loc: v.locs["category"] ?? v.loc })),
-        ...everyAllowanceCharge(m).map(({ ac }) => ({ id: ac.vatCategory, code: ac.vatExemptionCode, codeLoc: ac.locs["vatExemptionCode"], loc: ac.locs["vatCategory"] ?? ac.loc })),
+        ...everyAllowanceCharge(m).flatMap(({ ac }) => acTaxViews(ac)).map((ac) => ({ id: ac.vatCategory, code: ac.vatExemptionCode, codeLoc: ac.locs["vatExemptionCode"], loc: ac.locs["vatCategory"] ?? ac.loc })),
       ];
       for (const tc of taxCategories) {
         if (!tc.codeLoc) continue;
@@ -1787,8 +1856,12 @@ export function runRules(m: InvoiceModel, fmt: FormatInfo, opts: RuleOptions): F
     }
 
     // BR-x-02 (the VAT identifiers each line category needs) are in vatCategoryRules
-    // BR-IC-11 and BR-IC-12 start from a VAT breakdown row with category K, as the official rules do
-    if (m.vat.some((v) => v.category === "K")) {
+    // BR-IC-11 and BR-IC-12 start from a VAT breakdown row with category K under the VAT tax scheme, as the official
+    // rules do (UBL normalize-space(cbc:ID) with TaxScheme VAT; CII the CategoryCode as written with TypeCode VAT)
+    const kRow = (v: (typeof m.vat)[number]) =>
+      !!v.locs["category"] &&
+      (m.syntax === "CII" ? exactText(v.category, v.locs["category"]) === "K" && ciiVatType(v.scheme, v.locs["scheme"]) : normSpace(v.category) === "K" && ublVatScheme(v.scheme));
+    if (m.vat.some(kRow)) {
       // A delivery date, or an invoice period that isn't blank (UBL: any child; CII: a start or end date)
       if (!m.deliveryDateGiven && !m.periodHasContent)
         emit(

@@ -1,5 +1,5 @@
-import type { CodedKind, CodedValue, Loc, LocMap, InvoiceModel, SchemeIdentifier } from "./model";
-import { at, text, xpathOf, type XNode } from "./xml";
+import type { CodedKind, CodedValue, Loc, LocMap, InvoiceModel, SchemeIdentifier, TaxGroup } from "./model";
+import { at, kids, text, xpathOf, type XNode } from "./xml";
 import { normalizeSpace, xmlTrim } from "./xpath-text";
 
 export const DECIMAL_BTS = new Set([
@@ -25,6 +25,28 @@ export const DECIMAL_BTS = new Set([
   "BT-141",
   "BT-142",
 ]);
+
+/**
+ * Every VAT category group named `local` under `parent` (UBL TaxCategory / ClassifiedTaxCategory: ID, Percent,
+ * TaxScheme/ID, TaxExemptionReasonCode; CII CategoryTradeTax / ApplicableTradeTax: CategoryCode,
+ * RateApplicablePercent, TypeCode). Read with a context of its own: the first group's fields on the line or
+ * allowance already record its data-type findings.
+ */
+export function readTaxGroups(parent: XNode | null | undefined, local: string, syntax: "UBL" | "CII"): TaxGroup[] {
+  const ctx = new ReadCtx();
+  return kids(parent, local).map((g) => {
+    const locs: LocMap = {};
+    const ubl = syntax === "UBL";
+    return {
+      category: ctx.str(g, ubl ? "ID" : "CategoryCode", locs, "category"),
+      rate: ctx.num(g, ubl ? "Percent" : "RateApplicablePercent", locs, "rate", "BT-152"),
+      scheme: ctx.str(g, ubl ? "TaxScheme/ID" : "TypeCode", locs, "scheme"),
+      exemptionCode: ubl ? ctx.str(g, "TaxExemptionReasonCode", locs, "exemptionCode") : undefined,
+      locs,
+      loc: ctx.loc(g),
+    };
+  });
+}
 
 /** Shared reading context: tracks positions, decimals and type errors while mapping. */
 export class ReadCtx {

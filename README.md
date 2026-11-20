@@ -143,7 +143,7 @@ Exit codes: `0` no findings at or above `--fail-on`, `1` there are, `2` a usage 
 ```json
 {
   "tool": "peppol-ubl-check",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "rulesAvailable": 332,
   "profile": "peppol",
   "failOn": "error",

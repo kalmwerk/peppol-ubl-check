@@ -21,6 +21,7 @@ import {
   collectObjectIdSchemes,
   anyEqual,
   exactText,
+  readTaxGroups,
 } from "./read-utils";
 import { readNationalFacts } from "./read-national";
 import { all, at, kids, text, type XNode } from "./xml";
@@ -57,6 +58,27 @@ function periodInOrder(period: XNode): boolean {
   if (!start.length || !end.length) return true;
   const starts = start.flatMap(dates102);
   return end.flatMap(dates102).some((e) => starts.some((s) => e >= s));
+}
+
+/**
+ * Peppol R110 / R111 (CII), per line ram:StartDateTime (EndDateTime) when the invoice period has one:
+ * `udt:DateTimeString >= ../../../../ram:ApplicableHeaderTradeSettlement/ram:BillingSpecifiedPeriod/ram:StartDateTime/udt:DateTimeString`
+ * (`<=` for the end). Untyped values compare as strings, any pair matching, whatever their format, so a date the
+ * reader can't parse (a blank or a "2026-01-01") still takes part; a missing DateTimeString on either side fails.
+ */
+function againstInvoicePeriod(
+  linePeriod: XNode,
+  invoicePeriods: XNode[],
+  which: "StartDateTime" | "EndDateTime",
+): { ok: boolean; line: string; invoice: string } | undefined {
+  const header = invoicePeriods.flatMap((p) => kids(p, which));
+  const line = kids(linePeriod, which);
+  if (!header.length || !line.length) return undefined;
+  const values = (holders: XNode[]) => holders.flatMap((h) => kids(h, "DateTimeString")).map((d) => exactText(d) ?? "");
+  const invoice = values(header);
+  const failing = line.find((l) => !values([l]).some((x) => invoice.some((h) => (which === "StartDateTime" ? x >= h : x <= h))));
+  const shown = values(failing ? [failing] : line);
+  return { ok: !failing, line: shown[0] ?? "", invoice: invoice[0] ?? "" };
 }
 
 function readAddress(
@@ -119,6 +141,9 @@ function readParty(ctx: ReadCtx, node: XNode | null): Party {
     p.endpoint = { id: text(uri) ?? "", scheme: uri.attrs["schemeID"] };
     L["endpoint"] = ctx.loc(uri);
   }
+  p.endpointIds = kids(node, "URIUniversalCommunication")
+    .flatMap((g) => kids(g, "URIID"))
+    .map((u) => ({ id: text(u) ?? "", scheme: u.attrs["schemeID"], loc: ctx.loc(u) }));
   p.taxRegistrations = [];
   for (const reg of kids(node, "SpecifiedTaxRegistration")) {
     const id = at(reg, "ID");
@@ -143,17 +168,29 @@ function readAllowanceCharge(ctx: ReadCtx, node: XNode, level: "doc" | "line"): 
   const amountBt =
     level === "doc" ? (isCharge ? "BT-99" : "BT-92") : isCharge ? "BT-141" : "BT-136";
   const baseBt = level === "doc" ? (isCharge ? "BT-100" : "BT-93") : isCharge ? "BT-142" : "BT-137";
+  // The decimal rules (BR-DEC-01/02/05/06, -24/25/27/28) take ram:ChargeIndicator[udt:Indicator = 'false' / 'true'] as
+  // context, the Indicator compared as written: an amount under any other indicator ("1", "true ") isn't checked
+  const decimalsBefore = ctx.decimals.length;
+  const amount = ctx.num(node, "ActualAmount", locs, "amount", amountBt, { amount: true });
+  const baseAmount = ctx.num(node, "BasisAmount", locs, "baseAmount", baseBt, { amount: true });
+  const written = exactText(at(node, "ChargeIndicator/Indicator"));
+  if (written !== "true" && written !== "false") ctx.decimals.splice(decimalsBefore);
   return {
     isCharge,
     rawIndicator,
-    amount: ctx.num(node, "ActualAmount", locs, "amount", amountBt, { amount: true }),
-    baseAmount: ctx.num(node, "BasisAmount", locs, "baseAmount", baseBt, { amount: true }),
+    amount,
+    actualAmounts: kids(node, "ActualAmount").map((a) => {
+      const raw = text(a);
+      return raw !== undefined && /^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(raw) ? Number(raw) : undefined;
+    }),
+    baseAmount,
     percent: ctx.num(node, "CalculationPercent", locs, "percent", "BT-94"),
     reason: ctx.str(node, "Reason", locs, "reason"),
     reasonCode: ctx.str(node, "ReasonCode", locs, "reasonCode"),
     vatCategory: ctx.str(node, "CategoryTradeTax/CategoryCode", locs, "vatCategory"),
     vatRate: ctx.num(node, "CategoryTradeTax/RateApplicablePercent", locs, "vatRate", "BT-96"),
     vatScheme: ctx.str(node, "CategoryTradeTax/TypeCode", locs, "vatScheme"),
+    taxes: readTaxGroups(node, "CategoryTradeTax", "CII"),
     locs,
     loc: ctx.loc(node),
   };
@@ -163,6 +200,9 @@ export function readCii(root: XNode): InvoiceModel {
   const ctx = new ReadCtx();
   const locs: LocMap = {};
   const context = at(root, "ExchangedDocumentContext");
+  // The official files read rsm:ExchangedDocumentContext/ram:…Parameter/ram:ID across every parameter, so a repeated
+  // parameter whose first copy has no ID still gives the business process or specification: take the first ID there is
+  const contextParameter = (name: string) => kids(context, name).find((p) => at(p, "ID")) ?? kids(context, name)[0] ?? null;
   const doc = at(root, "ExchangedDocument");
   const tx = at(root, "SupplyChainTradeTransaction");
   const agreement = at(tx, "ApplicableHeaderTradeAgreement");
@@ -174,18 +214,8 @@ export function readCii(root: XNode): InvoiceModel {
   const model: InvoiceModel = {
     syntax: "CII",
     kind: typeCode && CREDIT_TYPE_CODES.has(typeCode) ? "creditnote" : "invoice",
-    customizationId: ctx.str(
-      context,
-      "GuidelineSpecifiedDocumentContextParameter/ID",
-      locs,
-      "customizationId",
-    ),
-    profileId: ctx.str(
-      context,
-      "BusinessProcessSpecifiedDocumentContextParameter/ID",
-      locs,
-      "profileId",
-    ),
+    customizationId: ctx.str(contextParameter("GuidelineSpecifiedDocumentContextParameter"), "ID", locs, "customizationId"),
+    profileId: ctx.str(contextParameter("BusinessProcessSpecifiedDocumentContextParameter"), "ID", locs, "profileId"),
     number: ctx.str(doc, "ID", locs, "number"),
     issueDate: ctx.ciiDate(doc, "IssueDateTime", locs, "issueDate", "BT-2"),
     issueDateFilled: dates102(at(doc, "IssueDateTime")).some((d) => normalizeSpace(d) !== ""),
@@ -547,12 +577,17 @@ export function readCii(root: XNode): InvoiceModel {
       if (L["vatCategory"]) L["vatCategoryCode"] = L["vatCategory"];
       if (!L["vatCategory"]) L["vatCategory"] = ctx.loc(lineTax);
     }
+    line.taxes = readTaxGroups(ls, "ApplicableTradeTax", "CII");
     const lp = at(ls, "BillingSpecifiedPeriod");
     if (lp) {
       L["period"] = ctx.loc(lp);
       line.periodStart = ctx.ciiDate(lp, "StartDateTime", L, "periodStart", "BT-134");
       line.periodEnd = ctx.ciiDate(lp, "EndDateTime", L, "periodEnd", "BT-135");
       line.periodInOrder = periodInOrder(lp);
+      const invoicePeriods = kids(settlement, "BillingSpecifiedPeriod");
+      const start = againstInvoicePeriod(lp, invoicePeriods, "StartDateTime");
+      const end = againstInvoicePeriod(lp, invoicePeriods, "EndDateTime");
+      if (start || end) line.periodWithinInvoice = { start, end };
     }
     line.documentRefs = kids(ls, "AdditionalReferencedDocument").map((d) => ({
       typeCode: exactText(at(d, "TypeCode")),

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] - 2026-11-20
+
+Verdicts now match the official files on invoices with several mistakes at once, too. 36,273 invoices with 2–8 faults each, drawn from four seeded random sequences (the Peppol BIS examples and the website's samples, in UBL and CII), were checked with the official CEN EN 16931 1.3.17 and Peppol BIS Billing 3.0.22 Schematron under Saxon-HE: 768 of them got a different finding for at least one rule and 7 a different overall verdict. Now none do. Most came from a rule running where the official one has no context (a tax scheme or TypeCode that isn't VAT, a repeated group whose first copy lacks the element), which an invoice with a single mistake can't show. 1,143 of those invoices, rebuilt from the seed by `test/multi-error-parity.test.ts`, and 21 new edge cases, most with two changes, now hold the checker to the recorded official verdicts; the official unit tests still give 0 differences. No rules were added or removed.
+
+### Fixed
+- VAT category rules run only where the official context matches. On UBL, BR-S-08, BR-S-09 and the other categories' -08 rules (BR-VAT-08 here) check a VAT breakdown row only under tax scheme VAT, as do BR-IC-11 and BR-IC-12; on CII, the rows' TypeCode decides as each official rule asks, and the IGIC and IPSI rows (categories L and M) never fail BR-IG-08 / BR-IP-08, which read the rate from a parent that has none.
+- BR-CO-14 compares each UBL TaxTotal with its own TaxSubtotals, so a repeated TaxTotal no longer fails it (Peppol's R053 still does).
+- Repeated groups are read the way the official rules read them: every ClassifiedTaxCategory of a UBL line and every ApplicableTradeTax of a CII line (BR-CO-04 finds the VAT one, the category rules such as BR-S-05 and BR-E-05 check each, BR-E-01 and the like count each use), every CategoryTradeTax of a CII allowance or charge (BR-32, BR-S-06 …), every InvoicePeriod of a UBL line (BR-CO-20, BR-30, R110, R111) and every URIUniversalCommunication of a CII seller or buyer (PEPPOL-EN16931-R010, R020 and CL008).
+- PEPPOL-EN16931-R120 sums only line allowances and charges whose indicator reads `true` or `false` (a `1` or `0` is neither) and, on CII, every ActualAmount of each, rounding each sum to cents as the official test does.
+- PEPPOL-EN16931-R110 and R111 on CII compare the line and invoice period DateTimeStrings as written, as the official file does, so a date written another way or left empty fails there; BR-CO-20 on CII only asks that a start or end date element is there, whatever it holds.
+- CII decimals (BR-DEC) of allowance and charge amounts are only checked under an indicator written exactly `true` or `false`, the official context (`1` or `true ` isn't).
+- PEPPOL-EN16931-R055 on CII matches the VAT totals' currency with TaxCurrencyCode as written, so a padded ` SEK` finds no VAT total in that currency and fails, as officially.
+- BR-CO-18 on CII runs per invoice line, as the official file does, so an invoice without lines isn't failed for a missing VAT breakdown.
+- A repeated BusinessProcessSpecifiedDocumentContextParameter or GuidelineSpecifiedDocumentContextParameter in CII whose first copy has no ID no longer hides the ID of the next: PEPPOL-EN16931-R001 and R007 (and the profile detection) read it there, as the official file does.
+
 ## [1.5.2] - 2026-11-20
 
 Every verdict follows the official files exactly, now for the Dutch and German rules too: the SI-UBL 2.0 / NLCIUS CII Schematron of the Dutch Peppol Authority (release 2026-05-21) and KoSIT's XRechnung Schematron 2.6.0 (XRechnung 3.0.2), next to CEN EN 16931 1.3.17 and Peppol BIS Billing 3.0.22. 8 new rules, 332 in total. 100 national cases (`test/fixtures/schematron-parity/national/`) and 100 edge cases (49 more than 1.5.1) hold the checker to verdicts recorded from the compiled official files with Saxon-HE; the official unit tests still give 0 differences.

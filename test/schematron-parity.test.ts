@@ -56,13 +56,17 @@ describe("official verdicts on generated invoices", () => {
 
 /**
  * Peppol UBL check 1.5.1 and 1.5.2: single-change edge cases of the library's valid samples (an element that is
- * there but empty or partly filled in, an identifier in an unusual but valid form), held to the official
- * verdicts recorded by `bun scripts/record-official-edge-cases.ts` in edge-verdicts.json. Each case is
- * checked under both profiles: en16931 against the CEN artefacts, peppol against CEN and Peppol together,
- * on the rules it is about and on the overall verdict (any fatal finding or none).
+ * there but empty or partly filled in, an identifier in an unusual but valid form), and from 1.5.3 the smallest
+ * two-change reproductions of what the seeded multi-error corpus found, held to the official verdicts recorded
+ * by `bun scripts/record-official-edge-cases.ts` in edge-verdicts.json. Each case is checked under both
+ * profiles: en16931 against the CEN artefacts, peppol against CEN and Peppol together, on the rules it is about
+ * and on the overall verdict (any fatal finding or none; a case's `outOfScope` syntax-binding asserts aside).
  */
 interface EdgeRecorded {
-  cases: Record<string, { about: string; rules: string[]; cen: Record<string, "error" | "warning">; peppol: Record<string, "error" | "warning"> }>;
+  cases: Record<
+    string,
+    { about: string; rules: string[]; outOfScope?: string[]; cen: Record<string, "error" | "warning">; peppol: Record<string, "error" | "warning"> }
+  >;
 }
 const edge = JSON.parse(readFileSync(resolve(DIR, "edge-verdicts.json"), "utf8")) as EdgeRecorded;
 
@@ -95,11 +99,22 @@ describe("official verdicts on edge cases", () => {
     expect(Object.values(edge.cases).flatMap((c) => c.rules).filter((id) => !ids.has(id))).toEqual([]);
   });
 
+  it("leaves out of the verdict only syntax-binding asserts the checker doesn't have, and only where they fail", () => {
+    const ids = new Set(RULES.map((r) => r.id));
+    for (const [file, c] of Object.entries(edge.cases))
+      for (const id of c.outOfScope ?? []) {
+        expect({ file, id, syntaxRule: /^(UBL|CII)-SR-\d+$/.test(id), inCatalog: ids.has(id) }).toEqual({ file, id, syntaxRule: true, inCatalog: false });
+        expect({ file, id, fails: c.cen[id] ?? c.peppol[id] }).toEqual({ file, id, fails: "error" });
+      }
+  });
+
   it.each(Object.entries(edge.cases))("%s", (file, c) => {
     const xml = readFileSync(resolve(DIR, file), "utf8");
-    const cen = asEngineIds(c.cen);
-    const official = { en16931: cen, peppol: { ...asEngineIds(c.peppol), ...cen } };
-    for (const [k, v] of Object.entries(asEngineIds(c.peppol))) if (v === "error") official.peppol[k] = "error";
+    const outOfScope = new Set(c.outOfScope ?? []);
+    const inScope = (v: Record<string, "error" | "warning">) => Object.fromEntries(Object.entries(v).filter(([id]) => !outOfScope.has(id)));
+    const cen = asEngineIds(inScope(c.cen));
+    const official = { en16931: cen, peppol: { ...asEngineIds(inScope(c.peppol)), ...cen } };
+    for (const [k, v] of Object.entries(asEngineIds(inScope(c.peppol)))) if (v === "error") official.peppol[k] = "error";
     for (const profile of ["en16931", "peppol"] as const) {
       const ours = engineVerdicts(xml, profile);
       expect({ profile, rules: only(ours, c.rules) }).toEqual({ profile, rules: only(official[profile], c.rules) });

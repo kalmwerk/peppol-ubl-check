@@ -28,6 +28,26 @@ per invoice, what it changes, the rules it is about and every failed assert of t
 (`cen`) and of the Peppol rules (`peppol`), produced by the same artefacts and the same Saxon run as
 `verdicts.json`. `schematron-parity.test.ts` checks each one under the en16931 profile against the
 CEN verdicts and under the peppol profile against both, on its rules and on the overall verdict.
+Since 1.5.3 the list ends with two-change cases: the smallest reproductions of what the multi-error
+corpus below found (one change takes an official rule's context away, the other breaks the value that
+rule would test). A case's `outOfScope` lists the CEN syntax-binding asserts it can't avoid and the
+checker leaves out by its documented scope (such as UBL-SR-48 on a repeated ClassifiedTaxCategory);
+only the overall verdict leaves them out.
+
+## Multi-error corpus (`multi-error/`, `multi-error-verdicts.json`)
+
+The four valid bases in `multi-error/` (the library's `peppol-valid`, `credit-note-valid` and
+`reverse-charge-valid` UBL samples, and `factur-x-en16931` declared as a Peppol BIS CII invoice) with 2–8
+faults at once, drawn from a seeded random sequence by `src/test/multi-error/corpus.ts`: elements
+removed, emptied, padded or repeated, amounts, codes and dates changed, values swapped. Real broken
+invoices often have several problems together, and a rule can then run where the official one doesn't
+(or the other way round), which no single-change case shows. `bun scripts/compare-multi-error-invoices.ts
+--record` keeps the schema-valid invoices the official files give a verdict on and records, per invoice,
+its content hash and every failed assert of CEN EN 16931 1.3.17 + Peppol BIS Billing 3.0.22 and of the
+Peppol BIS 3.1.0 draft (left out when it equals 3.0.22), as rule IDs the catalog names (warnings as
+`w:ID`). `multi-error-parity.test.ts` rebuilds every invoice from the bases and the seed and holds the
+checker to those verdicts rule by rule and on the overall verdict, with the documented deliberate
+differences apart.
 
 ## National rules (`national/`, `national-verdicts.json`)
 
