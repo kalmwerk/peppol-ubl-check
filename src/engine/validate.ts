@@ -4,6 +4,7 @@ import { readCii } from "./read-cii";
 import { readUbl } from "./read-ubl";
 import { RULES, type Section } from "./rules-catalog";
 import { runRules, type Finding } from "./rules";
+import { KOSIT_PEPPOL_RULES } from "./rules-national";
 import { parseXml, XmlSyntaxError } from "./xml";
 
 export type ValidationProfile = "auto" | "peppol" | "en16931" | "xrechnung" | "nlcius";
@@ -112,7 +113,8 @@ function computeTotals(m: InvoiceModel): ComputedTotals {
 function rulesApplicable(peppol: boolean, en16931: boolean, xrechnung: boolean, nlcius: boolean, syntax: "UBL" | "CII") {
   return RULES.filter((r) => {
     if (r.syntax && r.syntax !== syntax) return false;
-    if (r.source === "Peppol") return peppol;
+    // XRechnung also runs the Peppol rules KoSIT's Schematron copies
+    if (r.source === "Peppol") return peppol || (xrechnung && KOSIT_PEPPOL_RULES.has(r.id));
     if (r.source === "NLCIUS") return nlcius;
     // IV-DE-* (Leitweg-ID) are our own checks but only run with the XRechnung rules
     if (r.source === "XRechnung" || r.id.startsWith("IV-DE-")) return xrechnung;

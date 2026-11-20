@@ -316,7 +316,7 @@ export const VAT_CATEGORIES: Record<string, { label: string; short: string }> = 
   },
 };
 
-/** UNCL1001 document type codes accepted by EN16931 */
+/** UNCL1001 document type codes EN 16931 accepts (CEN 1.3.17), with their UNTDID names; BR-CL-01 checks the per-syntax lists below */
 export const INVOICE_TYPE_CODES: Record<string, string> = {
   "71": "Request for payment",
   "80": "Debit note related to goods or services",
@@ -359,6 +359,14 @@ export const INVOICE_TYPE_CODES: Record<string, string> = {
   "456": "Debit advice",
   "457": "Reversal of debit",
   "458": "Reversal of credit",
+  // Added to EN 16931's lists in CEN 1.3.17; names from UNTDID 1001 (D.24A)
+  "471": "Self-billed corrective invoice",
+  "472": "Factored corrective invoice",
+  "473": "Self-billed factored corrective invoice",
+  "500": "Self billed prepayment invoice",
+  "501": "Self billed factored invoice",
+  "502": "Self billed factored credit note",
+  "503": "Prepayment credit note",
   "527": "Self billed debit note",
   "532": "Forwarder's credit note",
   "553": "Forwarder's invoice discrepancy report",
@@ -374,6 +382,17 @@ export const INVOICE_TYPE_CODES: Record<string, string> = {
   "877": "Final construction invoice",
   "935": "Customs invoice",
 };
+
+/**
+ * BR-CL-01 as CEN's EN 16931 validation artefacts 1.3.17 test it (the same lists ship in Peppol BIS 3.0.22's
+ * and SI-UBL 2.0.3.13's copies): UBL checks cbc:InvoiceTypeCode and cbc:CreditNoteTypeCode against separate
+ * lists (81 is on both), CII checks ram:TypeCode against both together.
+ */
+export const EN16931_UBL_INVOICE_TYPE_CODES: ReadonlySet<string> = new Set(
+  "71 80 81 82 84 102 130 202 203 204 211 218 219 295 325 326 331 380 382 383 384 385 386 387 388 389 390 393 394 395 456 457 471 472 473 500 501 527 553 575 623 633 751 780 817 870 875 876 877 935".split(" "),
+);
+export const EN16931_UBL_CREDIT_NOTE_TYPE_CODES: ReadonlySet<string> = new Set("81 83 261 262 296 308 381 396 420 458 502 503 532".split(" "));
+export const EN16931_CII_TYPE_CODES: ReadonlySet<string> = new Set([...EN16931_UBL_INVOICE_TYPE_CODES, ...EN16931_UBL_CREDIT_NOTE_TYPE_CODES]);
 
 export const PEPPOL_INVOICE_TYPE_CODES = new Set([
   // Peppol BIS Billing 3.0.22, PEPPOL-EN16931-P0100 (326 and 384 need two German parties, P0112)

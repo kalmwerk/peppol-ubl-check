@@ -55,7 +55,7 @@ describe("official verdicts on generated invoices", () => {
 });
 
 /**
- * Peppol UBL check 1.5.1: single-change edge cases of the library's valid samples (an element that is
+ * Peppol UBL check 1.5.1 and 1.5.2: single-change edge cases of the library's valid samples (an element that is
  * there but empty or partly filled in, an identifier in an unusual but valid form), held to the official
  * verdicts recorded by `bun scripts/record-official-edge-cases.ts` in edge-verdicts.json. Each case is
  * checked under both profiles: en16931 against the CEN artefacts, peppol against CEN and Peppol together,
@@ -74,6 +74,14 @@ function engineVerdicts(xml: string, profile: "peppol" | "en16931") {
   }
   return out;
 }
+/** The engine ID that answers for an official one: the -01 and -08 rules of the non-standard categories, the decimal rules */
+const engineId = (id: string) =>
+  /^BR-(Z|E|AE|IC|G|O|IG|IP)-08$/.test(id) ? "BR-VAT-08" : /^BR-(Z|E|AE|IC|G|O|IG|IP)-01$/.test(id) ? "BR-VAT-01" : /^BR-DEC-\d+$/.test(id) ? "BR-DEC" : id;
+const asEngineIds = (v: Record<string, "error" | "warning">) => {
+  const out: Record<string, "error" | "warning"> = {};
+  for (const [id, f] of Object.entries(v)) if (out[engineId(id)] !== "error") out[engineId(id)] = f;
+  return out;
+};
 const only = (v: Record<string, "error" | "warning">, rules: string[]) =>
   Object.fromEntries(rules.filter((r) => v[r]).map((r) => [r, v[r]]));
 const fails = (v: Record<string, "error" | "warning">) => Object.values(v).includes("error");
@@ -89,12 +97,58 @@ describe("official verdicts on edge cases", () => {
 
   it.each(Object.entries(edge.cases))("%s", (file, c) => {
     const xml = readFileSync(resolve(DIR, file), "utf8");
-    const official = { en16931: c.cen, peppol: { ...c.peppol, ...c.cen } };
-    for (const [k, v] of Object.entries(c.peppol)) if (v === "error") official.peppol[k] = "error";
+    const cen = asEngineIds(c.cen);
+    const official = { en16931: cen, peppol: { ...asEngineIds(c.peppol), ...cen } };
+    for (const [k, v] of Object.entries(asEngineIds(c.peppol))) if (v === "error") official.peppol[k] = "error";
     for (const profile of ["en16931", "peppol"] as const) {
       const ours = engineVerdicts(xml, profile);
       expect({ profile, rules: only(ours, c.rules) }).toEqual({ profile, rules: only(official[profile], c.rules) });
       expect({ profile, fails: fails(ours) }).toEqual({ profile, fails: fails(official[profile]) });
     }
+  });
+});
+
+/**
+ * Peppol UBL check 1.5.2: SI-UBL 2.0 / NLCIUS and XRechnung invoices with a single change, held to the official
+ * verdicts recorded by `bun scripts/record-official-national-cases.ts` in national-verdicts.json: the Dutch Peppol
+ * Authority's validation set 2026-05-21 (its own BR-NL / SI rules), KoSIT's XRechnung Schematron 2.6.0 (with the
+ * Peppol rules it copies) and CEN EN 16931 1.3.17. Each case runs under its national profile and is compared on
+ * the rules it is about and on the overall verdict (any official fatal against any error of ours; our IV-SYN-03
+ * data-type check stands in for CEN's CII-DT-097). Info-level asserts (KoSIT's BR-DE-TMP-32) don't count.
+ */
+type Level = "error" | "warning" | "info";
+interface NationalRecorded {
+  cases: Record<string, { about: string; profile: "nlcius" | "xrechnung"; rules: string[]; official: Record<string, Level> }>;
+}
+const national = JSON.parse(readFileSync(resolve(DIR, "national-verdicts.json"), "utf8")) as NationalRecorded;
+
+/** The Dutch CII Schematron reports BR-NL-32 and BR-NL-34 as one assert. */
+const NL_CII_JOINT = "BR-NL-32-and-34";
+function nationalVerdicts(xml: string, profile: "nlcius" | "xrechnung", joint: boolean) {
+  const out: Record<string, "error" | "warning"> = {};
+  for (const f of validateInvoiceXml(xml, profile).findings) {
+    if (f.severity === "info") continue;
+    const id = joint && (f.ruleId === "BR-NL-32" || f.ruleId === "BR-NL-34") ? NL_CII_JOINT : f.ruleId;
+    if (out[id] !== "error") out[id] = f.severity === "error" ? "error" : "warning";
+  }
+  return out;
+}
+
+describe("official verdicts on Dutch and German national cases", () => {
+  it("covers the four national bases and every rule it names is in the catalog", () => {
+    const files = Object.keys(national.cases);
+    for (const base of ["nl-ubl-", "nl-cii-", "de-ubl-", "de-cii-"]) expect(files.filter((f) => f.startsWith(`national/${base}`)).length).toBeGreaterThan(8);
+    const ids = new Set(RULES.map((r) => r.id));
+    expect(Object.values(national.cases).flatMap((c) => c.rules).filter((id) => !ids.has(id))).toEqual([]);
+  });
+
+  it.each(Object.entries(national.cases))("%s", (file, c) => {
+    const xml = readFileSync(resolve(DIR, file), "utf8");
+    const joint = file.startsWith("national/nl-cii-");
+    const official = Object.fromEntries(Object.entries(c.official).filter(([, v]) => v !== "info")) as Record<string, "error" | "warning">;
+    const rules = joint ? [...c.rules.filter((r) => r !== "BR-NL-32" && r !== "BR-NL-34"), ...(c.rules.some((r) => r === "BR-NL-32" || r === "BR-NL-34") ? [NL_CII_JOINT] : [])] : c.rules;
+    const ours = nationalVerdicts(xml, c.profile, joint);
+    expect(only(ours, rules)).toEqual(only(official, rules));
+    expect(fails(ours)).toBe(fails(official));
   });
 });

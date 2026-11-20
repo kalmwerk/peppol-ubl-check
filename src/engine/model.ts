@@ -50,7 +50,7 @@ export interface Party {
    * (`scheme` = its schemeID attribute, VA or FC). vatId / taxRegistrationId above pick one of each.
    */
   /** Every UBL PartyTaxScheme with a CompanyID (scheme: its TaxScheme/ID) or CII SpecifiedTaxRegistration/ID (scheme: schemeID as written); id: the text */
-  taxRegistrations?: { scheme?: string; id: string; loc: Loc }[];
+  taxRegistrations?: { scheme?: string; id: string; loc: Loc; /** UBL TaxScheme/ID exactly as written (Peppol's `cbc:ID = 'VAT'`) */ schemeAsWritten?: string }[];
   locs: LocMap;
   loc?: Loc;
 }
@@ -81,6 +81,8 @@ export interface InvoiceLine {
   netAmount?: number; // BT-131
   orderLineRef?: string; // BT-132
   periodStart?: string; // BT-134
+  /** CII BR-30: the period's end and start dates with format exactly "102", compared as written, are in order (or one is missing) */
+  periodInOrder?: boolean;
   periodEnd?: string; // BT-135
   allowances: AllowanceCharge[];
   charges: AllowanceCharge[];
@@ -242,6 +244,8 @@ export interface InvoiceModel {
   profileId?: string; // BT-23
   number?: string; // BT-1
   issueDate?: string; // BT-2 (ISO yyyy-mm-dd)
+  /** CII BR-03: an issue date with format exactly "102" whose text isn't empty after normalize-space() */
+  issueDateFilled?: boolean;
   typeCode?: string; // BT-3
   currency?: string; // BT-5
   taxCurrency?: string; // BT-6
@@ -267,6 +271,8 @@ export interface InvoiceModel {
   periodStart?: string; // BT-73
   periodEnd?: string; // BT-74
   hasPeriod: boolean;
+  /** CII BR-29: the invoice period's end and start dates with format exactly "102", compared as written, are in order (or one is missing) */
+  periodInOrder?: boolean;
   /** BG-14 carries something the official rules accept: UBL any child element, CII a start or end date element */
   periodHasContent?: boolean;
   /** An actual delivery date is written (UBL: longer than one character; CII: a DateTimeString element) */
@@ -305,7 +311,14 @@ export interface InvoiceModel {
    * BR-CL-24 and PEPPOL-EN16931-CL001 read the attachments (UBL EmbeddedDocumentBinaryObject, CII
    * AttachmentBinaryObject) that have a mimeCode, UBL-DT-06/07 every one.
    */
-  binaryObjects?: { element: string; mime?: string; filename?: string; loc: Loc }[];
+  binaryObjects?: {
+    element: string;
+    mime?: string;
+    filename?: string;
+    /** cbc:EmbeddedDocumentBinaryObject (UBL) or ram:AttachmentBinaryObject (CII) in its own namespace: what BR-CL-24 and CL001 name; UBL-DT-06/07 match any `*BinaryObject` by name() */
+    attachment: boolean;
+    loc: Loc;
+  }[];
   /**
    * Every amount whose currencyID the code-list rules check (BR-CL-03, PEPPOL-EN16931-CL007), attribute as
    * written: UBL the thirteen cbc amount elements anywhere, CII each TaxTotalAmount that carries one.
@@ -334,8 +347,172 @@ export interface InvoiceModel {
   typeErrors: { bt: string; raw: string; expected: string; loc: Loc }[];
   /** Elements present but empty (Peppol R008) */
   emptyElements: Loc[];
+  /** What the SI-UBL 2.0 / NLCIUS rules read, exactly as the official Schematron does (see NlciusFacts) */
+  nlcius?: NlciusFacts;
+  /** What the XRechnung rules read, exactly as KoSIT's Schematron does (see XrechnungFacts) */
+  xrechnung?: XrechnungFacts;
   locs: LocMap;
   loc: Loc;
+}
+
+/**
+ * The inputs of the SI-UBL 2.0 (UBL) and NLCIUS-CII rules, read the way the Dutch Peppol Authority's
+ * Schematron reads them (validation set 2026-05-21: si-ubl-2.0-nlcius.sch, NLCIUS-CII-validation.sch):
+ * elements that are there count whether filled or not, text is compared as written unless the official
+ * test normalises it, and each rule runs once per context element. Readers fill it for both syntaxes;
+ * `src/lib/einvoice/rules-national.ts` evaluates the rules.
+ */
+export interface NlciusFacts {
+  /** `$si`: the CustomizationID declares SI-UBL 2.0 / NLCIUS or its G-account extension (UBL: contains, CII: equals, after normalize-space) */
+  declared: boolean;
+  /** `$s`: `$si` and the seller's postal country is NL (`upper-case(normalize-space(…))`) */
+  dutchSupplier: boolean;
+  /** UBL: every cbc:CustomizationID, normalize-space()d (SI-V20-INV-R000 checks each); CII has no such rule */
+  customizationIds: { value: string; loc: Loc }[];
+  /** BR-NL-1 contexts (UBL each seller cac:Party, CII each seller ram:SpecifiedLegalOrganization): legal ID schemeIDs as written, and whether any legal ID has text after normalize-space() */
+  sellerLegal: { loc: Loc; schemes: string[]; filled: boolean; idLoc?: Loc; id?: string; scheme?: string }[];
+  /** BR-NL-2 contexts (UBL the root, CII each ram:ApplicableHeaderTradeAgreement): a buyer reference or order reference ID element is there */
+  references: { loc: Loc; given: boolean }[];
+  /** BR-NL-3/4/5 contexts: each seller, buyer and tax representative postal address; `countryNotNl` is the official `country != 'NL'` (as written, any of them); `missing` lists the street, city and post code elements that aren't there */
+  addresses: { party: "seller" | "buyer" | "taxRepresentative"; loc: Loc; countryNotNl: boolean; missing: string[] }[];
+  /** BR-NL-7/8/9 contexts: UBL every InvoiceTypeCode / CreditNoteTypeCode, CII /\*\/rsm:ExchangedDocument/ram:TypeCode; text as written */
+  typeCodes: { text: string; loc: Loc }[];
+  /** UBL: /\*\/cac:BillingReference/cac:InvoiceDocumentReference/cbc:ID is there (BR-NL-9) */
+  invoiceReferenceGiven: boolean;
+  /**
+   * BR-NL-10 contexts (UBL each buyer cac:PartyLegalEntity, CII each ram:BuyerTradeParty): whether the buyer's
+   * country is exactly NL, the legal ID schemeIDs as written, how many legal ID elements there are and whether
+   * any has text. UBL passes without a CompanyID; CII requires a filled-in one (`idRequired`).
+   */
+  buyerLegal: { loc: Loc; countryNl: boolean; schemes: string[]; ids: number; filled: boolean; idRequired: boolean }[];
+  /** BR-NL-11 contexts (UBL /ubl:Invoice/cac:LegalMonetaryTotal, CII each header monetary summation): amount due as written, and whether payment means count as given there */
+  totals: { loc: Loc; payable?: string; paymentGiven: boolean }[];
+  /** CII: the document type code equals 381 as a number (BR-NL-11 lets credit notes through) */
+  creditNoteType: boolean;
+  /** BR-NL-12 (and UBL BR-NL-31) contexts: each payment means, its code elements as written, and (UBL) whether a FinancialInstitutionBranch/ID is there */
+  paymentMeans: { loc: Loc; codes: string[]; codeLoc?: Loc; branchIdGiven: boolean; branchLoc?: Loc }[];
+  /** BR-NL-13: order line reference elements (UBL cac:OrderLineReference/cbc:LineID, CII ram:BuyerOrderReferencedDocument/ram:LineID) */
+  orderLineRefs: { loc: Loc; text: string }[];
+  /** BR-NL-13: the document-level order reference ID element is there */
+  orderReferenceGiven: boolean;
+  /** BR-NL-25 contexts: each seller tax registration (UBL PartyTaxScheme, CII SpecifiedTaxRegistration): it has an ID, and its scheme is exactly VAT (UBL TaxScheme/ID) / VA (CII schemeID) */
+  sellerTaxSchemes: { loc: Loc; hasId: boolean; vat: boolean; id?: string }[];
+  /** BR-NL-33 contexts (UBL every cac:TaxTotal/cbc:TaxAmount, CII every header TaxTotalAmount): currencyID as written and the document currency codes it is compared with */
+  taxTotalCurrencies: { loc: Loc; currency?: string; documentCurrencies: string[] }[];
+  /** Elements NLCIUS asks Dutch suppliers to leave out, wherever the official rule context finds them (BR-NL-19 … BR-NL-35); `charge`: a CII charge reason code (BR-NL-32-and-34) */
+  discouraged: { rule: NlDiscouragedRule; loc: Loc; value?: string; charge?: boolean }[];
+  /** SI-UBL-2 / empty-element-check: every empty element, and whether an earlier rule of the same official pattern takes it as context (`s`: a Dutch-supplier rule, `si`: an SI-UBL rule for any supplier), which keeps the empty-element check from reporting it */
+  emptyElements: { loc: Loc; shadowedBy?: "s" | "si" }[];
+}
+export type NlDiscouragedRule =
+  | "BR-NL-19"
+  | "BR-NL-20"
+  | "BR-NL-21"
+  | "BR-NL-22"
+  | "BR-NL-23"
+  | "BR-NL-24"
+  | "BR-NL-26"
+  | "BR-NL-27"
+  | "BR-NL-28"
+  | "BR-NL-29"
+  | "BR-NL-30"
+  | "BR-NL-32"
+  | "BR-NL-35";
+
+/**
+ * The inputs of the XRechnung rules (BR-DE-*), read the way KoSIT's XRechnung Schematron 2.6.0 reads them
+ * (XRechnung 3.0.2): each rule's context element, presence of elements filled or not, `[boolean(normalize-space(.))]`
+ * filled-in tests, and values compared as written where the official test does. Filled for both syntaxes.
+ */
+export interface XrechnungFacts {
+  /** BR-DE-1: a payment means element is there */
+  paymentMeansGiven: boolean;
+  /** BR-DE-15: a buyer reference with text after normalize-space() */
+  buyerReferenceFilled: boolean;
+  /** BR-DE-16: a VAT category code S, Z, E, AE, K, G, L or M is used where the official test looks (exactly as written) */
+  vatCodeUsed?: string;
+  /** BR-DE-16: a seller VAT or tax registration identifier with text (UBL any PartyTaxScheme/CompanyID, CII a SpecifiedTaxRegistration/ID with schemeID VA or FC), or a tax representative */
+  sellerTaxIdGiven: boolean;
+  /** BR-DE-17 / BR-DE-26: the document type code(s) after normalize-space(); "" when there is none */
+  typeCodes: string[];
+  /** BR-DE-26: UBL cac:BillingReference/cac:InvoiceDocumentReference, CII header ram:InvoiceReferencedDocument is there */
+  invoiceReferenceGiven: boolean;
+  /** BR-DE-18: the first payment terms note (UBL cac:PaymentTerms/cbc:Note[1], CII ram:SpecifiedTradePaymentTerms/ram:Description[1]), text as written */
+  paymentTermsNote?: { text: string; loc: Loc };
+  /** BR-DE-21 context (UBL the root, CII rsm:ExchangedDocumentContext): the specification identifiers as written */
+  specIds?: { values: string[]; loc: Loc };
+  /** BR-DE-22: a filename attribute repeated by a later sibling attachment, as written */
+  duplicateFilename?: string;
+  /**
+   * BR-DE-30/31. UBL: `mandate` = a PaymentMeans/PaymentMandate is there, `creditorId` = a seller or payee
+   * PartyIdentification/ID with schemeID exactly SEPA, `debitedAccount` = PaymentMandate/PayerFinancialAccount/ID.
+   * CII: `mandate` = BT-89 (DirectDebitMandateID), `creditorId` = BT-90 (CreditorReferenceID), `debitedAccount` =
+   * BT-91 (PayerPartyDebtorFinancialAccount/IBANID); elements that are there, filled or not.
+   */
+  directDebit: { mandate: boolean; creditorId: boolean; debitedAccount: boolean };
+  /** BR-DE-2 contexts: each seller (UBL cac:AccountingSupplierParty, CII ram:SellerTradeParty) and whether it has a contact */
+  sellers: { loc: Loc; contactGiven: boolean }[];
+  /** BR-DE-3/4, 8/9, 10/11 contexts: each seller, buyer and deliver-to postal address, city and post code filled in */
+  addresses: { party: "seller" | "buyer" | "delivery"; loc: Loc; cityFilled: boolean; postcodeFilled: boolean }[];
+  /** BR-DE-5/6/7/27/28 contexts: each seller contact; name (CII: PersonName or DepartmentName), telephone and email filled in, and the normalize-space()d telephone and email the format rules read */
+  contacts: { loc: Loc; nameFilled: boolean; phoneFilled: boolean; emailFilled: boolean; phone: string; email: string; phoneLoc?: Loc; emailLoc?: Loc }[];
+  /**
+   * BR-DE-19/20/23/24/25 contexts: each payment means with its code after normalize-space(), the groups it carries
+   * (CII `directDebit`: BT-89, BT-90 or its own BT-91 is there; `institutions`: a payee or payer financial
+   * institution), and the account identifiers the IBAN rules read (`string(…)` of the first one, as written).
+   */
+  paymentMeans: { loc: Loc; code: string; creditTransfer: boolean; card: boolean; directDebit: boolean; institutions: boolean; payeeAccount: string; payerAccount: string; payeeLoc?: Loc; payerLoc?: Loc }[];
+  /** BR-DE-14 contexts: each document-level VAT breakdown, and whether its rate has text */
+  vatRates: { loc: Loc; filled: boolean; category?: string }[];
+  /** BR-DE-TMP-32: a delivery date, an invoicing period or a period on every line is there */
+  deliveryDateOrPeriod: boolean;
+  /** The Peppol rules KoSIT copies into its XRechnung files, where its copy differs from Peppol's own */
+  kosit: KositPeppolFacts;
+  /** KoSIT's temporary XRechnung rules BR-TMP-2 … BR-TMP-7 (Schematron 2.6.0) */
+  tmp: XrechnungTmpFacts;
+}
+
+export interface XrechnungTmpFacts {
+  /**
+   * BR-TMP-2: UBL each cac:AdditionalDocumentReference/cac:Attachment/cac:ExternalReference with its first cbc:URI
+   * as written (`null` when there is none, which fails like a bad one); CII each header AdditionalReferencedDocument
+   * with a TypeCode exactly "916" that has a URIID, with the first URIID as written
+   */
+  externalUris: { loc: Loc; uri: string | null }[];
+  /** BR-TMP-4 / BR-TMP-5 (CII): each of those "916" documents with its number of ram:Name and ram:AttachmentBinaryObject */
+  supportingDocs: { loc: Loc; names: number; attachments: number }[];
+  /** BR-TMP-3 (CII): lines whose gross and net price base quantities, or their unit codes, differ as written */
+  baseQuantityMismatch: Loc[];
+  /**
+   * BR-TMP-6 (UBL: cbc:IssueDate, DueDate, StartDate, EndDate, ActualDeliveryDate, TaxPointDate, PaymentDueDate
+   * anywhere) / BR-TMP-7 (CII: every udt:DateTimeString, qdt:DateTimeString and udt:DateString): dates not written
+   * as YYYY-MM-DD / format="102" with YYYYMMDD after normalize-space(), with the text as written
+   */
+  badDates: { loc: Loc; text: string; format?: string }[];
+}
+
+export interface KositPeppolFacts {
+  /**
+   * PEPPOL-EN16931-R008 (both syntaxes, unlike Peppol's own files): every element without child elements whose
+   * normalize-space() is empty, except UBL cbc:ID under cac:OrderReference and CII elements whose name as
+   * written is exactly ram:ApplicableHeaderTradeDelivery
+   */
+  emptyElements: Loc[];
+  /** `$slackValue` is 0.5 instead of 0.02 when a document currency code is exactly "HUF" (R040, R120) */
+  huf: boolean;
+  /**
+   * CII R044 / R046 contexts (KoSIT only): each line's GrossPriceProductTradePrice. `discounts` holds the
+   * first ActualAmount of each AppliedTradeAllowanceCharge; amounts are xs:decimal values, `null` where the
+   * official cast would fail.
+   */
+  grossPrices: {
+    loc: Loc;
+    actualGiven: boolean;
+    indicatorFalse: boolean;
+    chargeAmounts: (number | null)[];
+    netChargeAmounts: (number | null)[];
+    discounts: (number | null)[];
+  }[];
 }
 
 export function emptyParty(): Party {

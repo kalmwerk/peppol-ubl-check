@@ -22,6 +22,7 @@ import {
   anyEqual,
   exactText,
 } from "./read-utils";
+import { readNationalFacts } from "./read-national";
 import { all, at, kids, text, type XNode } from "./xml";
 import { normalizeSpace } from "./xpath-text";
 
@@ -40,6 +41,23 @@ const CREDIT_TYPE_CODES = new Set([
   "458",
   "532",
 ]);
+
+/** The string values of a date holder's udt:DateTimeString children with format exactly "102", as written. */
+const dates102 = (holder: XNode | null | undefined): string[] =>
+  holder ? kids(holder, "DateTimeString").filter((d) => d.attrs["format"] === "102").map((d) => exactText(d) ?? "") : [];
+
+/**
+ * CII BR-29 / BR-30: `(ram:EndDateTime/udt:DateTimeString[@format = '102']) >= (ram:StartDateTime/udt:DateTimeString[@format = '102'])
+ * or not(ram:EndDateTime) or not(ram:StartDateTime)`. Untyped values compare as strings, any pair matching, so a padded
+ * or unformatted date can't be put in order.
+ */
+function periodInOrder(period: XNode): boolean {
+  const start = kids(period, "StartDateTime");
+  const end = kids(period, "EndDateTime");
+  if (!start.length || !end.length) return true;
+  const starts = start.flatMap(dates102);
+  return end.flatMap(dates102).some((e) => starts.some((s) => e >= s));
+}
 
 function readAddress(
   ctx: ReadCtx,
@@ -151,6 +169,7 @@ export function readCii(root: XNode): InvoiceModel {
   const deliveryNode = at(tx, "ApplicableHeaderTradeDelivery");
   const settlement = at(tx, "ApplicableHeaderTradeSettlement");
   const typeCode = ctx.str(doc, "TypeCode", locs, "typeCode");
+  if (context) locs["documentContext"] = ctx.loc(context);
 
   const model: InvoiceModel = {
     syntax: "CII",
@@ -169,6 +188,7 @@ export function readCii(root: XNode): InvoiceModel {
     ),
     number: ctx.str(doc, "ID", locs, "number"),
     issueDate: ctx.ciiDate(doc, "IssueDateTime", locs, "issueDate", "BT-2"),
+    issueDateFilled: dates102(at(doc, "IssueDateTime")).some((d) => normalizeSpace(d) !== ""),
     typeCode,
     currency: ctx.str(settlement, "InvoiceCurrencyCode", locs, "currency"),
     taxCurrency: ctx.str(settlement, "TaxCurrencyCode", locs, "taxCurrency"),
@@ -307,6 +327,7 @@ export function readCii(root: XNode): InvoiceModel {
     locs["period"] = ctx.loc(period);
     model.periodStart = ctx.ciiDate(period, "StartDateTime", locs, "periodStart", "BT-73");
     model.periodEnd = ctx.ciiDate(period, "EndDateTime", locs, "periodEnd", "BT-74");
+    model.periodInOrder = periodInOrder(period);
   }
 
   const paymentRef = ctx.str(settlement, "PaymentReference", locs, "paymentRef");
@@ -531,6 +552,7 @@ export function readCii(root: XNode): InvoiceModel {
       L["period"] = ctx.loc(lp);
       line.periodStart = ctx.ciiDate(lp, "StartDateTime", L, "periodStart", "BT-134");
       line.periodEnd = ctx.ciiDate(lp, "EndDateTime", L, "periodEnd", "BT-135");
+      line.periodInOrder = periodInOrder(lp);
     }
     line.documentRefs = kids(ls, "AdditionalReferencedDocument").map((d) => ({
       typeCode: exactText(at(d, "TypeCode")),
@@ -553,5 +575,6 @@ export function readCii(root: XNode): InvoiceModel {
   model.decimals = ctx.decimals;
   model.typeErrors = ctx.typeErrors;
   model.emptyElements = collectEmptyElements(root, ctx);
+  Object.assign(model, readNationalFacts(root, ctx, "CII"));
   return model;
 }

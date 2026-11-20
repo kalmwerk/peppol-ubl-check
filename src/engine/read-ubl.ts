@@ -23,6 +23,7 @@ import {
   anyEqual,
   exactText,
 } from "./read-utils";
+import { readNationalFacts } from "./read-national";
 import { all, at, kids, text, type XNode } from "./xml";
 
 export const UBL_INVOICE_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
@@ -67,9 +68,10 @@ function readParty(ctx: ReadCtx, partyNode: XNode | null): Party {
   p.taxRegistrations = [];
   for (const pts of kids(partyNode, "PartyTaxScheme")) {
     const scheme = text(pts, "TaxScheme/ID");
+    const schemeNode = at(pts, "TaxScheme/ID");
     const company = at(pts, "CompanyID");
     if (!company) continue;
-    p.taxRegistrations.push({ scheme, id: text(company) ?? "", loc: ctx.loc(company) });
+    p.taxRegistrations.push({ scheme, schemeAsWritten: schemeNode ? (schemeNode.raw ?? schemeNode.text) : undefined, id: text(company) ?? "", loc: ctx.loc(company) });
     if (scheme?.toUpperCase() === "VAT") {
       p.vatId = text(company);
       L["vatId"] = ctx.loc(company);
@@ -455,5 +457,6 @@ export function readUbl(root: XNode): InvoiceModel {
   model.decimals = ctx.decimals;
   model.typeErrors = ctx.typeErrors;
   model.emptyElements = collectEmptyElements(root, ctx);
+  Object.assign(model, readNationalFacts(root, ctx, "UBL"));
   return model;
 }
