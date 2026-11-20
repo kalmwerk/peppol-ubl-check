@@ -1,18 +1,20 @@
 {
- "checkedWith": "CEN EN 16931 validation artefacts 1.3.17 (EN16931-UBL/CII-validation.xslt) and Peppol BIS Billing 3.0.22 (PEPPOL-EN16931-UBL/CII.sch compiled with SchXslt 1.10.1), Saxon-HE",
+ "checkedWith": "CEN EN 16931 validation artefacts 1.3.17 (EN16931-UBL/CII-validation.xslt) and Peppol BIS Billing 3.0.22 (PEPPOL-EN16931-UBL/CII.sch compiled with SchXslt 1.10.1), Saxon-HE; cen1316: the CEN 1.3.16 copy Peppol BIS 3.0.22 ships (CEN-EN16931-UBL/CII.sch, SchXslt 1.10.1), which the Peppol profile is held to",
  "recordedOn": "2026-11-20",
  "cases": {
   "edge/ubl-sample.xml": {
    "about": "the UBL sample, unchanged",
    "rules": [],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/cii-sample.xml": {
    "about": "the CII sample (Peppol BIS guideline), unchanged",
    "rules": [],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-classification-nature-code-only.xml": {
    "about": "CommodityClassification with only a NatureCode",
@@ -23,7 +25,10 @@
    "cen": {
     "UBL-CR-592": "warning"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "UBL-CR-592": "warning"
+   }
   },
   "edge/ubl-classification-empty.xml": {
    "about": "an empty CommodityClassification",
@@ -35,7 +40,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-R008": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-classification-listid-empty.xml": {
    "about": "ItemClassificationCode with listID=\"\"",
@@ -46,7 +52,10 @@
    "cen": {
     "BR-CL-13": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-13": "error"
+   }
   },
   "edge/ubl-classification-no-listid.xml": {
    "about": "ItemClassificationCode without listID",
@@ -57,7 +66,10 @@
    "cen": {
     "BR-65": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-65": "error"
+   }
   },
   "edge/cii-classification-without-code.xml": {
    "about": "DesignatedProductClassification with only a ClassName",
@@ -68,7 +80,10 @@
    "cen": {
     "CII-SR-083": "warning"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-083": "warning"
+   }
   },
   "edge/cii-classification-listid-blank.xml": {
    "about": "ClassCode with listID=\" \"",
@@ -80,7 +95,11 @@
     "BR-65": "error",
     "BR-CL-13": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-65": "error",
+    "BR-CL-13": "error"
+   }
   },
   "edge/ubl-gln-8-digits.xml": {
    "about": "buyer party identifier: a GLN-8 (scheme 0088) with a valid check digit",
@@ -88,7 +107,8 @@
     "PEPPOL-COMMON-R040"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-gln-14-digits.xml": {
    "about": "buyer party identifier: a 14-digit GTIN-style number (scheme 0088) with a valid check digit",
@@ -96,7 +116,8 @@
     "PEPPOL-COMMON-R040"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-gln-18-digits.xml": {
    "about": "buyer party identifier: 18 digits (scheme 0088) with a valid check digit",
@@ -104,7 +125,8 @@
     "PEPPOL-COMMON-R040"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-gln-13-digits.xml": {
    "about": "buyer party identifier: a valid 13-digit GLN",
@@ -112,7 +134,8 @@
     "PEPPOL-COMMON-R040"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-gln-wrong-check-digit.xml": {
    "about": "buyer party identifier: a 13-digit GLN with a wrong check digit",
@@ -122,7 +145,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R040": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-gln-nbsp.xml": {
    "about": "buyer party identifier: a valid GLN after a non-breaking space",
@@ -132,7 +156,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R040": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-gln-line-breaks.xml": {
    "about": "buyer party identifier: a valid GLN between a line break and a tab",
@@ -140,7 +165,8 @@
     "PEPPOL-COMMON-R040"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-gln-endpoint-8-digits.xml": {
    "about": "seller EndpointID: a GLN-8 (scheme 0088)",
@@ -150,7 +176,8 @@
     "BR-CL-25"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/cii-gln-8-digits.xml": {
    "about": "buyer GlobalID: a GLN-8 (scheme 0088)",
@@ -159,7 +186,8 @@
     "BR-CL-10"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/cii-gln-wrong-check-digit.xml": {
    "about": "buyer GlobalID: a GLN with a wrong check digit",
@@ -170,7 +198,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R040": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-0208-nbsp.xml": {
    "about": "buyer party identifier: a valid 0208 number after a non-breaking space",
@@ -180,7 +209,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R043": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-0208-line-breaks.xml": {
    "about": "buyer party identifier: a valid 0208 number between line breaks",
@@ -188,7 +218,8 @@
     "PEPPOL-COMMON-R043"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-endpoint-scheme-empty.xml": {
    "about": "seller EndpointID with schemeID=\"\"",
@@ -202,6 +233,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-CL008": "error"
+   },
+   "cen1316": {
+    "BR-CL-25": "error"
    }
   },
   "edge/ubl-endpoint-scheme-padded.xml": {
@@ -214,7 +248,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-CL008": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/cii-endpoint-scheme-blank.xml": {
    "about": "buyer URIID with schemeID=\" \"",
@@ -229,6 +264,10 @@
    },
    "peppol": {
     "PEPPOL-EN16931-CL008": "error"
+   },
+   "cen1316": {
+    "BR-63": "error",
+    "BR-CL-25": "error"
    }
   },
   "edge/cii-endpoint-scheme-padded.xml": {
@@ -241,7 +280,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-CL008": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/cii-legal-id-scheme-9925.xml": {
    "about": "seller legal registration identifier with the address scheme 9925",
@@ -251,7 +291,10 @@
    "cen": {
     "BR-CL-11": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-11": "error"
+   }
   },
   "edge/ubl-legal-id-scheme-nbsp.xml": {
    "about": "seller legal registration identifier whose schemeID starts with a non-breaking space",
@@ -261,7 +304,10 @@
    "cen": {
     "BR-CL-11": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-11": "error"
+   }
   },
   "edge/cii-tax-registration-0007.xml": {
    "about": "seller SpecifiedTaxRegistration/ID with schemeID \"0007\" instead of \"VA\"",
@@ -273,7 +319,10 @@
    "cen": {
     "BR-S-02": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-S-02": "error"
+   }
   },
   "edge/cii-tax-registration-fc.xml": {
    "about": "seller SpecifiedTaxRegistration/ID with schemeID \"FC\" (tax number) only",
@@ -283,7 +332,8 @@
     "BR-CO-26"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-vat-id-leading-space.xml": {
    "about": "seller VAT identifier written with a leading space",
@@ -294,22 +344,21 @@
    "cen": {
     "BR-CO-09": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-vat-id-empty.xml": {
-   "about": "seller VAT identifier element left empty",
+   "about": "an empty seller VAT identifier: CEN 1.3.16's UBL BR-CO-09 matches its prefix (none) anywhere in the list text, so it passes; 1.3.17 doesn't",
    "rules": [
-    "BR-CO-09",
-    "BR-S-02",
-    "BR-CO-26",
-    "PEPPOL-EN16931-R008"
+    "BR-CO-09"
    ],
    "cen": {
     "BR-CO-09": "error"
    },
    "peppol": {
     "PEPPOL-EN16931-R008": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-payee-name-blank.xml": {
    "about": "payee whose name is a single space",
@@ -320,7 +369,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-R008": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-payee-same-name-as-seller.xml": {
    "about": "payee with the seller's trading name",
@@ -330,7 +380,10 @@
    "cen": {
     "BR-17": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-17": "error"
+   }
   },
   "edge/ubl-payee-same-identifier-as-seller.xml": {
    "about": "payee with the seller's party identifier",
@@ -340,7 +393,10 @@
    "cen": {
     "BR-17": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-17": "error"
+   }
   },
   "edge/ubl-payee-blank-vs-empty-identifier.xml": {
    "about": "seller party identifier a single space, payee party identifier empty (they differ as written)",
@@ -351,7 +407,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-R008": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/cii-payee-name-empty.xml": {
    "about": "payee with an empty Name element",
@@ -359,7 +416,8 @@
     "BR-17"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/cii-payee-same-legal-id.xml": {
    "about": "payee with the seller's legal registration identifier",
@@ -369,7 +427,10 @@
    "cen": {
     "BR-17": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-17": "error"
+   }
   },
   "edge/ubl-item-attribute-name-empty.xml": {
    "about": "item attribute with an empty Name",
@@ -380,7 +441,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-R008": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/cii-item-attribute-description-empty.xml": {
    "about": "item attribute with an empty Description",
@@ -388,7 +450,8 @@
     "BR-54"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-allowance-reason-empty.xml": {
    "about": "document allowance whose only reason element is empty",
@@ -400,7 +463,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-R008": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-unit-code-empty.xml": {
    "about": "line quantity with unitCode=\"\"",
@@ -411,7 +475,10 @@
    "cen": {
     "BR-CL-23": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-23": "error"
+   }
   },
   "edge/ubl-payment-means-code-empty.xml": {
    "about": "payment means with an empty PaymentMeansCode",
@@ -426,6 +493,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R008": "error"
+   },
+   "cen1316": {
+    "BR-CL-16": "error"
    }
   },
   "edge/ubl-payee-account-id-empty.xml": {
@@ -440,6 +510,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R008": "error"
+   },
+   "cen1316": {
+    "BR-50": "error"
    }
   },
   "edge/cii-account-without-id.xml": {
@@ -453,7 +526,12 @@
     "BR-61": "error",
     "CII-SR-470": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-50": "error",
+    "BR-61": "error",
+    "CII-SR-470": "error"
+   }
   },
   "edge/ubl-notes-seller-country-nbsp.xml": {
    "about": "two document notes, buyer in DE, seller country DE followed by a non-breaking space",
@@ -466,6 +544,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R002": "error"
+   },
+   "cen1316": {
+    "BR-CL-14": "error"
    }
   },
   "edge/ubl-326-seller-country-nbsp.xml": {
@@ -479,6 +560,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-P0112": "error"
+   },
+   "cen1316": {
+    "BR-CL-14": "error"
    }
   },
   "edge/ubl-384-slovak-vat-ids.xml": {
@@ -487,7 +571,8 @@
     "PEPPOL-EN16931-P0112"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-384-slovak-vat-id-leading-space.xml": {
    "about": "invoice type 384, the seller's Slovak VAT identifier written with a leading space",
@@ -499,7 +584,8 @@
    },
    "peppol": {
     "PEPPOL-EN16931-P0112": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-nl-seller-country-nbsp.xml": {
    "about": "Dutch invoice, seller country NL followed by a non-breaking space, seller legal ID with scheme 0060",
@@ -510,7 +596,10 @@
    "cen": {
     "BR-CL-14": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-14": "error"
+   }
   },
   "edge/ubl-nl-legal-id-nbsp-only.xml": {
    "about": "Dutch invoice, seller KvK legal ID (0106) holding only a non-breaking space",
@@ -521,7 +610,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R054": "warning"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-nl-payment-code-nbsp.xml": {
    "about": "Dutch seller and buyer, payment means code 58 followed by a non-breaking space",
@@ -534,6 +624,9 @@
    },
    "peppol": {
     "NL-R-008": "error"
+   },
+   "cen1316": {
+    "BR-CL-16": "error"
    }
   },
   "edge/ubl-type-471.xml": {
@@ -545,7 +638,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-P0100": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-type-500.xml": {
    "about": "invoice type 500 (self-billed prepayment invoice, new in CEN 1.3.17)",
@@ -556,7 +650,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-P0100": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-type-503-on-invoice.xml": {
    "about": "credit note type 503 on a UBL Invoice",
@@ -569,6 +664,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-P0100": "error"
+   },
+   "cen1316": {
+    "BR-CL-01": "error"
    }
   },
   "edge/ubl-type-381-on-invoice.xml": {
@@ -582,6 +680,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-P0100": "error"
+   },
+   "cen1316": {
+    "BR-CL-01": "error"
    }
   },
   "edge/ubl-credit-note-503.xml": {
@@ -593,7 +694,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-P0101": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-credit-note-502.xml": {
    "about": "credit note type 502 (self-billed factored credit note, new in CEN 1.3.17)",
@@ -604,7 +706,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-P0101": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-foreign-lookalikes-in-extension.xml": {
    "about": "a UBL extension of another namespace holding amounts, an attachment, identifiers, codes and a date that would each break a rule as UBL elements",
@@ -628,7 +731,11 @@
     "UBL-CR-001": "warning",
     "UBL-DT-01": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "UBL-CR-001": "warning",
+    "UBL-DT-01": "error"
+   }
   },
   "edge/ubl-credit-note-380.xml": {
    "about": "invoice type 380 on a UBL CreditNote",
@@ -641,6 +748,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-P0101": "error"
+   },
+   "cen1316": {
+    "BR-CL-01": "error"
    }
   },
   "edge/cii-type-502.xml": {
@@ -650,7 +760,8 @@
     "PEPPOL-EN16931-P0100"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/cii-type-471.xml": {
    "about": "type 471 (new in CEN 1.3.17)",
@@ -659,7 +770,8 @@
     "PEPPOL-EN16931-P0100"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-kvk-7-digits.xml": {
    "about": "buyer party identifier: a 7-digit KvK number (scheme 0106)",
@@ -669,7 +781,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R054": "warning"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-kvk-padded.xml": {
    "about": "buyer party identifier: an 8-digit KvK number between a line break and a tab",
@@ -677,7 +790,8 @@
     "PEPPOL-COMMON-R054"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-kvk-nbsp.xml": {
    "about": "buyer party identifier: an 8-digit KvK number followed by a non-breaking space",
@@ -687,7 +801,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R054": "warning"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-kvk-branch-number.xml": {
    "about": "buyer party identifier: a 12-digit KvK branch number (scheme 0106)",
@@ -697,7 +812,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R054": "warning"
-   }
+   },
+   "cen1316": {}
   },
   "edge/ubl-kvk-scheme-padded.xml": {
    "about": "buyer party identifier: 7 digits with schemeID \" 0106\" (not exactly 0106)",
@@ -706,7 +822,8 @@
     "BR-CL-10"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-kvk-endpoint-spaced.xml": {
    "about": "Dutch seller EndpointID 0106 written as 1234 5678",
@@ -716,7 +833,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R054": "warning"
-   }
+   },
+   "cen1316": {}
   },
   "edge/cii-kvk-7-digits.xml": {
    "about": "buyer GlobalID: a 7-digit KvK number (scheme 0106)",
@@ -727,7 +845,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-COMMON-R054": "warning"
-   }
+   },
+   "cen1316": {}
   },
   "edge/cii-kvk-8-digits.xml": {
    "about": "buyer GlobalID: an 8-digit KvK number (scheme 0106)",
@@ -736,7 +855,8 @@
     "BR-CL-10"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/ubl-currency-padded.xml": {
    "about": "DocumentCurrencyCode \" EUR \" (currencyID compares with it as written)",
@@ -750,6 +870,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R051": "error"
+   },
+   "cen1316": {
+    "BR-CO-15": "error"
    }
   },
   "edge/cii-currency-padded.xml": {
@@ -765,6 +888,9 @@
    "peppol": {
     "PEPPOL-EN16931-R053": "error",
     "PEPPOL-EN16931-R054": "error"
+   },
+   "cen1316": {
+    "BR-CO-15": "error"
    }
   },
   "edge/ubl-vat-total-3-decimals.xml": {
@@ -779,7 +905,12 @@
     "BR-CO-15": "error",
     "UBL-DT-01": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-14": "error",
+    "BR-CO-15": "error",
+    "UBL-DT-01": "error"
+   }
   },
   "edge/cii-vat-total-trailing-zero.xml": {
    "about": "VAT total written 756.950 (two decimals of value)",
@@ -787,7 +918,8 @@
     "BR-DEC"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/cii-vat-total-3-decimals.xml": {
    "about": "VAT total 756.951 (three decimals of value)",
@@ -799,7 +931,11 @@
     "BR-CO-14": "error",
     "BR-DEC-13": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-14": "error",
+    "BR-DEC-13": "error"
+   }
   },
   "edge/cii-line-total-padded.xml": {
    "about": "document line total \"3850.00 \" (the space counts as a decimal)",
@@ -810,7 +946,10 @@
    "cen": {
     "BR-DEC-09": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-DEC-09": "error"
+   }
   },
   "edge/cii-issue-date-no-format.xml": {
    "about": "issue date 20261015 without format=\"102\"",
@@ -822,6 +961,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-F001": "error"
+   },
+   "cen1316": {
+    "BR-03": "error"
    }
   },
   "edge/cii-issue-date-empty.xml": {
@@ -835,6 +977,10 @@
    },
    "peppol": {
     "PEPPOL-EN16931-F001": "error"
+   },
+   "cen1316": {
+    "BR-03": "error",
+    "CII-DT-097": "error"
    }
   },
   "edge/cii-period-reversed.xml": {
@@ -845,7 +991,10 @@
    "cen": {
     "BR-29": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-29": "error"
+   }
   },
   "edge/cii-period-end-no-format.xml": {
    "about": "invoice period end 20261031 without format=\"102\"",
@@ -857,6 +1006,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-F001": "error"
+   },
+   "cen1316": {
+    "BR-29": "error"
    }
   },
   "edge/cii-period-padded-start.xml": {
@@ -867,7 +1019,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-F001": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/cii-allowance-indicator-zero.xml": {
    "about": "a document allowance (S 20%, 10.00) with ChargeIndicator \"0\" (xs:boolean false) and no AllowanceTotalAmount",
@@ -881,6 +1034,10 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R043": "error"
+   },
+   "cen1316": {
+    "BR-CO-11": "error",
+    "BR-S-08": "error"
    }
   },
   "edge/ubl-line-total-missing.xml": {
@@ -895,7 +1052,12 @@
     "BR-CO-10": "error",
     "BR-CO-13": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-12": "error",
+    "BR-CO-10": "error",
+    "BR-CO-13": "error"
+   }
   },
   "edge/cii-summation-missing.xml": {
    "about": "no SpecifiedTradeSettlementHeaderMonetarySummation (the totals rules don't run)",
@@ -913,6 +1075,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R053": "error"
+   },
+   "cen1316": {
+    "BR-CO-15": "error"
    }
   },
   "edge/ubl-breakdown-no-taxable.xml": {
@@ -928,7 +1093,13 @@
     "BR-S-08": "error",
     "BR-S-09": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-45": "error",
+    "BR-CO-17": "error",
+    "BR-S-08": "error",
+    "BR-S-09": "error"
+   }
   },
   "edge/ubl-breakdown-scheme-gst.xml": {
    "about": "the 6% VAT breakdown row under tax scheme GST (no VAT rate for BR-CO-17)",
@@ -942,7 +1113,12 @@
     "BR-48": "error",
     "BR-CO-17": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error"
+   }
   },
   "edge/ubl-breakdown-no-percent.xml": {
    "about": "the 6% VAT breakdown row without Percent (its VAT amount must then be 0)",
@@ -956,7 +1132,12 @@
     "BR-CO-17": "error",
     "BR-S-09": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-48": "error",
+    "BR-CO-17": "error",
+    "BR-S-09": "error"
+   }
   },
   "edge/ubl-line-zero-rated-no-percent.xml": {
    "about": "line 3 zero rated (Z) without Percent",
@@ -968,7 +1149,12 @@
     "BR-Z-01": "error",
     "BR-Z-05": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-S-08": "error",
+    "BR-Z-01": "error",
+    "BR-Z-05": "error"
+   }
   },
   "edge/ubl-line-exempt-scheme-gst.xml": {
    "about": "line 3 exempt (E, 6%) under tax scheme GST: not a VAT category, so BR-E-05 doesn't run",
@@ -979,7 +1165,11 @@
     "BR-CO-04": "error",
     "BR-S-08": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-04": "error",
+    "BR-S-08": "error"
+   }
   },
   "edge/ubl-standard-row-no-standard-use.xml": {
    "about": "every line and the allowance category written \"s\" (not S), the VAT breakdown rows still S: UBL's BR-S-01 also fails a standard-rated row nothing uses",
@@ -992,7 +1182,13 @@
     "BR-S-01": "error",
     "BR-S-08": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-17": "error",
+    "BR-CL-18": "error",
+    "BR-S-01": "error",
+    "BR-S-08": "error"
+   }
   },
   "edge/cii-standard-row-no-standard-use.xml": {
    "about": "every line category written \"s\" (not S), the VAT breakdown rows still S: CII's BR-S-01 has no test for a row nothing uses",
@@ -1003,7 +1199,11 @@
     "BR-CL-18": "error",
     "BR-S-08": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-18": "error",
+    "BR-S-08": "error"
+   }
   },
   "edge/cii-o-row-no-basis.xml": {
    "about": "an extra not-subject (O) VAT breakdown row without BasisAmount: BR-45 doesn't run on it",
@@ -1017,7 +1217,13 @@
     "BR-O-11": "error",
     "BR-O-12": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-O-01": "error",
+    "BR-O-08": "error",
+    "BR-O-11": "error",
+    "BR-O-12": "error"
+   }
   },
   "edge/cii-o-row-no-amounts.xml": {
    "about": "an extra O VAT breakdown row without CalculatedAmount and BasisAmount",
@@ -1033,7 +1239,14 @@
     "BR-O-11": "error",
     "BR-O-12": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-O-01": "error",
+    "BR-O-08": "error",
+    "BR-O-09": "error",
+    "BR-O-11": "error",
+    "BR-O-12": "error"
+   }
   },
   "edge/cii-o-row-padded-type-no-basis.xml": {
    "about": "an extra O row without BasisAmount, TypeCode \" VAT\": upper-case(TypeCode) isn't 'VAT', so the generic rule does run",
@@ -1048,7 +1261,14 @@
     "BR-O-01": "error",
     "CII-DT-037": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-45": "error",
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-O-01": "error",
+    "CII-DT-037": "error"
+   }
   },
   "edge/cii-l-row-no-rate.xml": {
    "about": "an extra IGIC (L) VAT breakdown row without RateApplicablePercent",
@@ -1057,7 +1277,8 @@
     "BR-CO-17"
    ],
    "cen": {},
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {}
   },
   "edge/cii-m-row-three-decimals.xml": {
    "about": "an extra IPSI (M) VAT breakdown row with amounts written with three decimals",
@@ -1068,7 +1289,10 @@
    "cen": {
     "BR-CO-14": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-14": "error"
+   }
   },
   "edge/cii-o-rows-tax-point-both.xml": {
    "about": "the two VAT breakdown rows replaced by one O row with both a TaxPointDate and a DueDateTypeCode: BR-CO-03 doesn't run",
@@ -1082,7 +1306,14 @@
     "BR-O-11": "error",
     "BR-O-12": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-14": "error",
+    "BR-O-01": "error",
+    "BR-O-08": "error",
+    "BR-O-11": "error",
+    "BR-O-12": "error"
+   }
   },
   "edge/cii-s-row-tax-point-both.xml": {
    "about": "the 20% S row with both a TaxPointDate and a DueDateTypeCode",
@@ -1092,7 +1323,10 @@
    "cen": {
     "BR-CO-03": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-03": "error"
+   }
   },
   "edge/cii-o-lines-no-row.xml": {
    "about": "every line in category O (not subject to VAT), no O VAT breakdown row: CII's BR-O-01 only runs when there is one",
@@ -1105,7 +1339,12 @@
     "BR-O-05": "error",
     "BR-S-08": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-O-02": "error",
+    "BR-O-05": "error",
+    "BR-S-08": "error"
+   }
   },
   "edge/ubl-igic-row-unused.xml": {
    "about": "an extra IGIC (L) VAT breakdown row that no line, allowance or charge uses",
@@ -1115,7 +1354,10 @@
    "cen": {
     "BR-IG-01": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-AF-01": "error"
+   }
   },
   "edge/ubl-ipsi-row-padded.xml": {
    "about": "line 3 in IPSI (M, 6%) and its VAT breakdown row's category written \" M \"",
@@ -1125,7 +1367,10 @@
    "cen": {
     "BR-IP-01": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-AG-01": "error"
+   }
   },
   "edge/ubl-preceding-credit-note-only.xml": {
    "about": "BillingReference with only a CreditNoteDocumentReference",
@@ -1137,7 +1382,12 @@
     "UBL-CR-039": "warning",
     "UBL-SR-07": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-55": "error",
+    "UBL-CR-039": "warning",
+    "UBL-SR-07": "error"
+   }
   },
   "edge/ubl-s-row-other-scheme-taxable-off.xml": {
    "about": "the 6% S VAT breakdown row under tax scheme GST with a taxable amount that doesn't match its lines: BR-S-08 and BR-S-09 don't run on it",
@@ -1150,7 +1400,12 @@
     "BR-48": "error",
     "BR-CO-17": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error"
+   }
   },
   "edge/ubl-k-row-other-scheme.xml": {
    "about": "the 6% row turned into an intra-community (K) row under tax scheme GST, no delivery date or country: BR-IC-11 and BR-IC-12 don't run",
@@ -1163,7 +1418,12 @@
     "BR-48": "error",
     "BR-CO-17": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error"
+   }
   },
   "edge/ubl-igic-row-unused-under-one.xml": {
    "about": "an extra IGIC (L) row with a taxable amount of 0.50 that nothing uses: BR-IG-08 only needs an invoice line and a difference under 1.00",
@@ -1173,7 +1433,10 @@
    "cen": {
     "BR-IG-01": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-AF-01": "error"
+   }
   },
   "edge/ubl-tax-total-repeated.xml": {
    "about": "the TaxTotal written twice: BR-CO-14 checks each TaxTotal against its own rows (Peppol's R053 fails it)",
@@ -1185,35 +1448,41 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R053": "error"
+   },
+   "cen1316": {
+    "BR-CO-15": "error"
    }
   },
   "edge/ubl-line-tax-category-repeated.xml": {
    "about": "line 1 with two ClassifiedTaxCategory groups, the first under tax scheme GST: BR-CO-04 finds the VAT one",
    "rules": [
     "BR-CO-04",
-    "BR-S-05"
-   ],
-   "outOfScope": [
+    "BR-S-05",
     "UBL-SR-48"
    ],
    "cen": {
     "UBL-SR-48": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "UBL-SR-48": "error"
+   }
   },
   "edge/ubl-line-tax-category-second-zero.xml": {
    "about": "line 1 with a second standard-rated ClassifiedTaxCategory at 0%: BR-S-05 checks each group",
    "rules": [
-    "BR-S-05"
-   ],
-   "outOfScope": [
+    "BR-S-05",
     "UBL-SR-48"
    ],
    "cen": {
     "BR-S-05": "error",
     "UBL-SR-48": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-S-05": "error",
+    "UBL-SR-48": "error"
+   }
   },
   "edge/ubl-line-period-repeated.xml": {
    "about": "line 1 with two InvoicePeriods, the second ending before it starts: BR-30 checks each",
@@ -1225,7 +1494,11 @@
     "BR-30": "error",
     "UBL-SR-36": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-30": "error",
+    "UBL-SR-36": "error"
+   }
   },
   "edge/ubl-line-charge-indicator-1.xml": {
    "about": "a line charge of 5.00 written with ChargeIndicator 1 (xs:boolean true) and the line amount unchanged: R120 only sums indicators written 'true' / 'false'",
@@ -1236,7 +1509,8 @@
    "cen": {},
    "peppol": {
     "PEPPOL-EN16931-R043": "error"
-   }
+   },
+   "cen1316": {}
   },
   "edge/cii-igic-row-unused.xml": {
    "about": "an extra IGIC (L, 7%) VAT breakdown row of 5.00 that nothing uses: CII's BR-IG-08 reads its rate from ../ram:RateApplicablePercent, which isn't there, so it never fails",
@@ -1246,7 +1520,10 @@
    "cen": {
     "BR-CO-14": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-14": "error"
+   }
   },
   "edge/cii-exempt-row-other-type.xml": {
    "about": "the 5.5% row turned into an exempt (E) row with TypeCode GST: BR-E-08 needs TypeCode VAT",
@@ -1261,7 +1538,14 @@
     "BR-E-01": "error",
     "CII-DT-037": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error",
+    "BR-E-01": "error",
+    "CII-DT-037": "error"
+   }
   },
   "edge/cii-k-row-other-type.xml": {
    "about": "the 5.5% row turned into an intra-community (K) row with TypeCode GST, no delivery date or ship-to country: BR-IC-11 and BR-IC-12 don't run",
@@ -1276,7 +1560,14 @@
     "BR-IC-01": "error",
     "CII-DT-037": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-47": "error",
+    "BR-48": "error",
+    "BR-CO-17": "error",
+    "BR-IC-01": "error",
+    "CII-DT-037": "error"
+   }
   },
   "edge/cii-line-period-start-iso.xml": {
    "about": "an invoice period and a line period, the line's start written 2026-10-01: R110 compares the DateTimeStrings as text",
@@ -1290,6 +1581,9 @@
    "peppol": {
     "PEPPOL-EN16931-F001": "error",
     "PEPPOL-EN16931-R110": "error"
+   },
+   "cen1316": {
+    "CII-DT-097": "error"
    }
   },
   "edge/cii-line-period-end-nbsp.xml": {
@@ -1305,15 +1599,16 @@
    "peppol": {
     "PEPPOL-EN16931-F001": "error",
     "PEPPOL-EN16931-R111": "error"
+   },
+   "cen1316": {
+    "CII-DT-097": "error"
    }
   },
   "edge/cii-line-allowance-two-amounts.xml": {
    "about": "a line allowance with two ActualAmounts of 0.02: Peppol's R120 sums both (0.04 off), EN 16931 reads the first",
    "rules": [
     "PEPPOL-EN16931-R120",
-    "BR-41"
-   ],
-   "outOfScope": [
+    "BR-41",
     "CII-SR-473"
    ],
    "cen": {
@@ -1321,6 +1616,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R120": "error"
+   },
+   "cen1316": {
+    "CII-SR-473": "error"
    }
   },
   "edge/cii-line-trade-tax-repeated.xml": {
@@ -1335,7 +1633,12 @@
     "CII-DT-037": "error",
     "CII-SR-454": "warning"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-E-01": "error",
+    "CII-DT-037": "error",
+    "CII-SR-454": "warning"
+   }
   },
   "edge/cii-allowance-trade-tax-repeated.xml": {
    "about": "a document allowance of 0.00 with two CategoryTradeTax groups, the first without CategoryCode, the second standard rated at 0%: BR-32 finds the second, BR-S-06 checks it",
@@ -1348,7 +1651,12 @@
     "BR-S-06": "error",
     "CII-SR-472": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-11": "error",
+    "BR-S-06": "error",
+    "CII-SR-472": "error"
+   }
   },
   "edge/cii-allowance-indicator-1-decimals.xml": {
    "about": "a document allowance with Indicator 1 and an amount with three decimals: BR-DEC-01 / -05 take Indicator 'false' / 'true' as written as context",
@@ -1360,6 +1668,9 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R043": "error"
+   },
+   "cen1316": {
+    "BR-CO-12": "error"
    }
   },
   "edge/cii-buyer-uri-repeated.xml": {
@@ -1374,7 +1685,12 @@
     "CII-SR-274": "warning",
     "CII-SR-460": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-63": "error",
+    "CII-SR-274": "warning",
+    "CII-SR-460": "error"
+   }
   },
   "edge/cii-tax-currency-padded.xml": {
    "about": "TaxCurrencyCode written \" SEK\" with a VAT total in SEK: Peppol's R055 matches currencyID against the code as written and finds none",
@@ -1387,6 +1703,10 @@
    },
    "peppol": {
     "PEPPOL-EN16931-R055": "error"
+   },
+   "cen1316": {
+    "BR-53": "error",
+    "BR-DEC-15": "error"
    }
   },
   "edge/cii-business-process-repeated.xml": {
@@ -1398,7 +1718,10 @@
    "cen": {
     "CII-SR-003": "warning"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-003": "warning"
+   }
   },
   "edge/cii-no-lines-no-rows.xml": {
    "about": "no line items and no VAT breakdown rows: CII's BR-CO-18 takes each line item as context, so it doesn't run",
@@ -1410,7 +1733,1364 @@
     "BR-CO-10": "error",
     "BR-CO-14": "error"
    },
-   "peppol": {}
+   "peppol": {},
+   "cen1316": {
+    "BR-16": "error",
+    "BR-CO-10": "error",
+    "BR-CO-14": "error"
+   }
+  },
+  "edge/ubl-sb-cr-666-object-attachment.xml": {
+   "about": "invoiced object reference (DocumentTypeCode 130) with an attachment",
+   "rules": [
+    "UBL-CR-666"
+   ],
+   "cen": {
+    "UBL-CR-666": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "UBL-CR-666": "error"
+   }
+  },
+  "edge/ubl-sb-cr-673-object-description.xml": {
+   "about": "invoiced object reference (DocumentTypeCode 130) with a description",
+   "rules": [
+    "UBL-CR-673"
+   ],
+   "cen": {
+    "UBL-CR-673": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "UBL-CR-673": "error"
+   }
+  },
+  "edge/ubl-sb-sr-29-two-sepa.xml": {
+   "about": "seller with two SEPA creditor identifiers, the second's schemeID in lower case (upper-case() in the official test)",
+   "rules": [
+    "UBL-SR-29"
+   ],
+   "cen": {
+    "BR-CL-10": "error",
+    "UBL-SR-29": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-10": "error",
+    "UBL-SR-29": "error"
+   }
+  },
+  "edge/ubl-sb-sr-45-two-due-dates.xml": {
+   "about": "two payment means, each with a PaymentDueDate",
+   "rules": [
+    "UBL-SR-45"
+   ],
+   "cen": {
+    "UBL-CR-412": "warning",
+    "UBL-SR-45": "error",
+    "UBL-SR-47": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "UBL-CR-412": "warning",
+    "UBL-SR-45": "error",
+    "UBL-SR-47": "error"
+   }
+  },
+  "edge/ubl-sb-sr-54-two-cards.xml": {
+   "about": "two card payment means, each with a CardAccount",
+   "rules": [
+    "UBL-SR-54"
+   ],
+   "cen": {
+    "UBL-SR-47": "error",
+    "UBL-SR-54": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "UBL-SR-47": "error",
+    "UBL-SR-54": "error"
+   }
+  },
+  "edge/ubl-sb-sr-28-two-mandates.xml": {
+   "about": "a direct debit with two PaymentMandate IDs (the UBL schema refuses it)",
+   "rules": [
+    "UBL-SR-28"
+   ],
+   "cen": {
+    "UBL-SR-28": "error",
+    "UBL-SR-47": "error",
+    "UBL-SR-55": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "UBL-SR-28": "error",
+    "UBL-SR-47": "error",
+    "UBL-SR-55": "error"
+   }
+  },
+  "edge/ubl-sb-sr-06-two-preceding.xml": {
+   "about": "a BillingReference with two InvoiceDocumentReference elements (the UBL schema refuses it)",
+   "rules": [
+    "UBL-SR-06"
+   ],
+   "cen": {
+    "UBL-SR-06": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "UBL-SR-06": "error"
+   }
+  },
+  "edge/cii-sb-sr-483-informationamount.xml": {
+   "about": "two InformationAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-483"
+   ],
+   "cen": {
+    "CII-SR-411": "warning",
+    "CII-SR-483": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-411": "warning",
+    "CII-SR-483": "error"
+   }
+  },
+  "edge/cii-sb-sr-485-totaldiscountamount.xml": {
+   "about": "two TotalDiscountAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-485"
+   ],
+   "cen": {
+    "CII-SR-412": "warning",
+    "CII-SR-485": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-412": "warning",
+    "CII-SR-485": "error"
+   }
+  },
+  "edge/cii-sb-sr-486-totalallowancechargeamount.xml": {
+   "about": "two TotalAllowanceChargeAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-486"
+   ],
+   "cen": {
+    "CII-SR-413": "warning",
+    "CII-SR-486": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-413": "warning",
+    "CII-SR-486": "error"
+   }
+  },
+  "edge/cii-sb-sr-488-retailvalueexcludingtaxinformationamount.xml": {
+   "about": "two RetailValueExcludingTaxInformationAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-488"
+   ],
+   "cen": {
+    "CII-SR-414": "warning",
+    "CII-SR-488": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-414": "warning",
+    "CII-SR-488": "error"
+   }
+  },
+  "edge/cii-sb-sr-489-totaldepositfeeinformationamount.xml": {
+   "about": "two TotalDepositFeeInformationAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-489"
+   ],
+   "cen": {
+    "CII-SR-415": "warning",
+    "CII-SR-489": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-415": "warning",
+    "CII-SR-489": "error"
+   }
+  },
+  "edge/cii-sb-sr-490-productvalueexcludingtobaccotaxinformationamount.xml": {
+   "about": "two ProductValueExcludingTobaccoTaxInformationAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-490"
+   ],
+   "cen": {
+    "CII-SR-416": "warning",
+    "CII-SR-490": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-416": "warning",
+    "CII-SR-490": "error"
+   }
+  },
+  "edge/cii-sb-sr-491-totalretailvalueinformationamount.xml": {
+   "about": "two TotalRetailValueInformationAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-491"
+   ],
+   "cen": {
+    "CII-SR-417": "warning",
+    "CII-SR-491": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-417": "warning",
+    "CII-SR-491": "error"
+   }
+  },
+  "edge/cii-sb-sr-492-grosslinetotalamount.xml": {
+   "about": "two GrossLineTotalAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-492"
+   ],
+   "cen": {
+    "CII-SR-418": "warning",
+    "CII-SR-492": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-418": "warning",
+    "CII-SR-492": "error"
+   }
+  },
+  "edge/cii-sb-sr-493-netlinetotalamount.xml": {
+   "about": "two NetLineTotalAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-493"
+   ],
+   "cen": {
+    "CII-SR-419": "warning",
+    "CII-SR-493": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-419": "warning",
+    "CII-SR-493": "error"
+   }
+  },
+  "edge/cii-sb-sr-494-netincludingtaxeslinetotalamount.xml": {
+   "about": "two NetIncludingTaxesLineTotalAmount elements in the header monetary summation",
+   "rules": [
+    "CII-SR-494"
+   ],
+   "cen": {
+    "CII-SR-420": "warning",
+    "CII-SR-494": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-420": "warning",
+    "CII-SR-494": "error"
+   }
+  },
+  "edge/cii-sb-dt-015-order-uriid.xml": {
+   "about": "URIID in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-015"
+   ],
+   "cen": {
+    "CII-DT-015": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-015": "error"
+   }
+  },
+  "edge/cii-sb-dt-016-order-statuscode.xml": {
+   "about": "StatusCode in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-016"
+   ],
+   "cen": {
+    "CII-DT-016": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-016": "error"
+   }
+  },
+  "edge/cii-sb-dt-017-order-copyindicator.xml": {
+   "about": "CopyIndicator in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-017"
+   ],
+   "cen": {
+    "CII-DT-017": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-017": "error"
+   }
+  },
+  "edge/cii-sb-dt-018-order-typecode.xml": {
+   "about": "TypeCode in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-018"
+   ],
+   "cen": {
+    "CII-DT-018": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-018": "error"
+   }
+  },
+  "edge/cii-sb-dt-019-order-globalid.xml": {
+   "about": "GlobalID in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-019"
+   ],
+   "cen": {
+    "CII-DT-019": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-019": "error"
+   }
+  },
+  "edge/cii-sb-dt-020-order-revisionid.xml": {
+   "about": "RevisionID in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-020"
+   ],
+   "cen": {
+    "CII-DT-020": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-020": "error"
+   }
+  },
+  "edge/cii-sb-dt-021-order-name.xml": {
+   "about": "Name in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-021"
+   ],
+   "cen": {
+    "CII-DT-021": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-021": "error"
+   }
+  },
+  "edge/cii-sb-dt-022-order-attachmentbinaryobject.xml": {
+   "about": "AttachmentBinaryObject in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-022"
+   ],
+   "cen": {
+    "CII-DT-022": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-022": "error"
+   }
+  },
+  "edge/cii-sb-dt-023-order-information.xml": {
+   "about": "Information in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-023"
+   ],
+   "cen": {
+    "CII-DT-023": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-023": "error"
+   }
+  },
+  "edge/cii-sb-dt-024-order-referencetypecode.xml": {
+   "about": "ReferenceTypeCode in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-024"
+   ],
+   "cen": {
+    "CII-DT-024": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-024": "error"
+   }
+  },
+  "edge/cii-sb-dt-025-order-sectionname.xml": {
+   "about": "SectionName in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-025"
+   ],
+   "cen": {
+    "CII-DT-025": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-025": "error"
+   }
+  },
+  "edge/cii-sb-dt-026-order-previousrevisionid.xml": {
+   "about": "PreviousRevisionID in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-026"
+   ],
+   "cen": {
+    "CII-DT-026": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-026": "error"
+   }
+  },
+  "edge/cii-sb-dt-027-order-formattedissuedatetime.xml": {
+   "about": "FormattedIssueDateTime in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-027"
+   ],
+   "cen": {
+    "CII-DT-027": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-027": "error"
+   }
+  },
+  "edge/cii-sb-dt-028-order-effectivespecifiedperiod.xml": {
+   "about": "EffectiveSpecifiedPeriod in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-028"
+   ],
+   "cen": {
+    "CII-DT-028": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-028": "error"
+   }
+  },
+  "edge/cii-sb-dt-029-order-issuertradeparty.xml": {
+   "about": "IssuerTradeParty in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-029"
+   ],
+   "cen": {
+    "CII-DT-029": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-029": "error"
+   }
+  },
+  "edge/cii-sb-dt-030-order-attachedspecifiedbinaryfile.xml": {
+   "about": "AttachedSpecifiedBinaryFile in the BuyerOrderReferencedDocument",
+   "rules": [
+    "CII-DT-030"
+   ],
+   "cen": {
+    "CII-DT-030": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-030": "error"
+   }
+  },
+  "edge/cii-sb-dt-ard-916-allowed.xml": {
+   "about": "a supporting document (TypeCode 916) with URIID, Name and an attachment: the exceptions of CII-DT-015, -021 and -022",
+   "rules": [
+    "CII-DT-015",
+    "CII-DT-018",
+    "CII-DT-021",
+    "CII-DT-022",
+    "CII-DT-105",
+    "CII-DT-106"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {}
+  },
+  "edge/cii-sb-dt-ard-916-padded.xml": {
+   "about": "the same supporting document with TypeCode written \" 916\": the exceptions compare the code as written, so CII-DT-015, -018, -021 and -022 fail",
+   "rules": [
+    "CII-DT-015",
+    "CII-DT-018",
+    "CII-DT-021",
+    "CII-DT-022"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-015": "error",
+    "CII-DT-018": "error",
+    "CII-DT-021": "error",
+    "CII-DT-022": "error"
+   }
+  },
+  "edge/cii-sb-dt-024-ard-130-allowed.xml": {
+   "about": "an invoiced object reference (TypeCode 130) with ReferenceTypeCode: the exception of CII-DT-024",
+   "rules": [
+    "CII-DT-024",
+    "CII-DT-018"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {}
+  },
+  "edge/cii-sb-dt-024-ard-916.xml": {
+   "about": "a supporting document (TypeCode 916) with ReferenceTypeCode",
+   "rules": [
+    "CII-DT-024"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-024": "error"
+   }
+  },
+  "edge/cii-sb-dt-106-no-filename.xml": {
+   "about": "a supporting document whose attachment has a mime code but no filename",
+   "rules": [
+    "CII-DT-105",
+    "CII-DT-106"
+   ],
+   "cen": {
+    "CII-DT-106": "error"
+   },
+   "peppol": {},
+   "cen1316": {}
+  },
+  "edge/cii-sb-dt-027-preceding-invoice-allowed.xml": {
+   "about": "an InvoiceReferencedDocument with its issue date: the exception of CII-DT-027",
+   "rules": [
+    "CII-DT-027"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {}
+  },
+  "edge/cii-sb-dt-013-root-language.xml": {
+   "about": "languageID on the root element (the CII schema refuses it)",
+   "rules": [
+    "CII-DT-013"
+   ],
+   "cen": {
+    "CII-DT-013": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-013": "error"
+   }
+  },
+  "edge/cii-sb-dt-014-root-locale.xml": {
+   "about": "languageLocaleID on the root element (the CII schema refuses it)",
+   "rules": [
+    "CII-DT-014"
+   ],
+   "cen": {
+    "CII-DT-014": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-014": "error"
+   }
+  },
+  "edge/cii-sb-dt-001-doc-id-scheme-name.xml": {
+   "about": "schemeName on the invoice number",
+   "rules": [
+    "CII-DT-001",
+    "CII-DT-101"
+   ],
+   "cen": {
+    "CII-DT-001": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-001": "error"
+   }
+  },
+  "edge/cii-sb-dt-002-guideline-agency-name.xml": {
+   "about": "schemeAgencyName on the specification identifier",
+   "rules": [
+    "CII-DT-002",
+    "CII-DT-102"
+   ],
+   "cen": {
+    "CII-DT-002": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-002": "error"
+   }
+  },
+  "edge/cii-sb-dt-003-line-id-data-uri.xml": {
+   "about": "schemeDataURI on the first line ID",
+   "rules": [
+    "CII-DT-003",
+    "CII-DT-103"
+   ],
+   "cen": {
+    "CII-DT-003": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-003": "error"
+   }
+  },
+  "edge/cii-sb-dt-004-seller-item-uri.xml": {
+   "about": "schemeURI on the seller's item ID",
+   "rules": [
+    "CII-DT-004",
+    "CII-DT-104"
+   ],
+   "cen": {
+    "CII-DT-004": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-004": "error"
+   }
+  },
+  "edge/cii-sb-dt-005-doc-id-scheme-id.xml": {
+   "about": "schemeID on the invoice number",
+   "rules": [
+    "CII-DT-005"
+   ],
+   "cen": {
+    "CII-DT-005": "error"
+   },
+   "peppol": {
+    "PEPPOL-COMMON-R040": "error"
+   },
+   "cen1316": {
+    "CII-DT-005": "error"
+   }
+  },
+  "edge/cii-sb-dt-006-guideline-agency-id.xml": {
+   "about": "schemeAgencyID on the specification identifier",
+   "rules": [
+    "CII-DT-006"
+   ],
+   "cen": {
+    "CII-DT-006": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-006": "error"
+   }
+  },
+  "edge/cii-sb-dt-007-line-id-version.xml": {
+   "about": "schemeVersionID on the first line ID",
+   "rules": [
+    "CII-DT-007"
+   ],
+   "cen": {
+    "CII-DT-007": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-007": "error"
+   }
+  },
+  "edge/cii-sb-dt-101-order-id-scheme-name.xml": {
+   "about": "schemeName on the order reference (an ID outside rule 21's four)",
+   "rules": [
+    "CII-DT-101",
+    "CII-DT-001"
+   ],
+   "cen": {
+    "CII-DT-101": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-101": "error"
+   }
+  },
+  "edge/cii-sb-dt-102-order-id-agency-name.xml": {
+   "about": "schemeAgencyName on the order reference",
+   "rules": [
+    "CII-DT-102"
+   ],
+   "cen": {
+    "CII-DT-102": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-102": "error"
+   }
+  },
+  "edge/cii-sb-dt-103-order-id-data-uri.xml": {
+   "about": "schemeDataURI on the order reference",
+   "rules": [
+    "CII-DT-103"
+   ],
+   "cen": {
+    "CII-DT-103": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-103": "error"
+   }
+  },
+  "edge/cii-sb-dt-104-order-id-uri.xml": {
+   "about": "schemeURI on the order reference",
+   "rules": [
+    "CII-DT-104"
+   ],
+   "cen": {
+    "CII-DT-104": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-104": "error"
+   }
+  },
+  "edge/cii-sb-dt-008-type-code-name.xml": {
+   "about": "name on the invoice type code",
+   "rules": [
+    "CII-DT-008"
+   ],
+   "cen": {
+    "CII-DT-008": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-008": "error"
+   }
+  },
+  "edge/cii-sb-dt-009-type-code-list-uri.xml": {
+   "about": "listURI on the invoice type code",
+   "rules": [
+    "CII-DT-009"
+   ],
+   "cen": {
+    "CII-DT-009": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-009": "error"
+   }
+  },
+  "edge/cii-sb-dt-031-amount-currency.xml": {
+   "about": "currencyID on the line total amount",
+   "rules": [
+    "CII-DT-031"
+   ],
+   "cen": {
+    "CII-DT-031": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-031": "error"
+   }
+  },
+  "edge/cii-sb-dt-031-tax-total-allowed.xml": {
+   "about": "currencyID on TaxTotalAmount only, as the base has it: CII-DT-031 leaves TaxTotalAmount out",
+   "rules": [
+    "CII-DT-031",
+    "CII-DT-032"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {}
+  },
+  "edge/cii-sb-dt-032-amount-list-version.xml": {
+   "about": "currencyCodeListVersionID on the line total amount",
+   "rules": [
+    "CII-DT-032"
+   ],
+   "cen": {
+    "CII-DT-032": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-032": "error"
+   }
+  },
+  "edge/cii-sb-dt-034-quantity-list-id.xml": {
+   "about": "unitCodeListID on the first billed quantity",
+   "rules": [
+    "CII-DT-034"
+   ],
+   "cen": {
+    "CII-DT-034": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-034": "error"
+   }
+  },
+  "edge/cii-sb-dt-035-quantity-agency-id.xml": {
+   "about": "unitCodeListAgencyID on the first billed quantity",
+   "rules": [
+    "CII-DT-035"
+   ],
+   "cen": {
+    "CII-DT-035": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-035": "error"
+   }
+  },
+  "edge/cii-sb-dt-036-quantity-agency-name.xml": {
+   "about": "unitCodeListAgencyName on the first billed quantity",
+   "rules": [
+    "CII-DT-036"
+   ],
+   "cen": {
+    "CII-DT-036": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-036": "error"
+   }
+  },
+  "edge/cii-sb-dt-068-period-date-time.xml": {
+   "about": "an invoice period whose start is a udt:DateTime",
+   "rules": [
+    "CII-DT-068"
+   ],
+   "cen": {
+    "CII-DT-068": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-068": "error"
+   }
+  },
+  "edge/cii-sb-dt-069-period-duration.xml": {
+   "about": "an invoice period with a DurationMeasure",
+   "rules": [
+    "CII-DT-069"
+   ],
+   "cen": {
+    "CII-DT-069": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-069": "error"
+   }
+  },
+  "edge/cii-sb-dt-080-period-continuous.xml": {
+   "about": "an invoice period with a ContinuousIndicator",
+   "rules": [
+    "CII-DT-080"
+   ],
+   "cen": {
+    "CII-DT-080": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-080": "error"
+   }
+  },
+  "edge/cii-sb-dt-084-building-name.xml": {
+   "about": "a BuildingName in the seller's address",
+   "rules": [
+    "CII-DT-084"
+   ],
+   "cen": {
+    "CII-DT-084": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-084": "error"
+   }
+  },
+  "edge/cii-sb-dt-086-line-four.xml": {
+   "about": "a LineFour in the seller's address",
+   "rules": [
+    "CII-DT-086"
+   ],
+   "cen": {
+    "CII-DT-086": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-086": "error"
+   }
+  },
+  "edge/cii-sb-dt-090-country-name.xml": {
+   "about": "a CountryName in the seller's address",
+   "rules": [
+    "CII-DT-090"
+   ],
+   "cen": {
+    "CII-DT-090": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-090": "error"
+   }
+  },
+  "edge/cii-sb-dt-096-additional-street.xml": {
+   "about": "an AdditionalStreetName in the seller's address",
+   "rules": [
+    "CII-DT-096"
+   ],
+   "cen": {
+    "CII-DT-096": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-DT-096": "error"
+   }
+  },
+  "edge/cii-sb-sr-495-two-cards.xml": {
+   "about": "two card payment means, each with a financial card",
+   "rules": [
+    "CII-SR-495"
+   ],
+   "cen": {
+    "CII-SR-467": "error",
+    "CII-SR-495": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "CII-SR-467": "error"
+   }
+  },
+  "edge/cii-sb-sr-496-two-debtor-accounts.xml": {
+   "about": "two direct-debit payment means, each with a debtor account",
+   "rules": [
+    "CII-SR-496"
+   ],
+   "cen": {
+    "CII-SR-467": "error",
+    "CII-SR-496": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-R061": "error"
+   },
+   "cen1316": {
+    "CII-SR-467": "error"
+   }
+  },
+  "edge/ubl-currency-stn.xml": {
+   "about": "invoice currency STN (São Tomé's dobra since 2018): CEN 1.3.17 lists it, the 1.3.16 copy in Peppol BIS 3.0.22 still has STD",
+   "rules": [
+    "BR-CL-03",
+    "BR-CL-04"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-03": "error",
+    "BR-CL-04": "error"
+   }
+  },
+  "edge/ubl-currency-std.xml": {
+   "about": "invoice currency STD (the old dobra): only CEN 1.3.16 lists it",
+   "rules": [
+    "BR-CL-03",
+    "BR-CL-04"
+   ],
+   "cen": {
+    "BR-CL-03": "error",
+    "BR-CL-04": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-CL007": "error"
+   },
+   "cen1316": {}
+  },
+  "edge/cii-currency-stn.xml": {
+   "about": "invoice currency STN: CEN 1.3.17 lists it, 1.3.16 not yet",
+   "rules": [
+    "BR-CL-03",
+    "BR-CL-04"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-03": "error",
+    "BR-CL-04": "error"
+   }
+  },
+  "edge/cii-currency-std.xml": {
+   "about": "invoice currency STD: only CEN 1.3.16 lists it",
+   "rules": [
+    "BR-CL-03",
+    "BR-CL-04"
+   ],
+   "cen": {
+    "BR-CL-03": "error",
+    "BR-CL-04": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-CL007": "error"
+   },
+   "cen1316": {}
+  },
+  "edge/ubl-endpoint-9960.xml": {
+   "about": "buyer endpoint scheme 9960: in CEN 1.3.17's EAS list, not 1.3.16's",
+   "rules": [
+    "BR-CL-25"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-CL008": "error"
+   },
+   "cen1316": {
+    "BR-CL-25": "error"
+   }
+  },
+  "edge/ubl-endpoint-0219.xml": {
+   "about": "buyer endpoint scheme 0219: in CEN 1.3.16's EAS list, dropped in 1.3.17",
+   "rules": [
+    "BR-CL-25"
+   ],
+   "cen": {
+    "BR-CL-25": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-CL008": "error"
+   },
+   "cen1316": {}
+  },
+  "edge/cii-endpoint-9960.xml": {
+   "about": "buyer electronic address scheme 9960: CEN 1.3.17 only",
+   "rules": [
+    "BR-CL-25"
+   ],
+   "cen": {},
+   "peppol": {
+    "PEPPOL-EN16931-CL008": "error"
+   },
+   "cen1316": {
+    "BR-CL-25": "error"
+   }
+  },
+  "edge/cii-endpoint-0220.xml": {
+   "about": "buyer electronic address scheme 0220: CEN 1.3.16 only",
+   "rules": [
+    "BR-CL-25"
+   ],
+   "cen": {
+    "BR-CL-25": "error"
+   },
+   "peppol": {
+    "PEPPOL-EN16931-CL008": "error"
+   },
+   "cen1316": {}
+  },
+  "edge/ubl-party-id-0249.xml": {
+   "about": "buyer party identifier scheme 0249: an ICD code CEN 1.3.17 added",
+   "rules": [
+    "BR-CL-10"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-10": "error"
+   }
+  },
+  "edge/ubl-legal-id-0250.xml": {
+   "about": "seller legal registration scheme 0250: an ICD code CEN 1.3.17 added",
+   "rules": [
+    "BR-CL-11"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-11": "error"
+   }
+  },
+  "edge/ubl-item-id-0251.xml": {
+   "about": "an item standard identifier with scheme 0251: an ICD code CEN 1.3.17 added",
+   "rules": [
+    "BR-CL-21"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-21": "error"
+   }
+  },
+  "edge/cii-global-id-0249.xml": {
+   "about": "buyer global identifier scheme 0249: CEN 1.3.17 only",
+   "rules": [
+    "BR-CL-10"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-10": "error"
+   }
+  },
+  "edge/ubl-vatex-es.xml": {
+   "about": "the 6% row with exemption reason code VATEX-ES-N1: a Spanish VATEX code CEN 1.3.17 added",
+   "rules": [
+    "BR-CL-22"
+   ],
+   "cen": {
+    "BR-S-10": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-22": "error",
+    "BR-S-10": "error"
+   }
+  },
+  "edge/ubl-note-subject-bat.xml": {
+   "about": "an invoice note with subject code #BAT#: UNTDID 4451 code UBL's CEN 1.3.17 list added (CII's lists it in both)",
+   "rules": [
+    "BR-CL-08"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-08": "error"
+   }
+  },
+  "edge/ubl-vat-id-letter-space.xml": {
+   "about": "seller VAT identifier \"A 0123456749\": its prefix \"A \" occurs in 1.3.16's list text (after 1A), not as a code in 1.3.17's",
+   "rules": [
+    "BR-CO-09"
+   ],
+   "cen": {
+    "BR-CO-09": "error"
+   },
+   "peppol": {},
+   "cen1316": {}
+  },
+  "edge/cii-vat-prefix-ss.xml": {
+   "about": "seller VAT number with prefix SS (South Sudan): CII's CEN 1.3.17 list has it, 1.3.16's not yet",
+   "rules": [
+    "BR-CO-09"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-09": "error"
+   }
+  },
+  "edge/cii-vat-prefix-an.xml": {
+   "about": "seller VAT number with prefix AN (Netherlands Antilles): only CII's CEN 1.3.16 list has it",
+   "rules": [
+    "BR-CO-09"
+   ],
+   "cen": {
+    "BR-CO-09": "error"
+   },
+   "peppol": {},
+   "cen1316": {}
+  },
+  "edge/cii-country-ss.xml": {
+   "about": "buyer country SS: CII's CEN 1.3.17 list has it, 1.3.16's not yet",
+   "rules": [
+    "BR-CL-14"
+   ],
+   "cen": {},
+   "peppol": {},
+   "cen1316": {
+    "BR-CL-14": "error"
+   }
+  },
+  "edge/cii-country-an.xml": {
+   "about": "buyer country AN: only CII's CEN 1.3.16 list has it",
+   "rules": [
+    "BR-CL-14"
+   ],
+   "cen": {
+    "BR-CL-14": "error"
+   },
+   "peppol": {},
+   "cen1316": {}
+  },
+  "edge/cii-igic-exemption-reason.xml": {
+   "about": "line 3 and its row in IGIC (L), the row with an exemption reason: BR-AF-10 in the 1.3.16 copy (BR-IG-10 here), BR-IP-10 in CEN 1.3.17's CII",
+   "rules": [
+    "BR-IG-10",
+    "BR-IP-10"
+   ],
+   "cen": {
+    "BR-IP-10": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-AF-10": "error"
+   }
+  },
+  "edge/cii-igic-zero-rate.xml": {
+   "about": "line 3 and its row in IGIC (L) at 0%: the 1.3.16 copy's BR-AF-05 accepts 0, CEN 1.3.17's CII checks L with BR-IP-05, which asks for a rate above 0",
+   "rules": [
+    "BR-IG-05",
+    "BR-IP-05",
+    "BR-IG-09",
+    "BR-IP-09"
+   ],
+   "cen": {
+    "BR-CO-14": "error",
+    "BR-IP-05": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-AF-05": "error",
+    "BR-CO-14": "error"
+   }
+  },
+  "edge/cii-line-total-double-low.xml": {
+   "about": "line 3 amount 90.015 and the line total 3850.01: CEN 1.3.16 sums the lines in xs:double (3850.0149…) before rounding, 1.3.17 in decimals (3850.02)",
+   "rules": [
+    "BR-CO-10"
+   ],
+   "cen": {
+    "BR-CO-10": "error",
+    "BR-CO-13": "error",
+    "BR-DEC-23": "error",
+    "BR-S-08": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-13": "error",
+    "BR-DEC-23": "error",
+    "BR-S-08": "error"
+   }
+  },
+  "edge/cii-line-total-double-high.xml": {
+   "about": "line 3 amount 90.015 and the line total 3850.02: right in decimals (CEN 1.3.17), not in 1.3.16's xs:double sum",
+   "rules": [
+    "BR-CO-10"
+   ],
+   "cen": {
+    "BR-CO-13": "error",
+    "BR-DEC-23": "error",
+    "BR-S-08": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-10": "error",
+    "BR-CO-13": "error",
+    "BR-DEC-23": "error",
+    "BR-S-08": "error"
+   }
+  },
+  "edge/cii-allowance-total-double.xml": {
+   "about": "a document allowance of 1.005 and an allowance total of 1.00: CEN 1.3.16 rounds 1.005 × 10 × 10 in xs:double (100.4999…), 1.3.17 in decimals (1.01)",
+   "rules": [
+    "BR-CO-11"
+   ],
+   "cen": {
+    "BR-CO-11": "error",
+    "BR-CO-13": "error",
+    "BR-DEC-01": "error",
+    "BR-S-08": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-13": "error",
+    "BR-DEC-01": "error",
+    "BR-S-08": "error"
+   }
+  },
+  "edge/cii-allowance-total-decimal.xml": {
+   "about": "a document allowance of 1.005 and an allowance total of 1.01: CEN 1.3.17's answer",
+   "rules": [
+    "BR-CO-11"
+   ],
+   "cen": {
+    "BR-CO-13": "error",
+    "BR-DEC-01": "error",
+    "BR-S-08": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-11": "error",
+    "BR-CO-13": "error",
+    "BR-DEC-01": "error",
+    "BR-S-08": "error"
+   }
+  },
+  "edge/cii-charge-total-double.xml": {
+   "about": "a document charge of 1.005 and a charge total of 1.00: CEN 1.3.16's xs:double answer",
+   "rules": [
+    "BR-CO-12"
+   ],
+   "cen": {
+    "BR-CO-12": "error",
+    "BR-CO-13": "error",
+    "BR-DEC-05": "error",
+    "BR-S-08": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-13": "error",
+    "BR-DEC-05": "error",
+    "BR-S-08": "error"
+   }
+  },
+  "edge/cii-vat-total-double.xml": {
+   "about": "the 20% row's VAT 75.085 and a VAT total of 80.03: CEN 1.3.16 sums the rows in xs:double (80.03), 1.3.17 in decimals (80.04)",
+   "rules": [
+    "BR-CO-14"
+   ],
+   "cen": {
+    "BR-CO-14": "error",
+    "BR-CO-15": "error",
+    "BR-CO-17": "error",
+    "BR-DEC-20": "error",
+    "BR-S-09": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-15": "error",
+    "BR-CO-17": "error",
+    "BR-DEC-20": "error",
+    "BR-S-09": "error"
+   }
+  },
+  "edge/cii-vat-total-decimal.xml": {
+   "about": "the 20% row's VAT 75.085 and a VAT total of 80.04: CEN 1.3.17's answer",
+   "rules": [
+    "BR-CO-14"
+   ],
+   "cen": {
+    "BR-CO-15": "error",
+    "BR-CO-17": "error",
+    "BR-DEC-20": "error",
+    "BR-S-09": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-CO-14": "error",
+    "BR-CO-15": "error",
+    "BR-CO-17": "error",
+    "BR-DEC-20": "error",
+    "BR-S-09": "error"
+   }
+  },
+  "edge/cii-s-basis-double.xml": {
+   "about": "the 20% row's taxable amount written 3760.000000000000001: CEN 1.3.16 compares it as an xs:double (3760, a match), 1.3.17 as a decimal",
+   "rules": [
+    "BR-S-08"
+   ],
+   "cen": {
+    "BR-DEC-19": "error",
+    "BR-S-08": "error"
+   },
+   "peppol": {},
+   "cen1316": {
+    "BR-DEC-19": "error"
+   }
+  },
+  "edge/cii-vat-total-many-decimals.xml": {
+   "about": "the VAT total written 756.950000000000001: CEN 1.3.16's BR-DEC-13 rounds it as an xs:double (756.95, two decimals), 1.3.17 counts its decimals",
+   "rules": [
+    "BR-DEC",
+    "BR-CO-14"
+   ],
+   "cen": {
+    "BR-DEC-13": "error"
+   },
+   "peppol": {},
+   "cen1316": {}
   }
  }
 }
