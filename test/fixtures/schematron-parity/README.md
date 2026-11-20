@@ -28,3 +28,15 @@ per invoice, what it changes, the rules it is about and every failed assert of t
 (`cen`) and of the Peppol rules (`peppol`), produced by the same artefacts and the same Saxon run as
 `verdicts.json`. `schematron-parity.test.ts` checks each one under the en16931 profile against the
 CEN verdicts and under the peppol profile against both, on its rules and on the overall verdict.
+
+## National rules (`national/`, `national-verdicts.json`)
+
+Single-change copies of the library's Dutch SI-UBL 2.0 and NLCIUS CII samples and its XRechnung samples
+(UBL and CII), written by `bun scripts/record-official-national-cases.ts`: values the official national
+files compare exactly as written (codes and identifiers with spaces, line breaks or a non-breaking space,
+upper and lower case), elements that are there but empty, KoSIT's temporary rules (BR-TMP-2 … BR-TMP-7)
+and dates in other formats. `national-verdicts.json` records every failed assert of the Dutch Peppol
+Authority's SI-UBL 2.0 / NLCIUS Schematron (release 2026-05-21) or KoSIT's XRechnung Schematron 2.6.0
+(with its copies of Peppol rules), together with CEN EN 16931 1.3.17, under Saxon-HE; KoSIT's
+information-only notices are kept as `info`. `schematron-parity.test.ts` checks each one under the
+nlcius or xrechnung profile on its rules and on the overall verdict.

@@ -1,0 +1,986 @@
+{
+ "checkedWith": "Dutch Peppol Authority validation 2026-05-21 (si-ubl-2.0.xsl 2.0.3.13, nlcius-cii-1.0.xsl 1.0.3.13; BR-NL/SI rules only), KoSIT XRechnung Schematron 2.6.0 (XRechnung 3.0.2) and CEN EN 16931 validation artefacts 1.3.17, Saxon-HE",
+ "recordedOn": "2026-11-20",
+ "cases": {
+  "national/nl-ubl-sample.xml": {
+   "about": "the SI-UBL 2.0 sample, unchanged",
+   "profile": "nlcius",
+   "rules": [],
+   "official": {}
+  },
+  "national/nl-cii-sample.xml": {
+   "about": "the NLCIUS CII example, unchanged",
+   "profile": "nlcius",
+   "rules": [],
+   "official": {}
+  },
+  "national/de-ubl-sample.xml": {
+   "about": "the XRechnung UBL sample, unchanged",
+   "profile": "xrechnung",
+   "rules": [],
+   "official": {}
+  },
+  "national/de-cii-sample.xml": {
+   "about": "the XRechnung CII sample, unchanged",
+   "profile": "xrechnung",
+   "rules": [],
+   "official": {}
+  },
+  "national/nl-ubl-buyer-country-lower-no-street.xml": {
+   "about": "buyer country \"nl\" and no buyer street",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-4"
+   ],
+   "official": {
+    "BR-CL-14": "error"
+   }
+  },
+  "national/nl-ubl-buyer-country-padded-no-street.xml": {
+   "about": "buyer country \" NL \" and no buyer street",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-4"
+   ],
+   "official": {}
+  },
+  "national/nl-ubl-buyer-no-street.xml": {
+   "about": "Dutch buyer without a street",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-4"
+   ],
+   "official": {
+    "BR-NL-4": "error"
+   }
+  },
+  "national/nl-ubl-buyer-street-empty.xml": {
+   "about": "Dutch buyer street element left empty",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-4",
+    "SI-UBL-2"
+   ],
+   "official": {
+    "SI-UBL-2": "warning"
+   }
+  },
+  "national/nl-ubl-seller-no-city.xml": {
+   "about": "seller without a city",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-3"
+   ],
+   "official": {
+    "BR-NL-3": "error"
+   }
+  },
+  "national/nl-ubl-seller-belgian.xml": {
+   "about": "seller in Belgium (Dutch-supplier rules off), Dutch buyer without a street",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-1",
+    "BR-NL-4"
+   ],
+   "official": {}
+  },
+  "national/nl-ubl-type-381-invoice.xml": {
+   "about": "type code 381 on a UBL Invoice",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-7",
+    "BR-NL-8",
+    "BR-CL-01"
+   ],
+   "official": {
+    "BR-CL-01": "error",
+    "BR-NL-8": "error"
+   }
+  },
+  "national/nl-ubl-type-384-no-reference.xml": {
+   "about": "type code 384 without a preceding invoice reference",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-7",
+    "BR-NL-9"
+   ],
+   "official": {
+    "BR-NL-9": "error"
+   }
+  },
+  "national/nl-ubl-type-padded.xml": {
+   "about": "type code \" 380 \"",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-7",
+    "BR-CL-01"
+   ],
+   "official": {
+    "BR-NL-7": "error"
+   }
+  },
+  "national/nl-ubl-type-471.xml": {
+   "about": "type code 471 (self-billed corrective invoice, new in CEN 1.3.17)",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-7",
+    "BR-CL-01"
+   ],
+   "official": {
+    "BR-NL-7": "error"
+   }
+  },
+  "national/nl-ubl-seller-legal-scheme-tokens.xml": {
+   "about": "seller legal ID with schemeID \"0190 0106\"",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-1"
+   ],
+   "official": {
+    "BR-CL-11": "error"
+   }
+  },
+  "national/nl-ubl-seller-legal-nbsp.xml": {
+   "about": "seller KvK number holding only a non-breaking space",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-1"
+   ],
+   "official": {}
+  },
+  "national/nl-ubl-seller-legal-0060.xml": {
+   "about": "seller legal ID with scheme 0060",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-1"
+   ],
+   "official": {
+    "BR-NL-1": "error"
+   }
+  },
+  "national/nl-ubl-buyer-no-legal-id.xml": {
+   "about": "Dutch buyer without a legal ID",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-10"
+   ],
+   "official": {
+    "BR-NL-10": "error"
+   }
+  },
+  "national/nl-ubl-buyer-legal-0060.xml": {
+   "about": "Dutch buyer legal ID with scheme 0060",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-10"
+   ],
+   "official": {
+    "BR-NL-10": "error"
+   }
+  },
+  "national/nl-ubl-buyer-belgian-no-legal-id.xml": {
+   "about": "buyer in Belgium without a legal ID",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-10"
+   ],
+   "official": {}
+  },
+  "national/nl-ubl-no-payment-means.xml": {
+   "about": "no payment means",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-11",
+    "BR-NL-12"
+   ],
+   "official": {
+    "BR-NL-11": "error"
+   }
+  },
+  "national/nl-ubl-payment-code-padded.xml": {
+   "about": "payment means code \" 58 \"",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-12"
+   ],
+   "official": {}
+  },
+  "national/nl-ubl-payment-code-31.xml": {
+   "about": "payment means code 31",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-12"
+   ],
+   "official": {
+    "BR-NL-12": "error"
+   }
+  },
+  "national/nl-ubl-payment-58-bic.xml": {
+   "about": "SEPA credit transfer (58) with a BIC",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-31"
+   ],
+   "official": {
+    "BR-NL-31": "warning"
+   }
+  },
+  "national/nl-ubl-order-line-without-order.xml": {
+   "about": "a line order reference, no document order reference",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-13"
+   ],
+   "official": {
+    "BR-NL-13": "error"
+   }
+  },
+  "national/nl-ubl-customization-padded.xml": {
+   "about": "CustomizationID with a leading space",
+   "profile": "nlcius",
+   "rules": [
+    "SI-V20-INV-R000"
+   ],
+   "official": {}
+  },
+  "national/nl-ubl-customization-gaccount.xml": {
+   "about": "CustomizationID of the G-account extension",
+   "profile": "nlcius",
+   "rules": [
+    "SI-V20-INV-R000"
+   ],
+   "official": {}
+  },
+  "national/nl-ubl-tax-point-date.xml": {
+   "about": "a VAT point date",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-20"
+   ],
+   "official": {
+    "BR-NL-20": "warning"
+   }
+  },
+  "national/nl-ubl-tax-point-date-empty.xml": {
+   "about": "an empty VAT point date",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-20",
+    "SI-UBL-2"
+   ],
+   "official": {
+    "BR-NL-20": "warning"
+   }
+  },
+  "national/nl-ubl-charge-reason-code.xml": {
+   "about": "a zero document charge with reason code FC",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-32",
+    "BR-NL-34"
+   ],
+   "official": {
+    "BR-CO-12": "error",
+    "BR-NL-32": "warning"
+   }
+  },
+  "national/nl-ubl-allowance-reason-code.xml": {
+   "about": "a zero document allowance with reason code 95",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-32",
+    "BR-NL-34"
+   ],
+   "official": {
+    "BR-CO-11": "error",
+    "BR-NL-32": "warning"
+   }
+  },
+  "national/nl-ubl-other-tax-scheme.xml": {
+   "about": "a second seller tax registration that isn't VAT",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-25"
+   ],
+   "official": {
+    "BR-NL-25": "warning"
+   }
+  },
+  "national/nl-ubl-tax-total-currency-lower.xml": {
+   "about": "VAT total with currencyID \"eur\"",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-33"
+   ],
+   "official": {
+    "BR-CL-03": "error",
+    "BR-CO-15": "error",
+    "BR-NL-33": "warning"
+   }
+  },
+  "national/nl-ubl-address-line.xml": {
+   "about": "a third address line for the seller",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-27"
+   ],
+   "official": {
+    "BR-NL-27": "warning"
+   }
+  },
+  "national/nl-ubl-empty-note.xml": {
+   "about": "an empty document note",
+   "profile": "nlcius",
+   "rules": [
+    "SI-UBL-2"
+   ],
+   "official": {
+    "SI-UBL-2": "warning"
+   }
+  },
+  "national/nl-cii-type-numeric.xml": {
+   "about": "type code \"3.8E2\" (380 as a number)",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-7",
+    "BR-CL-01"
+   ],
+   "official": {
+    "BR-CL-01": "error"
+   }
+  },
+  "national/nl-cii-type-384.xml": {
+   "about": "type code 384 without a preceding invoice reference",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-7",
+    "BR-NL-9"
+   ],
+   "official": {}
+  },
+  "national/nl-cii-type-389.xml": {
+   "about": "type code 389 (self-billed)",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-7"
+   ],
+   "official": {}
+  },
+  "national/nl-cii-buyer-no-legal-id.xml": {
+   "about": "Dutch buyer without a legal organisation",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-10"
+   ],
+   "official": {
+    "BR-NL-10": "error"
+   }
+  },
+  "national/nl-cii-buyer-belgian-no-legal-id.xml": {
+   "about": "buyer in Belgium without a legal organisation",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-10"
+   ],
+   "official": {
+    "BR-NL-10": "error"
+   }
+  },
+  "national/nl-cii-credit-note-no-payment.xml": {
+   "about": "type code 381 and no payment means",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-11"
+   ],
+   "official": {}
+  },
+  "national/nl-cii-no-payment.xml": {
+   "about": "no payment means",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-11"
+   ],
+   "official": {
+    "BR-NL-11": "error"
+   }
+  },
+  "national/nl-cii-payment-code-decimal.xml": {
+   "about": "payment means code \"30.0\"",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-12"
+   ],
+   "official": {
+    "BR-CL-16": "error"
+   }
+  },
+  "national/nl-cii-payment-58-bic.xml": {
+   "about": "SEPA credit transfer (58) with a BIC",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-31"
+   ],
+   "official": {}
+  },
+  "national/nl-cii-note-subject-code.xml": {
+   "about": "an invoice note with subject code AAI",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-22"
+   ],
+   "official": {
+    "BR-NL-22": "warning"
+   }
+  },
+  "national/nl-cii-business-process.xml": {
+   "about": "a business process type",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-23"
+   ],
+   "official": {
+    "BR-NL-23": "warning"
+   }
+  },
+  "national/nl-cii-due-date-type-code.xml": {
+   "about": "a VAT point date code (DueDateTypeCode 5)",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-21"
+   ],
+   "official": {
+    "BR-NL-21": "warning"
+   }
+  },
+  "national/nl-cii-line-three.xml": {
+   "about": "a third address line for the seller",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-27"
+   ],
+   "official": {
+    "BR-NL-27": "warning"
+   }
+  },
+  "national/nl-cii-empty-payment-reference.xml": {
+   "about": "an empty payment reference",
+   "profile": "nlcius",
+   "rules": [
+    "SI-UBL-2"
+   ],
+   "official": {
+    "SI-UBL-2": "warning"
+   }
+  },
+  "national/de-ubl-no-profile.xml": {
+   "about": "no ProfileID (Peppol's R001, copied by KoSIT)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R001"
+   ],
+   "official": {
+    "PEPPOL-EN16931-R001": "error"
+   }
+  },
+  "national/de-ubl-empty-order-id.xml": {
+   "about": "an empty order reference ID (KoSIT's R008 exception)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R008"
+   ],
+   "official": {}
+  },
+  "national/de-ubl-empty-note.xml": {
+   "about": "an empty document note",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R008"
+   ],
+   "official": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "national/de-ubl-no-buyer-endpoint.xml": {
+   "about": "no buyer electronic address",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R010"
+   ],
+   "official": {
+    "PEPPOL-EN16931-R010": "error"
+   }
+  },
+  "national/de-ubl-line-price-off.xml": {
+   "about": "a line amount 0.03 off quantity × price (KoSIT's R120 is a warning)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R120"
+   ],
+   "official": {
+    "PEPPOL-EN16931-R120": "warning"
+   }
+  },
+  "national/de-ubl-phone-two-digits.xml": {
+   "about": "seller telephone \"12\"",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-27"
+   ],
+   "official": {
+    "BR-DE-27": "warning"
+   }
+  },
+  "national/de-ubl-no-phone.xml": {
+   "about": "seller contact without a telephone",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-6",
+    "BR-DE-27"
+   ],
+   "official": {
+    "BR-DE-6": "error",
+    "BR-DE-27": "warning"
+   }
+  },
+  "national/de-ubl-email-nbsp.xml": {
+   "about": "seller email with a non-breaking space inside",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-28"
+   ],
+   "official": {}
+  },
+  "national/de-ubl-email-space.xml": {
+   "about": "seller email with a space inside",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-28"
+   ],
+   "official": {
+    "BR-DE-28": "warning"
+   }
+  },
+  "national/de-ubl-skonto-no-line-break.xml": {
+   "about": "Skonto entry without a line break after it",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-18"
+   ],
+   "official": {
+    "BR-DE-18": "error"
+   }
+  },
+  "national/de-ubl-skonto-bad-percent.xml": {
+   "about": "Skonto percentage without two decimals",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-18"
+   ],
+   "official": {
+    "BR-DE-18": "error"
+   }
+  },
+  "national/de-ubl-skonto-indented.xml": {
+   "about": "Skonto entry indented with spaces",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-18"
+   ],
+   "official": {}
+  },
+  "national/de-ubl-spec-trailing-space.xml": {
+   "about": "XRechnung CustomizationID with a trailing space",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-21"
+   ],
+   "official": {
+    "BR-DE-21": "warning"
+   }
+  },
+  "national/de-ubl-iban-lower-case.xml": {
+   "about": "IBAN in lower case",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-19"
+   ],
+   "official": {
+    "BR-DE-19": "warning"
+   }
+  },
+  "national/de-ubl-iban-spaces.xml": {
+   "about": "IBAN written in groups of four",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-19"
+   ],
+   "official": {}
+  },
+  "national/de-ubl-iban-check-digits.xml": {
+   "about": "IBAN with wrong check digits",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-19"
+   ],
+   "official": {
+    "BR-DE-19": "warning"
+   }
+  },
+  "national/de-ubl-type-384.xml": {
+   "about": "type code 384 without a preceding invoice reference",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-17",
+    "BR-DE-26"
+   ],
+   "official": {
+    "BR-DE-26": "warning"
+   }
+  },
+  "national/de-ubl-type-875.xml": {
+   "about": "type code 875 (partial construction invoice)",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-17",
+    "BR-CL-01"
+   ],
+   "official": {}
+  },
+  "national/de-ubl-type-471.xml": {
+   "about": "type code 471 (new in CEN 1.3.17)",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-17",
+    "BR-CL-01"
+   ],
+   "official": {
+    "BR-DE-17": "warning"
+   }
+  },
+  "national/de-ubl-no-delivery.xml": {
+   "about": "no delivery date or invoicing period",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-TMP-32"
+   ],
+   "official": {
+    "BR-DE-TMP-32": "info"
+   }
+  },
+  "national/de-ubl-no-seller-vat.xml": {
+   "about": "seller without VAT or tax number, category S used",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-16"
+   ],
+   "official": {
+    "BR-DE-16": "error",
+    "BR-S-02": "error"
+   }
+  },
+  "national/de-ubl-external-uri-relative.xml": {
+   "about": "a supporting document linked with a relative address",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-2"
+   ],
+   "official": {
+    "BR-TMP-2": "error"
+   }
+  },
+  "national/de-ubl-external-uri-https.xml": {
+   "about": "a supporting document linked with an https address",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-2"
+   ],
+   "official": {}
+  },
+  "national/de-ubl-external-uri-padded.xml": {
+   "about": "a supporting document link with a leading space",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-2"
+   ],
+   "official": {
+    "BR-TMP-2": "error"
+   }
+  },
+  "national/de-ubl-external-no-uri.xml": {
+   "about": "an external reference without an address",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-2"
+   ],
+   "official": {
+    "BR-TMP-2": "error",
+    "UBL-CR-121": "warning"
+   }
+  },
+  "national/de-ubl-issue-date-zone.xml": {
+   "about": "issue date with a time zone (2026-11-03+01:00)",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-6"
+   ],
+   "official": {
+    "BR-TMP-6": "warning"
+   }
+  },
+  "national/de-ubl-delivery-date-padded.xml": {
+   "about": "delivery date between line breaks",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-6"
+   ],
+   "official": {}
+  },
+  "national/de-cii-no-business-process.xml": {
+   "about": "no business process (Peppol's R001, copied by KoSIT)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R001"
+   ],
+   "official": {
+    "PEPPOL-EN16931-R001": "error"
+   }
+  },
+  "national/de-cii-empty-account-name.xml": {
+   "about": "an empty account name (KoSIT runs R008 on CII)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R008"
+   ],
+   "official": {
+    "PEPPOL-EN16931-R008": "error"
+   }
+  },
+  "national/de-cii-empty-delivery.xml": {
+   "about": "an empty ApplicableHeaderTradeDelivery (KoSIT's R008 exception)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R008",
+    "BR-DE-TMP-32"
+   ],
+   "official": {
+    "BR-DE-TMP-32": "info"
+   }
+  },
+  "national/de-cii-gross-price-ok.xml": {
+   "about": "gross price 500 less a 15.00 price allowance = net 485",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R044",
+    "PEPPOL-EN16931-R046"
+   ],
+   "official": {}
+  },
+  "national/de-cii-gross-price-mismatch.xml": {
+   "about": "gross price 500 less a 10.00 price allowance, net 485",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R044",
+    "PEPPOL-EN16931-R046"
+   ],
+   "official": {
+    "PEPPOL-EN16931-R046": "error"
+   }
+  },
+  "national/de-cii-gross-price-charge.xml": {
+   "about": "a price-level charge (indicator true)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R044",
+    "PEPPOL-EN16931-R046"
+   ],
+   "official": {
+    "CII-SR-119": "warning",
+    "PEPPOL-EN16931-R044": "error",
+    "PEPPOL-EN16931-R046": "error"
+   }
+  },
+  "national/de-cii-gross-base-quantity.xml": {
+   "about": "gross price base quantity 2 and no net base quantity (KoSIT's R120 divides by it)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R120",
+    "PEPPOL-EN16931-R046"
+   ],
+   "official": {
+    "PEPPOL-EN16931-R120": "warning"
+   }
+  },
+  "national/de-cii-department-only.xml": {
+   "about": "seller contact with a department name instead of a person",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-5"
+   ],
+   "official": {}
+  },
+  "national/de-cii-iban-nbsp.xml": {
+   "about": "IBAN with a non-breaking space inside",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-19"
+   ],
+   "official": {
+    "BR-DE-19": "warning"
+   }
+  },
+  "national/de-cii-tax-currency-only.xml": {
+   "about": "tax currency USD with only a USD VAT total (KoSIT's R053 and R055)",
+   "profile": "xrechnung",
+   "rules": [
+    "PEPPOL-EN16931-R053",
+    "PEPPOL-EN16931-R055"
+   ],
+   "official": {
+    "BR-CO-15": "error"
+   }
+  },
+  "national/de-cii-creditor-id-only.xml": {
+   "about": "a SEPA creditor ID without mandate or debited account",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-DE-30",
+    "BR-DE-31"
+   ],
+   "official": {
+    "BR-DE-23-b": "error",
+    "BR-DE-30": "error",
+    "BR-DE-31": "error"
+   }
+  },
+  "national/de-cii-916-relative-two-names.xml": {
+   "about": "a supporting document (916) with a relative address and two descriptions",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-2",
+    "BR-TMP-4"
+   ],
+   "official": {
+    "BR-TMP-2": "error",
+    "BR-TMP-4": "warning",
+    "CII-SR-475": "warning"
+   }
+  },
+  "national/de-cii-916-https.xml": {
+   "about": "a supporting document (916) with an https address",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-2",
+    "BR-TMP-4"
+   ],
+   "official": {}
+  },
+  "national/de-cii-916-padded-type.xml": {
+   "about": "a relative address on a supporting document with TypeCode \" 916\"",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-2"
+   ],
+   "official": {}
+  },
+  "national/de-cii-916-two-files.xml": {
+   "about": "a supporting document (916) with two attached files",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-5"
+   ],
+   "official": {
+    "BR-TMP-5": "warning",
+    "CII-SR-476": "warning"
+   }
+  },
+  "national/de-cii-base-quantity-differs.xml": {
+   "about": "gross base quantity 2, net base quantity 1",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-3"
+   ],
+   "official": {
+    "BR-TMP-3": "error"
+   }
+  },
+  "national/de-cii-base-quantity-as-written.xml": {
+   "about": "gross base quantity \"1.0\", net base quantity \"1\"",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-3"
+   ],
+   "official": {
+    "BR-TMP-3": "error"
+   }
+  },
+  "national/de-cii-base-quantity-units.xml": {
+   "about": "same base quantity, units H87 and C62",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-3"
+   ],
+   "official": {
+    "BR-TMP-3": "error",
+    "PEPPOL-EN16931-R130": "error"
+   }
+  },
+  "national/de-cii-due-date-no-format.xml": {
+   "about": "due date without the format attribute",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-7"
+   ],
+   "official": {
+    "BR-TMP-7": "warning"
+   }
+  },
+  "national/de-cii-due-date-padded-format.xml": {
+   "about": "due date with format=\" 102 \"",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-7"
+   ],
+   "official": {}
+  },
+  "national/de-cii-due-date-dashes.xml": {
+   "about": "due date written 2026-12-03 with format 102",
+   "profile": "xrechnung",
+   "rules": [
+    "BR-TMP-7"
+   ],
+   "official": {
+    "BR-TMP-7": "warning",
+    "CII-DT-097": "error"
+   }
+  },
+  "national/nl-ubl-foreign-tax-currency-in-extension.xml": {
+   "about": "a TaxCurrencyCode of another namespace inside a UBL extension",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-19"
+   ],
+   "official": {
+    "UBL-CR-001": "warning"
+   }
+  },
+  "national/nl-ubl-ubl-tax-currency-in-extension.xml": {
+   "about": "a cbc:TaxCurrencyCode inside a UBL extension",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-19"
+   ],
+   "official": {
+    "BR-NL-19": "warning",
+    "UBL-CR-001": "warning"
+   }
+  },
+  "national/nl-cii-foreign-subject-code.xml": {
+   "about": "a SubjectCode of another namespace in the invoice note",
+   "profile": "nlcius",
+   "rules": [
+    "BR-NL-22"
+   ],
+   "official": {}
+  }
+ }
+}
