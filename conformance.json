@@ -1,5 +1,5 @@
 {
-  "checkedOn": "2026-11-19",
+  "checkedOn": "2026-11-20",
   "command": "npm run compare-official",
   "sources": {
     "cen": {
@@ -21,7 +21,7 @@
     "cen": 913,
     "peppol": 1006
   },
-  "compared": 1246,
+  "compared": 1277,
   "differences": [],
   "uncovered": {
     "en16931": [],
@@ -104,7 +104,6 @@
       "PEPPOL-COMMON-R050",
       "PEPPOL-COMMON-R052",
       "PEPPOL-COMMON-R053",
-      "PEPPOL-COMMON-R054",
       "PEPPOL-COMMON-R055",
       "PEPPOL-COMMON-R056-1",
       "PEPPOL-COMMON-R057",
@@ -147,7 +146,7 @@
     },
     "national": {
       "official": 119,
-      "checked": 14,
+      "checked": 15,
       "countries": [
         "DE",
         "DK",
@@ -245,7 +244,6 @@
         "PEPPOL-COMMON-R050",
         "PEPPOL-COMMON-R052",
         "PEPPOL-COMMON-R053",
-        "PEPPOL-COMMON-R054",
         "PEPPOL-COMMON-R055",
         "PEPPOL-COMMON-R056-1",
         "PEPPOL-COMMON-R056-2",
@@ -266,5 +264,5 @@
       ]
     }
   },
-  "fingerprint": "73c0550d88a2768622ca4239497f6590221bb2b58a2e3232c5b4aa9b3f231f26"
+  "fingerprint": "383da5531d85c3bab9d391faa969b79bf646210b2c704565707b5b323f0d07c1"
 }
