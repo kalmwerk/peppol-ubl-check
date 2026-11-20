@@ -62,6 +62,24 @@ export function nationalScope(c) {
   return parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : (parts[0] ?? "");
 }
 
+/**
+ * Blocking CEN syntax rules no invoice reaches: in the CII pattern, CII-DT-010 … 012 (@listID,
+ * @listAgencyID, @listVersionID on a TypeCode) share their context with CII-DT-005 … 009, an
+ * earlier rule of the same pattern that takes every TypeCode, so Schematron never runs them.
+ */
+export const UNREACHED_SYNTAX_RULES = ["CII-DT-010", "CII-DT-011", "CII-DT-012"];
+
+/** How many of the blocking CEN syntax rules (flag="fatal") the engine checks, one sentence. */
+export function syntaxCoverage(c) {
+  const s = c.ruleSets.syntax;
+  const gaps = s.fatalNotChecked.filter((id) => !UNREACHED_SYNTAX_RULES.includes(id));
+  const unreached = s.fatalNotChecked.filter((id) => UNREACHED_SYNTAX_RULES.includes(id));
+  const note = unreached.length ? ` (${unreached.join(", ")} never run in the official files: an earlier rule takes every element they name)` : "";
+  return gaps.length === 0
+    ? `Every blocking CEN syntax-binding rule is checked: ${num(s.fatalChecked)} of the ${num(s.fatal)}${note}.`
+    : `Checked: ${num(s.fatalChecked)} of the ${num(s.fatal)} blocking CEN syntax-binding rules; not checked: ${gaps.join(", ")}${note}.`;
+}
+
 /** True when every EN 16931 and Peppol BIS core rule the official tests exercise is checked. */
 export const coreComplete = (c) => c.uncovered.en16931.length === 0 && c.uncovered.peppol.length === 0;
 
@@ -76,7 +94,8 @@ export function ruleSetsMarkdown(c) {
     b.notChecked.length === 0 && p.notChecked.length === 0
       ? `Every EN 16931 business rule that can fail (${num(b.checked)}${alwaysTrue}) and every Peppol BIS core rule (${num(p.checked)}) is checked.`
       : `Checked: ${num(b.checked)} of the ${num(b.official)} EN 16931 business rules and ${num(p.checked)} of the ${num(p.official)} Peppol BIS core rules.`;
-  return `${core} Not checked: ${num(syntax.official - syntax.checked)} of the ${num(syntax.official)} CEN syntax-binding and data-type rules (UBL-SR, UBL-CR, UBL-DT, CII-SR, CII-DT) and ${num(national.official - national.checked)} of Peppol's ${num(national.official)} national rules.`;
+  const warnings = syntax.official - syntax.fatal - (syntax.checked - syntax.fatalChecked);
+  return `${core} ${syntaxCoverage(c)} Not checked: ${num(warnings)} warning-level CEN syntax notes (UBL-CR, CII-SR …), which don't block an invoice, and ${num(national.official - national.checked)} of Peppol's ${num(national.official)} national rules.`;
 }
 
 export function totals(c) {
@@ -92,7 +111,7 @@ export function summaryMarkdown(c) {
   const t = totals(c);
   const verdict =
     t.different === 0
-      ? `same verdict as the official EN 16931 and Peppol Schematron for every rule this tool checks, on all ${num(t.cases)} official unit-test cases of the ${sourceLinks(c)}: ${num(t.compared)} verdicts compared, 0 different.`
+      ? `same verdict as the official EN 16931 and Peppol Schematron for every official rule this tool checks, on all ${num(t.cases)} official unit-test cases of the ${sourceLinks(c)}: ${num(t.compared)} verdicts compared, 0 different.`
       : `on the ${num(t.cases)} official unit-test cases of the ${sourceLinks(c)}, the official verdict on ${num(t.compared - t.different)} of the ${num(t.compared)} verdicts compared for the rules this tool checks; ${num(t.different)} differ, listed in [\`${CONFORMANCE_FILE}\`](${CONFORMANCE_FILE}).`;
   return [
     `**Conformance, checked ${longDate(c.checkedOn)}:** ${verdict}`,

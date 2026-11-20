@@ -34,7 +34,11 @@ export interface Conformance {
   ruleSets: {
     business: RuleSetCount & { alwaysTrue: string[]; notChecked: string[] };
     peppol: RuleSetCount & { alwaysTrue: string[]; notChecked: string[] };
-    syntax: RuleSetCount;
+    /**
+     * `fatal`: the syntax rules that block an invoice (flag="fatal"), the rest being warning-level notes;
+     * `fatalChecked`: how many of those the engine checks; `fatalNotChecked`: the blocking ones it doesn't
+     */
+    syntax: RuleSetCount & { fatal: number; fatalChecked: number; fatalNotChecked: string[] };
     /**
      * `countries`: ID prefixes (ISO country codes) of the national rules not checked; `notChecked`:
      * every national rule not checked, tested or not, including Peppol's identifier formats
@@ -55,6 +59,10 @@ export function sameResult(a: Conformance, b: Conformance): boolean;
 export function longDate(iso: string): string;
 export function num(n: number): string;
 export function nationalCountries(c: Conformance): string[];
+/** Blocking CEN syntax rules no invoice reaches: an earlier rule of the same pattern takes every node they name */
+export const UNREACHED_SYNTAX_RULES: readonly string[];
+/** "Every blocking CEN syntax-binding rule …" or the blocking ones that aren't checked, one sentence */
+export function syntaxCoverage(c: Conformance): string;
 /** What the uncovered national rules are about: "Denmark, Germany … and Peppol's identifier formats" */
 export function nationalScope(c: Conformance): string;
 /** True when every EN 16931 and Peppol BIS core rule the official tests exercise is checked */
